@@ -25,6 +25,45 @@ struct RuleMatch: Equatable, Sendable {
     let end: Int
 }
 
+/// A value a line wrap cut in two or three: what a rule matches when the lines are read as one.
+struct JunctionMatch: Equatable, Sendable {
+    let rule: TextRule
+    /// The matched characters, the lines read as one.
+    let text: String
+    /// Where the matched characters sit on each line the value was read from, one entry per
+    /// line: scalar indices into that line's NFKC form, or nil for a line the match does not reach.
+    let ranges: [Range<Int>?]
+}
+
+extension JunctionMatch {
+
+    /// One match per value. Where two matches overlap on a line and one's range there holds the
+    /// other's, and so on every line the other reaches, the other is the same value read again or
+    /// a piece of it, and it goes: the larger range stays. Two that only cross partly, neither
+    /// holding the other on every line it reaches, both stay.
+    static func distinct(_ found: [JunctionMatch]) -> [JunctionMatch] {
+        var kept: [JunctionMatch] = []
+        for m in found {
+            if kept.contains(where: { holds($0, over: m) }) { continue }
+            kept.removeAll { holds(m, over: $0) }
+            kept.append(m)
+        }
+        return kept
+    }
+
+    /// Whether `a` reaches every line `b` reaches, with a range that holds `b`'s there.
+    private static func holds(_ a: JunctionMatch, over b: JunctionMatch) -> Bool {
+        var shared = false
+        for (i, range) in b.ranges.enumerated() {
+            guard let range else { continue }
+            guard i < a.ranges.count, let holder = a.ranges[i],
+                  holder.lowerBound <= range.lowerBound, range.upperBound <= holder.upperBound else { return false }
+            shared = true
+        }
+        return shared
+    }
+}
+
 extension RuleMatch {
 
     /// A rule can match part of one number, code or address: 16 digits of "R2026112300045678".
@@ -75,7 +114,18 @@ extension RuleMatch {
 enum TextRuleMatcher {
 
     static func matches(in line: String) -> [RuleMatch] {
+        scan(views(for: line))
+    }
+
+    /// What a line carries to hide: its matches, each grown to the whole run of characters it
+    /// sits in, and then a run of digits long enough to be two values glued by a table's columns
+    /// cut into them. The cut comes after the growing, which would join the pieces again.
+    static func runs(in line: String) -> [RuleMatch] {
         let v = views(for: line)
+        return cutGlued(RuleMatch.grow(scan(v), in: v.scalars), views: v)
+    }
+
+    private static func scan(_ v: Views) -> [RuleMatch] {
         if v.scalars.isEmpty { return [] }
 
         struct Candidate {
@@ -153,6 +203,220 @@ enum TextRuleMatcher {
 
     static func isFlagged(_ line: String) -> Bool {
         !matches(in: line).isEmpty
+    }
+
+    // MARK: - Glued digits
+
+    /// The least digits a run must have for a cut to be tried on it: the shortest value cut out
+    /// of a run is a phone of 11 digits, so 12 is a phone with one digit glued to it.
+    private static let gluedRunDigits = 12
+
+    /// The least digits a run nobody recognizes at either end must have to be hidden whole as a
+    /// reference. Under it, 12 to 15 digits, the reference rule decides as it does today.
+    private static let wholeRunDigits = 16
+
+    /// What must be left of a run beside a card-shaped or ID-shaped piece for that piece to be
+    /// cut out: a card is any 16 to 19 digits, so a run of 20 with one digit over it is one order
+    /// number, not a card. A phone is told by its first two digits, and is cut out of anything.
+    private static let restDigits = 10
+
+    /// The length of the piece tried at an end of a run, longest first: a card of 19, 18, 17 or
+    /// 16 digits, an ID number of 18, then a phone of 11.
+    private static let pieceLengths = [19, 18, 17, 16, 11]
+
+    /// Cuts into its values every run of digits the rules could not know whole. The separators
+    /// between digits are gone from the `digits` view, so a card printed in groups and the number
+    /// beside it are one run there, and a sum glued to a phone is one run with the phone at its
+    /// end. The full stop and the comma stay, so a sum and the number after it are two runs. The
+    /// cut comes after the growing, which would join the pieces again.
+    private static func cutGlued(_ matches: [RuleMatch], views v: Views) -> [RuleMatch] {
+        let d = Array(v.digits.unicodeScalars)
+        var out = matches
+        var i = 0
+        while i < d.count {
+            guard isDigit(d[i]) else { i += 1; continue }
+            var j = i
+            while j < d.count, isDigit(d[j]) { j += 1 }
+            let digits = j - i
+            // An ID number ends in X: the letter belongs to the last value of the run.
+            if j < d.count, d[j].value == 88 { j += 1 }
+            // A letter glued to the run makes one code of them, SF1398867001234, which the reference
+            // rule hides whole: the run is not two values, whatever shape its digits make.
+            let oneCode = (i > 0 && isLetter(d[i - 1])) || (j < d.count && isLetter(d[j]))
+            if digits >= gluedRunDigits, !oneCode { cut(d[i..<j], from: i, views: v, into: &out) }
+            i = j
+        }
+        return out.sorted { $0.start < $1.start }
+    }
+
+    /// Cuts one run of the `digits` view, which starts at `i` there, into its place in the line.
+    private static func cut(_ run: ArraySlice<Unicode.Scalar>, from i: Int, views v: Views, into out: inout [RuleMatch]) {
+        let j = i + run.count
+        let from = v.digitsMap[i], to = v.digitsMap[j - 1] + 1
+        func piece(_ rule: TextRule, _ start: Int, _ end: Int) -> RuleMatch {
+            RuleMatch(rule: rule, text: Self.string(Array(v.scalars[start..<end])), tolerant: false, start: start, end: end)
+        }
+        // What stands over the run already. A rule other than reference knows the digits for part
+        // of something it hides whole, an address: the run is not two values.
+        let over = out.filter { $0.start < to && $0.end > from }
+        if over.contains(where: { $0.rule != .reference }) { return }
+
+        guard let split = shapes(run) else {
+            // Nobody knows an end. A long enough run is one reference, over the run and whatever
+            // a reference beside it had grown over, so nothing that was hidden is shown again.
+            guard run.filter(isDigit).count >= wholeRunDigits else { return }
+            if over.contains(where: { $0.start <= from && $0.end >= to }) { return }
+            let left = min(from, over.map(\.start).min() ?? from), right = max(to, over.map(\.end).max() ?? to)
+            out.removeAll { $0.start < to && $0.end > from }
+            out.append(piece(.reference, left, right))
+            return
+        }
+        var pieces = split.map { piece($0.rule, v.digitsMap[i + $0.start], v.digitsMap[i + $0.end - 1] + 1) }
+        // What a reference beside the run had grown over, the sum and its point before a phone,
+        // stays hidden: joined to a reference piece at the end of the run it touches, or apart.
+        let left = over.map(\.start).min(), right = over.map(\.end).max()
+        out.removeAll { $0.start < to && $0.end > from }
+        if let left, left < from {
+            if pieces[0].rule == .reference { pieces[0] = piece(.reference, left, pieces[0].end) }
+            else { out.append(piece(.reference, left, from)) }
+        }
+        if let right, right > to {
+            let last = pieces.count - 1
+            if pieces[last].rule == .reference { pieces[last] = piece(.reference, pieces[last].start, right) }
+            else { out.append(piece(.reference, to, right)) }
+        }
+        out.append(contentsOf: pieces)
+    }
+
+    /// The two values of a run of digits, as offsets into the run, the first at the start. A
+    /// split where both are shapes a rule knows wins, provided one is a phone or an ID number:
+    /// those are told by their shape alone, where 16 to 19 digits could be anything. Otherwise
+    /// one end is a known shape and the rest passes for a reference when it has no shape. The
+    /// piece at the start is tried before the piece at the end, each length longest first.
+    /// Nil when neither end is a known shape.
+    private static func shapes(_ run: ArraySlice<Unicode.Scalar>) -> [(rule: TextRule, start: Int, end: Int)]? {
+        let r = Array(run)
+        let n = r.count
+        func shape(_ a: Int, _ b: Int) -> TextRule? { a >= 0 && b <= n && b > a ? Self.shape(r[a..<b]) : nil }
+        func named(_ rule: TextRule?) -> Bool { rule == .phone || rule == .idNumber }
+        func halves(_ first: TextRule, _ a: Int, _ b: Int, _ second: TextRule?, _ c: Int, _ d: Int) -> [(rule: TextRule, start: Int, end: Int)] {
+            [(first, a, b), (second ?? .reference, c, d)].sorted { $0.start < $1.start }
+        }
+        var rest: [(rule: TextRule, start: Int, end: Int)]?
+        for atStart in [true, false] {
+            for length in pieceLengths where length < n {
+                var a = 0, b = length, c = length, d = n
+                if !atStart { a = n - length; b = n; c = 0; d = n - length }
+                guard let first = shape(a, b) else { continue }
+                let second = shape(c, d)
+                if let second, named(first) || named(second) { return halves(first, a, b, second, c, d) }
+                if rest == nil, first == .phone || d - c >= restDigits { rest = halves(first, a, b, second, c, d) }
+            }
+        }
+        return rest
+    }
+
+    /// The rule a piece follows by its shape alone: a phone is 11 digits starting with 1[3-9],
+    /// an ID number is 17 digits and a digit or an X, a card is 16 to 19 digits.
+    private static func shape(_ piece: ArraySlice<Unicode.Scalar>) -> TextRule? {
+        let p = Array(piece)
+        guard let first = p.first, let last = p.last else { return nil }
+        let digits = p.filter(isDigit).count
+        if p.count == 11, digits == 11, first.value == 49, (51...57).contains(p[1].value) { return .phone }
+        if p.count == 18, digits >= 17, p.dropLast().allSatisfy(isDigit), isDigit(last) || last.value == 88 { return .idNumber }
+        if (16...19).contains(p.count), digits == p.count { return .bankCard }
+        return nil
+    }
+
+    // MARK: - Wrapped values
+
+    /// The matches that cross from one line to the next once the lines, two or three that a wrap
+    /// cut, are read as one, each place the wrap cut taken both as clean and as parted with a
+    /// space. No piece of such a value matches alone, so a match that stays inside one line is
+    /// not new and is left out. One value is told once: see `JunctionMatch.distinct`.
+    static func junctionMatches(lines: [String]) -> [JunctionMatch] {
+        let read = lines.map { Array($0.precomposedStringWithCompatibilityMapping.unicodeScalars) }
+        guard (2...3).contains(read.count) else { return [] }
+        // The readings with spaces first, so that the text kept for a value is the one a reader sees.
+        var readings: [Int: [(match: RuleMatch, places: [Range<Int>?])]] = [:]
+        var found: [JunctionMatch] = []
+        for parted in stride(from: (1 << (read.count - 1)) - 1, through: 0, by: -1) {
+            let items = reading(read, parted: parted)
+            readings[parted] = items
+            for item in items {
+                let ranges = item.places
+                let crossing = (1..<read.count).contains { ranges[$0 - 1] != nil && ranges[$0] != nil }
+                guard crossing else { continue }
+                let match = JunctionMatch(rule: item.match.rule, text: item.match.text, ranges: ranges)
+                guard !glued(match, parted: parted, lines: read, readings: readings) else { continue }
+                found.append(match)
+            }
+        }
+        return JunctionMatch.distinct(found)
+    }
+
+    /// The lines read as one with a space at the cuts named in `parted`: what the reading matches,
+    /// and where each match sits on each line, as scalar indices into that line, or nil for a line
+    /// the match does not reach.
+    private static func reading(_ lines: [[Unicode.Scalar]], parted: Int) -> [(match: RuleMatch, places: [Range<Int>?])] {
+        let space: Unicode.Scalar = " "
+        var joined: [Unicode.Scalar] = []
+        var starts: [Int] = []
+        for (i, line) in lines.enumerated() {
+            if i > 0, (parted & (1 << (i - 1))) != 0 { joined.append(space) }
+            starts.append(joined.count)
+            joined += line
+        }
+        return RuleMatch.grow(matches(in: Self.string(joined)), in: joined).map { m in
+            (m, lines.indices.map { i in
+                // Where the piece sits on its own line, not on the joined text: two readings that
+                // differ only by a separator then tell the same value the same way.
+                let from = max(m.start, starts[i]) - starts[i], to = min(m.end, starts[i] + lines[i].count) - starts[i]
+                return from < to ? from..<to : nil
+            })
+        }
+    }
+
+    /// Whether a match that crosses a cut read without a space is not a value the wrap cut, but
+    /// what stands next to a value glued onto it. A wrap has a shape: the value runs to the end of
+    /// the line it is cut from, and the last line of a number carries no other digits, as the row
+    /// under a phone does. What a line carries whole is not lengthened by a word either: a label
+    /// over an address, a sentence under one, a word in lower case before a number.
+    private static func glued(_ m: JunctionMatch, parted: Int, lines: [[Unicode.Scalar]],
+                              readings: [Int: [(match: RuleMatch, places: [Range<Int>?])]]) -> Bool {
+        let reached = m.ranges.indices.filter { m.ranges[$0] != nil }
+        guard let first = reached.first, let last = reached.last, let head = m.ranges[first], let tail = m.ranges[last] else { return true }
+        let rest = { (line: Int, from: Int) in lines[line].dropFirst(from) }
+        // The value runs to the end of the line it is cut from, a mark aside.
+        if rest(first, head.upperBound).contains(where: { !$0.properties.isWhitespace && !isMark($0) }) { return true }
+        // The last line of a number holds no other digits: the digits under a whole number are a row of their own.
+        if m.rule == .phone || m.rule == .idNumber || m.rule == .bankCard || m.rule == .reference,
+           rest(last, tail.upperBound).contains(where: { isDigit($0) }) { return true }
+        for j in 0..<(lines.count - 1) where (parted & (1 << j)) == 0 {
+            guard let upper = m.ranges[j], let lower = m.ranges[j + 1] else { continue }
+            let above = Array(lines[j][upper]), below = Array(lines[j + 1][lower])
+            // A word over an address that the line under it carries whole is a label. A piece that
+            // starts with a mark was cut where it was: "zhang" over ".wei@example.com" is one address.
+            if m.rule == .email || m.rule == .url, above.allSatisfy({ isLetter($0) }),
+               below.first.map({ isLetter($0) || isDigit($0) }) ?? false,
+               readings[parted | (1 << j)]?.contains(where: { item in
+                   item.places[j + 1].map { $0.lowerBound <= lower.lowerBound && lower.upperBound <= $0.upperBound } ?? false
+               }) == true {
+                return true
+            }
+            // A word before a number or a code is the end of a sentence, not the start of a code,
+            // whose start, SE or SF, is in capitals. Growing may have named the whole after the
+            // number, a phone with "ok" before it, so the rule does not tell them apart: both go.
+            if m.rule != .email, m.rule != .url, above.allSatisfy({ isLetter($0) }), !above.allSatisfy({ $0.value < 97 }) { return true }
+            // A sentence under an address starts in capitals where the address ended in small letters.
+            if let a = above.last, let b = below.first, isLetter(a), a.value >= 97, isLetter(b), b.value < 97 { return true }
+        }
+        return false
+    }
+
+    /// A mark: punctuation or a sign, what is neither a letter nor a digit nor space.
+    private static func isMark(_ s: Unicode.Scalar) -> Bool {
+        !s.properties.isAlphabetic && !isDigit(s)
     }
 
     // MARK: - Internals
