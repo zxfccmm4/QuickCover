@@ -83,4 +83,46 @@ struct BlockMergerTests {
         #expect(block.evidence == "13800138000 1101011990")
         #expect(block.quad.map(\.x) == [100, 355, 355, 100])
     }
+
+    private func quad(_ rect: CGRect) -> [CGPoint] {
+        [CGPoint(x: rect.minX, y: rect.minY), CGPoint(x: rect.maxX, y: rect.minY),
+         CGPoint(x: rect.maxX, y: rect.maxY), CGPoint(x: rect.minX, y: rect.maxY)]
+    }
+
+    /// A card a wrap cut: 「6222 0210」 on one line, 「0110 8867 123」 under it, one item.
+    private func wrappedCard() -> (finding: Finding, upper: [CGPoint], lower: [CGPoint]) {
+        let upper = quad(CGRect(x: 10, y: 100, width: 100, height: 30))
+        let lower = quad(CGRect(x: 300, y: 150, width: 50, height: 30))
+        let finding = Finding(kind: .text, rule: .bankCard, pieces: [upper, lower], evidence: "6222 0210 0110 8867 123")
+        return (finding, upper, lower)
+    }
+
+    @Test
+    func wrappedValueKeepsItsOtherLineWhenJoined() {
+        // Beside the first line of the card a URL stands, close enough to join: the block is the
+        // two boxes on that line, and the card's second line rides along as a part.
+        let (card, _, lower) = wrappedCard()
+        let url = Finding(kind: .text, rule: .url, quad: quad(CGRect(x: 115, y: 100, width: 60, height: 30)), evidence: "https://a.cn")
+        for out in [BlockMerger.merge([card, url]), BlockMerger.merge([url, card])] {
+            #expect(out.count == 1)
+            #expect(out[0].quad == [CGPoint(x: 10, y: 100), CGPoint(x: 175, y: 100), CGPoint(x: 175, y: 130), CGPoint(x: 10, y: 130)])
+            #expect(out[0].parts == [lower])
+            #expect(out[0].boxes.count == 2)
+            #expect(out[0].box == CGRect(x: 10, y: 100, width: 340, height: 80))
+            // Two kinds of thing in one block: the checklist calls it text.
+            #expect(out[0].rule == nil)
+            #expect(out[0].evidence.split(separator: " ").count == 6)
+        }
+    }
+
+    @Test
+    func linesDoNotJoinThroughAUnionBox() {
+        // Beside the card's second line a phone stands, close to that line. It is not on the
+        // card's first line, so it does not join, although the card's bounds reach down to it.
+        let (card, _, _) = wrappedCard()
+        let phone = Finding(kind: .text, rule: .phone, quad: quad(CGRect(x: 370, y: 150, width: 60, height: 30)), evidence: "13800138000")
+        let out = BlockMerger.merge([card, phone])
+        #expect(out.count == 2)
+        #expect(out.contains(card) && out.contains(phone))
+    }
 }
