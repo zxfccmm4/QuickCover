@@ -564,7 +564,7 @@ Image("IconArtwork")
 
 写法统一：`Image(systemName:)` 加 `.font(.system(size:…, weight:…))` 和 `.symbolRenderingMode(.monochrome)`；跟 Dynamic Type 走的（行首、提醒里的）用 `.imageScale(.medium)` 配 §3 的字，不写死 size。
 
-这些名字都是 SF Symbols 里早有的，但我没有逐个在 SF Symbols 7 里核对（未验，§12）；编译时哪一个报不存在，用同义的最近的名字替，告诉我改表。
+这 27 个名字我对着一份公开的 SF Symbols 名单（6,164 个名字）逐个核过，都在；还没有在 Xcode 里编译过（未验，§12.2 第 2 条）。编译时哪一个报不存在，用同义的最近的名字替，告诉我改表。
 
 ## 11. 外观、语言、字号
 
@@ -608,7 +608,7 @@ Image("IconArtwork")
 | # | 事 | 怎么验 · 谁验 |
 |---|---|---|
 | 1 | SwiftUI 的 API 名字和 iOS 26 下的行为：`glassEffect(_:in:)`、`GlassEffectContainer`、`presentationDetents`、`presentationBackgroundInteraction`、`presentationCornerRadius`、`toolbar(.hidden, for: .navigationBar)`、`PhotosPicker(filter: .screenshots)`、`fileImporter`、`UIImpactFeedbackGenerator` | 名字都对着 Apple 的文档抄过，没编译过。Pluso 建工程时编译 |
-| 2 | §10.3 表里 SF Symbols 的名字 | SF Symbols 7 里逐个核；报不存在的换同义的，告诉我改表 |
+| 2 | §10.3 表里 SF Symbols 的名字 | 名字都对着公开名单核过（27 个都在）；还没编译。编译时报不存在的换同义的，告诉我改表 |
 | 3 | 玻璃上白字在亮截图上的对比（真机的玻璃不是样机画的那样） | 真机：打开一张白底的聊天截图看编辑页 |
 | 4 | 英文和辅助功能档字号下的排布（样机没有 SF 字体，也没画 AX 档） | 模拟器切 English 和 AX 档各截一轮 |
 | 5 | 系统的照片选择器、文件选择器、分享面板、警告在深色下是什么样 | 模拟器实拍 |
