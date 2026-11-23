@@ -1,28 +1,78 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "CFBundleDisplayName": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "秒遮"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "The name under the icon (copy.md §1).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "秒遮"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "QuickCover"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickCover"
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "comment" : "copy.md §3.3 系统弹窗里的说明 · 3.3.1 · the system prompt",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮读你的截图，是为了打开就能把最近一张遮好。图片不离开手机。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮讀取你的螢幕快照，是為了打開時就能把最近一張遮好。圖片不離開手機。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickCover reads your screenshots so it can open with the latest one already covered. Images never leave your phone."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryAddUsageDescription" : {
+      "comment" : "copy.md §3.3 系统弹窗里的说明 · 3.3.2 · the system prompt",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮把遮好的图存到照片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮把遮好的圖儲存到照片。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickCover saves the covered image to Photos."
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

@@ -1,15 +1,2099 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Airbuild is ready" : {
-
+    "3.1.1" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.1 · 标题",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选一张图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選一張圖"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick an Image"
+          }
+        }
+      }
     },
+    "3.1.2" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.2 · 可省",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "截图、照片都可以，一次一张。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "螢幕快照、照片都可以，一次一張。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots or photos, one at a time."
+          }
+        }
+      }
+    },
+    "3.1.3" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.3 · 系统选择器，不要相册权限",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選照片"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Photo"
+          }
+        }
+      }
+    },
+    "3.1.4" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.4",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选文件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選檔案"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose File"
+          }
+        }
+      }
+    },
+    "3.1.5" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.5 · 剪贴板里有图才能点",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "粘贴图片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "貼上圖片"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste Image"
+          }
+        }
+      }
+    },
+    "3.1.6" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.6 · 「粘贴图片」点不了时的说明",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剪贴板里没有图片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剪貼簿裡沒有圖片"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No image on the clipboard"
+          }
+        }
+      }
+    },
+    "3.1.7" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.7 · 选了打不开的文件时",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这张图打不开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這張圖打不開"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Image Can't Be Opened"
+          }
+        }
+      }
+    },
+    "3.1.8" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.8 · 编辑里回到这一页；也是 3.1.7 的按钮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "换一张"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "換一張"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Another"
+          }
+        }
+      }
+    },
+    "3.1.9" : {
+      "comment" : "copy.md §3.1 选图页 · 3.1.9 · 系统选择器只列截图，不要相册权限。排在「选照片」前面",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选截图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選螢幕快照"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Screenshot"
+          }
+        }
+      }
+    },
+    "3.2.1" : {
+      "comment" : "copy.md §3.2 第一次读截图 · 3.2.1 · 标题",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让秒遮找到你的截图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讓秒遮找到你的螢幕快照"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let QuickCover Find Your Screenshots"
+          }
+        }
+      }
+    },
+    "3.2.2" : {
+      "comment" : "copy.md §3.2 第一次读截图 · 3.2.2 · 正文。系统弹窗问的是照片，所以这里先说照片",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮要访问你的照片，才能找到最近的截图。允许后，一打开就是最近一张，已经遮好。图片不离开手机。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮需要取用你的照片，才能找到最近的螢幕快照。允許後，一打開就是最近一張，已經遮好。圖片不離開手機。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickCover needs access to your photos to find your latest screenshot. Once allowed, it opens on that screenshot already covered. Images never leave your phone."
+          }
+        }
+      }
+    },
+    "3.2.3" : {
+      "comment" : "copy.md §3.2 第一次读截图 · 3.2.3 · 主按钮，点了出系统弹窗。系统弹窗里的确切用字等 Pluso 的实拍",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许访问照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允許取用照片"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow Access to Photos"
+          }
+        }
+      }
+    },
+    "3.2.4" : {
+      "comment" : "copy.md §3.2 第一次读截图 · 3.2.4 · 次按钮，去 3.1",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先选一张图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先選一張圖"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick an Image Instead"
+          }
+        }
+      }
+    },
+    "3.2.6" : {
+      "comment" : "copy.md §3.2 第一次读截图 · 3.2.6 · 正文下面的小字。系统弹窗里有「只给一部分照片」这个选项，先说清楚选了会怎样",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只给一部分照片的话，秒遮只看得到你选的那几张，新截的图要自己选。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只給一部分照片的話，秒遮只看得到你選的那幾張，新的螢幕快照要自己選。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you give access to only some photos, QuickCover sees just those, so you'll need to choose each new screenshot yourself."
+          }
+        }
+      }
+    },
+    "4.1.1" : {
+      "comment" : "copy.md §4.1 标题与入口 · 4.1.1 · 编辑页没有导航栏。这两个字用在选图页和导出页左上角的返回键上：从编辑页去了这两页，返回键就是「编辑」",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
+    },
+    "4.1.2" : {
+      "comment" : "copy.md §4.1 标题与入口 · 4.1.2 · 同 3.1.8",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "换一张"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "換一張"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Another"
+          }
+        }
+      }
+    },
+    "4.2.1" : {
+      "comment" : "copy.md §4.2 正在找 · 4.2.1 · 一两秒就过去；太久或失败走 5.2",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在找要遮的地方…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在找要遮的地方…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Looking for things to cover…"
+          }
+        }
+      }
+    },
+    "4.3.1" : {
+      "comment" : "copy.md §4.3 汇总 · 4.3.1",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 张人脸"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 張人臉"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld face"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld faces"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "4.3.2" : {
+      "comment" : "copy.md §4.3 汇总 · 4.3.2",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 处文字"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 處文字"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld line of text"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lines of text"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "4.3.3" : {
+      "comment" : "copy.md §4.3 汇总 · 4.3.3",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 个二维码"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 個 QR Code"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld QR Code"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld QR Codes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "4.3.4" : {
+      "comment" : "copy.md §4.3 汇总 · 4.3.4",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 个条形码"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 個條碼"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld barcode"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld barcodes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "4.4.1" : {
+      "comment" : "copy.md §4.4 逐项检查 · 4.4.1 · 标题",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "逐项检查"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "逐項檢查"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review Each Item"
+          }
+        }
+      }
+    },
+    "4.4.2" : {
+      "comment" : "copy.md §4.4 逐项检查 · 4.4.2 · 汇总下面的一行。繁体 22 个字，默认字号一行放得下；字号放大了会折行，折了也行",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人脸、手机号这些已经自动遮上，不用就关掉。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人臉、手機號碼這些已經自動遮上，不用就關掉。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faces, phone numbers and the like are covered automatically. Turn off any you don't need."
+          }
+        }
+      }
+    },
+    "4.4.3" : {
+      "comment" : "copy.md §4.4 逐项检查 · 4.4.3 · 图上有没遮的文字行时才显示。右边带一个文字按钮「手动框选」（4.8.3）；要做什么按钮已经说了，这句只说原因。繁体 10 个字、英文 19 个字符，默认字号在按钮左边都是一行",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "姓名、昵称认不出来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "姓名、暱稱認不出來。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Names aren't found."
+          }
+        }
+      }
+    },
+    "4.4.4" : {
+      "comment" : "copy.md §4.4 逐项检查 · 4.4.4 · 读屏里每一行的自定义动作；就是点一行的字的效果，图上对应的地方亮一下",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在图上看"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在圖上看"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show in Image"
+          }
+        }
+      }
+    },
+    "4.5.01" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.01 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人脸"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人臉"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face"
+          }
+        }
+      }
+    },
+    "4.5.02" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.02 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手机号"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手機號碼"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone Number"
+          }
+        }
+      }
+    },
+    "4.5.03" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.03 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "身份证号"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "身分證號碼"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID Number"
+          }
+        }
+      }
+    },
+    "4.5.04" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.04 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "银行卡号"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "銀行卡號"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bank Card Number"
+          }
+        }
+      }
+    },
+    "4.5.05" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.05 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邮箱"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "電子郵件"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email"
+          }
+        }
+      }
+    },
+    "4.5.06" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.06 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "網址"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web Address"
+          }
+        }
+      }
+    },
+    "4.5.07" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.07 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IP 地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IP 位址"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IP Address"
+          }
+        }
+      }
+    },
+    "4.5.08" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.08 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "长串数字"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "長串數字"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Long Number"
+          }
+        }
+      }
+    },
+    "4.5.09" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.09 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可能是车牌"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可能是車牌"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maybe a License Plate"
+          }
+        }
+      }
+    },
+    "4.5.10" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.10 · 不遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文字"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文字"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text"
+          }
+        }
+      }
+    },
+    "4.5.11" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.11 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "二维码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR Code"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR Code"
+          }
+        }
+      }
+    },
+    "4.5.12" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.12 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条形码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "條碼"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barcode"
+          }
+        }
+      }
+    },
+    "4.5.13" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.13 · 遮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自己框的"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自己框的"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Box You Drew"
+          }
+        }
+      }
+    },
+    "4.5.14" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.14 · 「可能是车牌」那一行下面的小字",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不像车牌的话，在这里关掉。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不像車牌的話，在這裡關掉。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If this isn't a license plate, turn it off."
+          }
+        }
+      }
+    },
+    "4.5.15" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.15 · 这一行的状态",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已遮"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已遮"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Covered"
+          }
+        }
+      }
+    },
+    "4.5.16" : {
+      "comment" : "copy.md §4.5 清单每一行 · 4.5.16 · 这一行的状态",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没遮"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒遮"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not covered"
+          }
+        }
+      }
+    },
+    "4.6.1" : {
+      "comment" : "copy.md §4.6 遮住所有文字 · 4.6.1 · 开关",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遮住所有文字"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遮住所有文字"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cover All Text"
+          }
+        }
+      }
+    },
+    "4.6.2" : {
+      "comment" : "copy.md §4.6 遮住所有文字 · 4.6.2 · 开关下面的小字",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "图上所有的字都遮，不只是手机号这类。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "圖片裡所有的字都遮，不只是手機號碼這類。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Covers every word in the image, not just things like phone numbers."
+          }
+        }
+      }
+    },
+    "4.7.1" : {
+      "comment" : "copy.md §4.7 样式 · 4.7.1 · 标题",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "样式"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "樣式"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Style"
+          }
+        }
+      }
+    },
+    "4.7.2" : {
+      "comment" : "copy.md §4.7 样式 · 4.7.2 · 默认",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "马赛克"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "馬賽克"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mosaic"
+          }
+        }
+      }
+    },
+    "4.7.3" : {
+      "comment" : "copy.md §4.7 样式 · 4.7.3",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纯色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "純色"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solid Color"
+          }
+        }
+      }
+    },
+    "4.7.4" : {
+      "comment" : "copy.md §4.7 样式 · 4.7.4",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模糊"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模糊"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blur"
+          }
+        }
+      }
+    },
+    "4.7.5" : {
+      "comment" : "copy.md §4.7 样式 · 4.7.5 · Colo 定的：这次自己点到「模糊」时，在样式分段下面说一次。这里旁边没有按钮，所以要把做法说完。上次留下的模糊不在面板里说，到导出页说 6.3.1；那边按钮就在旁边，是短的一句，和这条不是同一句",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模糊可能被还原，重要的内容请改用纯色。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模糊可能被還原，重要的內容請改用純色。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blur can sometimes be reversed. For anything important, switch to Solid Color."
+          }
+        }
+      }
+    },
+    "4.8.1" : {
+      "comment" : "copy.md §4.8 工具 · 4.8.1",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "撤销"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還原"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo"
+          }
+        }
+      }
+    },
+    "4.8.2" : {
+      "comment" : "copy.md §4.8 工具 · 4.8.2",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重做"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重做"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redo"
+          }
+        }
+      }
+    },
+    "4.8.3" : {
+      "comment" : "copy.md §4.8 工具 · 4.8.3",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动框选"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手動框選"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draw a Box"
+          }
+        }
+      }
+    },
+    "4.8.4" : {
+      "comment" : "copy.md §4.8 工具 · 4.8.4 · 第一次看到遮好的图时，图顶上出一次，停 5 秒淡出",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按住看原图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按住看原圖"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold to See the Original"
+          }
+        }
+      }
+    },
+    "4.8.5" : {
+      "comment" : "copy.md §4.8 工具 · 4.8.5 · 点了「手动框选」之后出现",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖一个框，盖住漏掉的地方。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖一個框，蓋住漏掉的地方。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag a box over anything that was missed."
+          }
+        }
+      }
+    },
+    "4.8.6" : {
+      "comment" : "copy.md §4.8 工具 · 4.8.6 · 显示原图时，图上方居中的小标签。不进读屏顺序，开没开由开关来念",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原圖"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        }
+      }
+    },
+    "4.9.1" : {
+      "comment" : "copy.md §4.9 主动作 · 4.9.1 · 去屏 3，不弹确认",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export"
+          }
+        }
+      }
+    },
+    "5.1.1" : {
+      "comment" : "copy.md §5.1 什么都没找到 · 5.1.1 · 标题",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没找到要遮的东西"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒找到要遮的東西"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing Found to Cover"
+          }
+        }
+      }
+    },
+    "5.1.2" : {
+      "comment" : "copy.md §5.1 什么都没找到 · 5.1.2 · 正文",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这张图里没找到人脸、文字或二维码。有要遮的，自己框一块。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這張圖裡沒找到人臉、文字或 QR Code。有要遮的，自己框一塊。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No faces, text or codes were found in this image. If something needs covering, draw a box over it."
+          }
+        }
+      }
+    },
+    "5.1.3" : {
+      "comment" : "copy.md §5.1 什么都没找到 · 5.1.3 · 按钮，同 4.8.3",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动框选"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手動框選"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draw a Box"
+          }
+        }
+      }
+    },
+    "5.2.1" : {
+      "comment" : "copy.md §5.2 识别失败 · 5.2.1 · 标题",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这张图还没检查过"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這張圖還沒檢查過"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Image Hasn't Been Checked"
+          }
+        }
+      }
+    },
+    "5.2.2" : {
+      "comment" : "copy.md §5.2 识别失败 · 5.2.2 · 正文。不写原因，程序说不准",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刚才没能自动找要遮的地方。发之前请自己看一遍，或者再试一次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剛才沒能自動找要遮的地方。傳出去之前請自己看一遍，或者再試一次。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickCover couldn't finish looking for things to cover. Look it over before you send it, or try again."
+          }
+        }
+      }
+    },
+    "5.2.3" : {
+      "comment" : "copy.md §5.2 识别失败 · 5.2.3 · 按钮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再试一次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再試一次"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Again"
+          }
+        }
+      }
+    },
+    "5.2.4" : {
+      "comment" : "copy.md §5.2 识别失败 · 5.2.4 · 按钮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动框选"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手動框選"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draw a Box"
+          }
+        }
+      }
+    },
+    "6.1.1" : {
+      "comment" : "copy.md §6.1 画面与动作 · 6.1.1 · 标题",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export"
+          }
+        }
+      }
+    },
+    "6.1.2" : {
+      "comment" : "copy.md §6.1 画面与动作 · 6.1.2 · 图下面的一行",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出的就是这张图。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出的就是這張圖。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is exactly what gets exported."
+          }
+        }
+      }
+    },
+    "6.1.3" : {
+      "comment" : "copy.md §6.1 画面与动作 · 6.1.3",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存到照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存到照片"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save to Photos"
+          }
+        }
+      }
+    },
+    "6.1.4" : {
+      "comment" : "copy.md §6.1 画面与动作 · 6.1.4",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share"
+          }
+        }
+      }
+    },
+    "6.1.5" : {
+      "comment" : "copy.md §6.1 画面与动作 · 6.1.5",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷贝"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷貝"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "6.2.1" : {
+      "comment" : "copy.md §6.2 位置信息 · 6.2.1 · 开关，默认开",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "去掉位置信息"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除位置資訊"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Location Info"
+          }
+        }
+      }
+    },
+    "6.2.2" : {
+      "comment" : "copy.md §6.2 位置信息 · 6.2.2 · 开关开着时",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新图不带拍摄地点和设备信息。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新圖不帶拍攝地點和裝置資訊。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new image won't include where it was taken or what device took it."
+          }
+        }
+      }
+    },
+    "6.2.3" : {
+      "comment" : "copy.md §6.2 位置信息 · 6.2.3 · 开关关掉时",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新图会带着拍摄地点。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新圖會帶著拍攝地點。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new image will include where it was taken."
+          }
+        }
+      }
+    },
+    "6.2.4" : {
+      "comment" : "copy.md §6.2 位置信息 · 6.2.4 · 样式是马赛克或纯色时显示。模糊时不显示：模糊后的像素就是遮住的内容，和旁边的 6.3.1 放在一起两句打架（Ato 定，2026-11-23）。简报验收第 3 条过了才留这句",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遮住的内容不会留在新图里。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遮住的內容不會留在新圖裡。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Covered content isn't kept in the new image."
+          }
+        }
+      }
+    },
+    "6.3.1" : {
+      "comment" : "copy.md §6.3 模糊提醒 · 6.3.1 · 导出页那条提醒里、按钮 6.3.2 左边的一句。右边被按钮占了地方，原来那整句会折成两行、第二行只剩「色。」，所以只说风险，做法让按钮说。繁体 8 个字，英文一行",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模糊可能被还原。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模糊可能被還原。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blur can be reversed."
+          }
+        }
+      }
+    },
+    "6.3.2" : {
+      "comment" : "copy.md §6.3 模糊提醒 · 6.3.2 · 按钮。导出页的模糊提醒里用，点了整张图换成纯色",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改用纯色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改用純色"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch to Solid Color"
+          }
+        }
+      }
+    },
+    "6.4.1" : {
+      "comment" : "copy.md §6.4 结果提示 · 6.4.1",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已存到照片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已儲存到照片"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved to Photos"
+          }
+        }
+      }
+    },
+    "6.4.2" : {
+      "comment" : "copy.md §6.4 结果提示 · 6.4.2 · 不写原因",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这张图没存上，原图没有改动。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這張圖沒存進去，原圖沒有更動。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The image wasn't saved. Your original is unchanged."
+          }
+        }
+      }
+    },
+    "6.4.3" : {
+      "comment" : "copy.md §6.4 结果提示 · 6.4.3 · 6.4.2 的按钮",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再试一次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再試一次"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Again"
+          }
+        }
+      }
+    },
+    "6.4.4" : {
+      "comment" : "copy.md §6.4 结果提示 · 6.4.4",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷贝"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied"
+          }
+        }
+      }
+    },
+    "7.2" : {
+      "comment" : "copy.md §7. 读屏 · 7.2 · 清单每一行的提示",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点两下切换遮或不遮"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點兩下切換遮或不遮"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double-tap to cover or uncover."
+          }
+        }
+      }
+    },
+    "7.3" : {
+      "comment" : "copy.md §7. 读屏 · 7.3 · 见下面第三条",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看原图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看原圖"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See Original"
+          }
+        }
+      }
+    },
+    "4.3.sep" : {
+      "comment" : "Not a row. The separator between the parts of the on-screen summary (copy.md §4.3 「 · 」; design.md §3: U+00A0 · U+00A0 so it never breaks).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · "
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · "
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · "
+          }
+        }
+      }
+    },
+    "7.1.lead" : {
+      "comment" : "Not a row. The first word of the screen-reader summary: what stands before the first count in the 7.1 example (copy.md §7 rule).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找到"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找到"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Found"
+          }
+        }
+      }
+    },
+    "7.1.join" : {
+      "comment" : "Not a row. What joins the parts of the screen-reader summary (copy.md §7 rule: 「、」, or a comma and \"and\" before the last part).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "、"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "、"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", "
+          }
+        }
+      }
+    },
+    "7.1.lastJoin" : {
+      "comment" : "Not a row. What goes before the last part of the screen-reader summary (copy.md §7 rule: 「、」, or a comma and \"and\" before the last part).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "、"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "、"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " and "
+          }
+        }
+      }
+    },
+    "Airbuild is ready" : {},
     "Made with AirBuild" : {
       "comment" : "Credit at the bottom of Settings. Keep the name AirBuild as is."
     },
-    "Tap count: %lld" : {
-
-    }
+    "Tap count: %lld" : {}
   },
   "version" : "1.0"
 }
