@@ -23,7 +23,9 @@ struct NoticeBar<Trailing: View>: View {
                 .foregroundStyle(Theme.body)
                 .lineLimit(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            // The button keeps its whole name; the text wraps instead, up to its three lines.
             trailing()
+                .layoutPriority(1)
         }
         .padding(.leading, 12)
         .padding(.trailing, 8)

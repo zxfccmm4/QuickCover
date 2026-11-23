@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The 29×29 tile at the start of a row (design.md §4): corner 7, the first fill as its ground, an
 /// 18 pt medium symbol in the accent colour. The first row of the picker is the one exception:
-/// `#7B2FE0` and white.
+/// `Theme.accentButton` and white.
 struct IconTile: View {
     let systemImage: String
     var ground: Color = Theme.fill
@@ -97,8 +97,10 @@ struct ToggleRow: View {
 
     var body: some View {
         RowContent(systemImage: systemImage, title: title, footnote: footnote) {
+            // The switch keeps the system's own colour, not the app's tint (design.md §2).
             Toggle("", isOn: $isOn)
                 .labelsHidden()
+                .tint(nil)
                 .accessibilityHidden(true)
         }
         .contentShape(Rectangle())

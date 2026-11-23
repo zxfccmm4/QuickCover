@@ -15,7 +15,7 @@ struct PressStyle: ButtonStyle {
     }
 }
 
-/// The primary button (design.md §6): the whole width, 50 high, corner 14, `#7B2FE0`, white 17
+/// The primary button (design.md §6): the whole width, 50 high, corner 14, `Theme.accentButton`, white 17
 /// semibold on one line, 0.8 opacity while pressed.
 struct PrimaryButton: View {
     let title: LocalizedStringKey
@@ -36,6 +36,7 @@ struct PrimaryButton: View {
         }
         .buttonStyle(PressStyle(opacity: 0.8))
         .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : Theme.disabledOpacity)
     }
 }
 
@@ -60,6 +61,7 @@ struct SecondaryButton: View {
         }
         .buttonStyle(PressStyle(opacity: 0.8))
         .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : Theme.disabledOpacity)
     }
 }
 
