@@ -1,0 +1,208 @@
+{
+ "id": "web_01_log",
+ "file": "web_01_log.png",
+ "category": "web",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 2532,
+ "orientation": 1,
+ "notes": "Dark log viewer, 10.5px monospace, line-height 1.75. tail -f view: the three oldest rows of the brief scrolled off the top so the newest 22 rows (44 wrapped lines) fill the screen; they held no unique tagged item. Each tagged span sits on one line.",
+ "text": [
+  {
+   "rule": "ipv4",
+   "text": "198.51.100.7",
+   "boxes": [
+    [
+     688.2,
+     111,
+     207.8,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "203.0.113.42",
+   "boxes": [
+    [
+     688.2,
+     221.3,
+     207.8,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ref",
+   "text": "8f14e45fceea167a5a36dedd4bea2543",
+   "boxes": [
+    [
+     82,
+     386.6,
+     554.2,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "ops@example.com",
+   "boxes": [
+    [
+     826.7,
+     441.8,
+     259.8,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "192.0.2.61",
+   "boxes": [
+    [
+     237.8,
+     607.1,
+     173.2,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "zhang.wei@example.com",
+   "boxes": [
+    [
+     774.8,
+     662.3,
+     363.7,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "url",
+   "text": "https://mirror.example.com/apt/pool/main/",
+   "boxes": [
+    [
+     30,
+     827.6,
+     710.1,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "198.51.100.7",
+   "boxes": [
+    [
+     688.2,
+     993,
+     207.8,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "anna.li@example.com",
+   "boxes": [
+    [
+     30,
+     1158.4,
+     329.1,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ref",
+   "text": "R2026112300045678",
+   "boxes": [
+    [
+     809.4,
+     1213.5,
+     294.4,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "203.0.113.42",
+   "boxes": [
+    [
+     688.2,
+     1434,
+     207.8,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "192.0.2.61",
+   "boxes": [
+    [
+     30,
+     1819.9,
+     173.2,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "phone",
+   "text": "13900128867",
+   "boxes": [
+    [
+     809.4,
+     1875,
+     190.5,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "198.51.100.7",
+   "boxes": [
+    [
+     688.2,
+     1985.3,
+     207.8,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "bounce@example.com",
+   "boxes": [
+    [
+     30,
+     2260.9,
+     311.8,
+     33
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "203.0.113.42",
+   "boxes": [
+    [
+     688.2,
+     2316,
+     207.8,
+     33
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

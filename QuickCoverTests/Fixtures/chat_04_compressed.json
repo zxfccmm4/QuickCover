@@ -1,0 +1,77 @@
+{
+ "id": "chat_04_compressed",
+ "file": "chat_04_compressed.jpg",
+ "category": "chat",
+ "variant": "compressed",
+ "source": "html",
+ "width": 739,
+ "height": 1600,
+ "orientation": 1,
+ "notes": "iMessage-like English chat rendered clean at 1170x2532, then ffmpeg scale=-1:1600 + gblur=sigma=0.5, JPEG q=9 (forwarded-compressed look). Boxes scaled by 739/1170 and 1600/2532. Title Daniel Park is shadow:name; +1 (415) 555-0132 is shadow:intl_phone.",
+ "text": [
+  {
+   "rule": "ref",
+   "text": "A8821304567",
+   "boxes": [
+    [
+     363.2,
+     701.5,
+     202.1,
+     37.9
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "daniel.park@example.com",
+   "boxes": [
+    [
+     195.2,
+     871,
+     380.4,
+     37.9
+    ]
+   ]
+  },
+  {
+   "rule": "ref",
+   "text": "1Z999AA10123456784",
+   "boxes": [
+    [
+     195.2,
+     1074.9,
+     332.9,
+     37.9
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "name",
+   "text": "Daniel Park",
+   "boxes": [
+    [
+     286.6,
+     110.9,
+     165.7,
+     37.9
+    ]
+   ]
+  },
+  {
+   "kind": "intl_phone",
+   "text": "+1 (415) 555-0132",
+   "boxes": [
+    [
+     138.3,
+     1244.4,
+     264.6,
+     37.9
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": []
+}

@@ -1,0 +1,70 @@
+{
+ "id": "chat_06_dark",
+ "file": "chat_06_dark.png",
+ "category": "chat",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 2532,
+ "orientation": 1,
+ "notes": "DARK theme (black background, dark grey left bubbles, green right bubbles), Traditional Chinese group chat, Android-style WeChat layout (16 CSS px text). The URL breaks across two lines in its bubble (two boxes). 統一編號 52368847 is untagged (8 digits).",
+ "text": [
+  {
+   "rule": "phone",
+   "text": "137 0013 2266",
+   "boxes": [
+    [
+     322.8,
+     466.2,
+     314.6,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "chenwei@example.com",
+   "boxes": [
+    [
+     216,
+     727.7,
+     533.6,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "url",
+   "text": "https://shop.example.com/orders/88213045",
+   "boxes": [
+    [
+     322.8,
+     922,
+     518.4,
+     72
+    ],
+    [
+     216,
+     989.2,
+     467.1,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "bank",
+   "text": "6226 0211 0033 8867",
+   "boxes": [
+    [
+     322.8,
+     1183.5,
+     458.5,
+     72
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

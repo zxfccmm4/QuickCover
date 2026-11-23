@@ -1,0 +1,28 @@
+{
+ "id": "plate_04_glare",
+ "file": "plate_04_glare.jpg",
+ "category": "plate",
+ "variant": "original",
+ "source": "composite",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Glare: a soft white reflection streak runs across the middle of the plate (characters ·G5 partly washed out), slight defocus (≈1.2 px).",
+ "text": [
+  {
+   "rule": "plate",
+   "text": "浙AG5T91",
+   "boxes": [
+    [
+     632.5,
+     482.2,
+     305,
+     101
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

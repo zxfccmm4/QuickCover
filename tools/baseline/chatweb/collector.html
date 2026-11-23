@@ -1,0 +1,17 @@
+<script>
+window.__gt = () => {
+  const f = v => Math.round(v * 10) / 10;
+  const rect = e => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(f); };
+  const rects = e => [...e.getClientRects()].map(r => [r.x, r.y, r.width, r.height].map(f));
+  const s = document.getElementById('shot').getBoundingClientRect();
+  const shift = b => [b[0] - s.x, b[1] - s.y, b[2], b[3]].map(f);
+  const out = { text: [], shadow: [], faces: [], codes: [] };
+  document.querySelectorAll('[data-rule],[data-shadow],[data-face],[data-code]').forEach(e => {
+    if (e.dataset.rule)  out.text.push({ rule: e.dataset.rule, text: e.textContent, boxes: rects(e).map(shift) });
+    if (e.dataset.shadow) out.shadow.push({ kind: e.dataset.shadow, text: e.textContent, boxes: rects(e).map(shift) });
+    if (e.dataset.face)  out.faces.push(shift(rect(e)));
+    if (e.dataset.code)  out.codes.push({ type: e.dataset.code, payload: e.dataset.payload || '', box: shift(rect(e)) });
+  });
+  return out;
+};
+</script>

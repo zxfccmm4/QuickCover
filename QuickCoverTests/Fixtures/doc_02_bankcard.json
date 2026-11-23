@@ -1,0 +1,19 @@
+{
+  "id": "doc_02_bankcard",
+  "file": "doc_02_bankcard.png",
+  "category": "doc",
+  "variant": "original",
+  "source": "html",
+  "width": 1587,
+  "height": 1002,
+  "orientation": 1,
+  "notes": "Bank card front; embossed number is the only rule item, CARD HOLDER / VALID THRU / 12/29 are negatives; watermark sits between the chip and the number.",
+  "text": [
+    { "rule": "bank", "text": "6226 0211 0033 8867", "boxes": [[290.3, 606.8, 1006.3, 90]] }
+  ],
+  "shadow": [
+    { "kind": "name", "text": "ZHANG WEI", "boxes": [[145.5, 816.8, 268.1, 48]] }
+  ],
+  "faces": [],
+  "codes": []
+}

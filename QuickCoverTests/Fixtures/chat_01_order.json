@@ -1,0 +1,65 @@
+{
+ "id": "chat_01_order",
+ "file": "chat_01_order.png",
+ "category": "chat",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 2532,
+ "orientation": 1,
+ "notes": "One-on-one WeChat-like chat, light theme. Title 李娜 and the bubble 李娜 are shadow:name. Order number 2026111500045678 is tagged bank, not ref: it is 16 digits and the section 3.1 order puts bank before ref. The address line is untagged (as in the brief).",
+ "text": [
+  {
+   "rule": "bank",
+   "text": "2026111500045678",
+   "boxes": [
+    [
+     336,
+     933.6,
+     452.9,
+     75
+    ]
+   ]
+  },
+  {
+   "rule": "phone",
+   "text": "139 0012 8867",
+   "boxes": [
+    [
+     216,
+     1249.7,
+     334.2,
+     75
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "name",
+   "text": "李娜",
+   "boxes": [
+    [
+     534,
+     169.5,
+     102,
+     75
+    ]
+   ]
+  },
+  {
+   "kind": "name",
+   "text": "李娜",
+   "boxes": [
+    [
+     533.4,
+     1178.3,
+     102,
+     75
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": []
+}

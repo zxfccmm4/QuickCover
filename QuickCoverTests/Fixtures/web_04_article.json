@@ -1,0 +1,41 @@
+{
+ "id": "web_04_article",
+ "file": "web_04_article.png",
+ "category": "web",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 3562,
+ "orientation": 1,
+ "notes": "Long Chinese magazine article, 16px/1.9 justified. Only reader@example.com is in scope; 010-6888 1234 is shadow:landline. All other numbers (years, comma-grouped counts, footnote markers, dates) are negatives.",
+ "text": [
+  {
+   "rule": "email",
+   "text": "reader@example.com",
+   "boxes": [
+    [
+     267,
+     3367,
+     399.8,
+     57
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "landline",
+   "text": "010-6888 1234",
+   "boxes": [
+    [
+     275.8,
+     3433.3,
+     260.4,
+     57
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": []
+}

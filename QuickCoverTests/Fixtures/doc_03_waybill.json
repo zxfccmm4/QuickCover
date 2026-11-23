@@ -1,0 +1,28 @@
+{
+  "id": "doc_03_waybill",
+  "file": "doc_03_waybill.png",
+  "category": "doc",
+  "variant": "original",
+  "source": "html",
+  "width": 1000,
+  "height": 1414,
+  "orientation": 1,
+  "notes": "Thermal courier label: QR top right, CODE128 at the bottom with its digits in their own element; watermark in the blank top-left area.",
+  "text": [
+    { "rule": "phone", "text": "186 0013 8867", "boxes": [[231.7, 597, 280.9, 42]] },
+    { "rule": "phone", "text": "139 0012 8867", "boxes": [[231.7, 723, 280.9, 42]] },
+    { "rule": "ref", "text": "SE1398867001234", "boxes": [[165, 846, 693.1, 81]] },
+    { "rule": "ref", "text": "99998888001234", "boxes": [[281.5, 1289, 436.9, 48]] }
+  ],
+  "shadow": [
+    { "kind": "name", "text": "王芳", "boxes": [[138, 597, 72, 42]] },
+    { "kind": "address", "text": "上海市徐汇区示例路 12 号 3 楼", "boxes": [[156, 648, 547.3, 42]] },
+    { "kind": "name", "text": "李娜", "boxes": [[138, 723, 72, 42]] },
+    { "kind": "address", "text": "上海市浦东新区张江路 88 弄 3 号 502 室", "boxes": [[156, 774, 727.3, 42]] }
+  ],
+  "faces": [],
+  "codes": [
+    { "type": "qr", "payload": "https://example.com/t/SE1398867001234", "box": [526, 24, 450, 450] },
+    { "type": "code128", "payload": "99998888001234", "box": [104, 1173, 792, 110] }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+ "id": "chat_03_id",
+ "file": "chat_03_id.png",
+ "category": "chat",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 2532,
+ "orientation": 1,
+ "notes": "One-on-one chat with ID numbers. The last left bubble is deliberately narrow; its second ID number (110101198807154417) breaks across two lines (15 digits, then 417), so that id entry has two boxes. The bubble is 246 px wide; the exact line break aimed at in the brief is impossible at 17 px (the aimed line 2 alone is 264 px wide), so line 1 ends with 身. Title 张伟 is shadow:name; the QQ number 987654321 (9 digits) is untagged and matches no rule.",
+ "text": [
+  {
+   "rule": "id",
+   "text": "310115199203084216",
+   "boxes": [
+    [
+     216,
+     515.4,
+     509.5,
+     75
+    ]
+   ]
+  },
+  {
+   "rule": "phone",
+   "text": "186 0013 2266",
+   "boxes": [
+    [
+     216,
+     831.6,
+     334.2,
+     75
+    ]
+   ]
+  },
+  {
+   "rule": "ref",
+   "text": "91110108MA01AB2C3X",
+   "boxes": [
+    [
+     216,
+     1423.1,
+     538.4,
+     75
+    ]
+   ]
+  },
+  {
+   "rule": "id",
+   "text": "110101198807154417",
+   "boxes": [
+    [
+     431.4,
+     1841.3,
+     424.6,
+     75
+    ],
+    [
+     216,
+     1912.7,
+     84.9,
+     75
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "name",
+   "text": "张伟",
+   "boxes": [
+    [
+     534,
+     169.5,
+     102,
+     75
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": []
+}

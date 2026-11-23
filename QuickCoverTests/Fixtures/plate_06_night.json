@@ -1,0 +1,28 @@
+{
+ "id": "plate_06_night",
+ "file": "plate_06_night.jpg",
+ "category": "plate",
+ "variant": "original",
+ "source": "composite",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Night: plate lit by two lamps (brighter at both upper corners), dark surroundings; the plate is slightly smaller than a standard 440 mm plate would appear at this distance (≈300 px).",
+ "text": [
+  {
+   "rule": "plate",
+   "text": "苏E7H3M6",
+   "boxes": [
+    [
+     618.7,
+     515.3,
+     300,
+     102
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

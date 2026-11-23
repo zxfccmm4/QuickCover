@@ -1,0 +1,77 @@
+{
+ "id": "web_05_lowres",
+ "file": "web_05_lowres.jpg",
+ "category": "web",
+ "variant": "lowres",
+ "source": "html",
+ "width": 720,
+ "height": 1558,
+ "orientation": 1,
+ "notes": "Logistics page rendered clean at 1170x2532, then downscaled to 720 wide (scale=720:-2), JPEG q=11 (rough). Boxes scaled by 720/1170 and 1558/2532. Masked 139****8867 and 李娜 are untagged per the brief; 021-6888 1234 is shadow:landline.",
+ "text": [
+  {
+   "rule": "ref",
+   "text": "SF1398867001234",
+   "boxes": [
+    [
+     258.8,
+     221.3,
+     319.8,
+     49.8
+    ]
+   ]
+  },
+  {
+   "rule": "phone",
+   "text": "186 0013 8867",
+   "boxes": [
+    [
+     125.5,
+     558.4,
+     181.5,
+     38.8
+    ]
+   ]
+  },
+  {
+   "rule": "phone",
+   "text": "137 0013 5566",
+   "boxes": [
+    [
+     125.5,
+     909.1,
+     181.5,
+     38.8
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "name",
+   "text": "王芳",
+   "boxes": [
+    [
+     48,
+     558.4,
+     55.4,
+     38.8
+    ]
+   ]
+  },
+  {
+   "kind": "landline",
+   "text": "021-6888 1234",
+   "boxes": [
+    [
+     330.6,
+     1391.9,
+     160.2,
+     35.1
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": []
+}

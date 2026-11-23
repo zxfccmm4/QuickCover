@@ -1,0 +1,28 @@
+{
+ "id": "plate_01_clear",
+ "file": "plate_01_clear.jpg",
+ "category": "plate",
+ "variant": "original",
+ "source": "composite",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Frontal plate, ≈398 px wide, daylight, no occlusion.",
+ "text": [
+  {
+   "rule": "plate",
+   "text": "粤B8S6Q0",
+   "boxes": [
+    [
+     588.5,
+     459,
+     398,
+     126.6
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

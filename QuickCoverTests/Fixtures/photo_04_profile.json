@@ -1,0 +1,34 @@
+{
+ "id": "photo_04_profile",
+ "file": "photo_04_profile.jpg",
+ "category": "photo",
+ "variant": "original",
+ "source": "imagegen",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Face 0 is a profile: the box spans the back of the ear to the front of the lips. Face 1 is seen 3/4: his far ear is hidden. Face 2 wears a cap: the hairline is under the brim, the box starts where the forehead shows.",
+ "text": [],
+ "shadow": [],
+ "faces": [
+  [
+   275.0,
+   206.0,
+   271.0,
+   342.0
+  ],
+  [
+   600.0,
+   300.0,
+   248.0,
+   205.0
+  ],
+  [
+   1262.0,
+   464.0,
+   196.0,
+   154.0
+  ]
+ ],
+ "codes": []
+}

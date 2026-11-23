@@ -1,0 +1,28 @@
+{
+ "id": "plate_02_angle",
+ "file": "plate_02_angle.jpg",
+ "category": "plate",
+ "variant": "original",
+ "source": "composite",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Plate seen at an angle: ≈38° yaw (left end nearer the camera, so taller) and ≈7.5° roll, as the generated car's plate recess demanded more yaw than the brief's ~25°. The generated photo carries a blank blue plate in its recess; the rendered plate is placed to cover it.",
+ "text": [
+  {
+   "rule": "plate",
+   "text": "沪A23745",
+   "boxes": [
+    [
+     857,
+     484.8,
+     385.1,
+     208.8
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

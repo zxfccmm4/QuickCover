@@ -1,0 +1,94 @@
+{
+ "id": "chat_02_group",
+ "file": "chat_02_group.png",
+ "category": "chat",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 2532,
+ "orientation": 1,
+ "notes": "Group chat, light theme, Android-style WeChat layout (16 CSS px text, 300 px bubbles; the content does not fit 844 px at 17 px). The URL breaks across two lines inside the bubble, so the url entry has two boxes. Nicknames are grey lines above left bubbles.",
+ "text": [
+  {
+   "rule": "ipv4",
+   "text": "192.168.1.23",
+   "boxes": [
+    [
+     466.8,
+     442.2,
+     279.8,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "wangfang@example.com",
+   "boxes": [
+    [
+     418.8,
+     509.3,
+     565.3,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "bank",
+   "text": "6222 0210 0110 8867 123",
+   "boxes": [
+    [
+     216,
+     758.9,
+     549.2,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "url",
+   "text": "https://docs.example.com/hike/2026.pdf",
+   "boxes": [
+    [
+     514.8,
+     1123.5,
+     512.6,
+     72
+    ],
+    [
+     216,
+     1190.7,
+     400.7,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "ref",
+   "text": "SF1398867001234",
+   "boxes": [
+    [
+     418.8,
+     1373.1,
+     401.4,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "192.168.1.23",
+   "boxes": [
+    [
+     618,
+     2110.3,
+     279.8,
+     72
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

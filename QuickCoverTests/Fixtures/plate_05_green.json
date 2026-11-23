@@ -1,0 +1,28 @@
+{
+ "id": "plate_05_green",
+ "file": "plate_05_green.jpg",
+ "category": "plate",
+ "variant": "original",
+ "source": "composite",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "New-energy plate: green background, black characters, 8 characters (粤A D12345).",
+ "text": [
+  {
+   "rule": "plate",
+   "text": "粤AD12345",
+   "boxes": [
+    [
+     428.7,
+     515.2,
+     390,
+     113.7
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

@@ -1,0 +1,46 @@
+{
+ "id": "photo_05_dinner",
+ "file": "photo_05_dinner.jpg",
+ "category": "photo",
+ "variant": "original",
+ "source": "imagegen",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Face 1 wears a face mask (box includes the mask). Face 0 is cut by the left frame edge, face 4 by the right one; fringes hide the hairline of faces 0 and 3. Excluded: the wedding photo in the frame on the sideboard (x 905-955 / y 265-320, faces ≈8 px) and the landscape painting in the mirror.",
+ "text": [],
+ "shadow": [],
+ "faces": [
+  [
+   0.0,
+   320.0,
+   301.0,
+   413.0
+  ],
+  [
+   302.0,
+   293.0,
+   211.0,
+   241.0
+  ],
+  [
+   602.0,
+   192.0,
+   153.0,
+   147.0
+  ],
+  [
+   1036.0,
+   310.0,
+   158.0,
+   131.0
+  ],
+  [
+   1354.0,
+   298.0,
+   182.0,
+   249.0
+  ]
+ ],
+ "codes": []
+}

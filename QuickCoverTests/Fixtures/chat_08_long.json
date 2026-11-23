@@ -1,0 +1,130 @@
+{
+ "id": "chat_08_long",
+ "file": "chat_08_long.png",
+ "category": "chat",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 4800,
+ "orientation": 1,
+ "notes": "Long group-chat screenshot (CSS 390x1600), Android-style WeChat layout (16 CSS px text, 300 px bubbles). Messages spread over the full height with two extra timestamp lines (three in total); no image message. The hotel URL breaks across two lines in its bubble (two boxes). Order number 2026112300045678 is tagged bank, not ref: it is 16 digits and the section 3.1 order puts bank before ref. Passport EF1234567 is shadow:passport.",
+ "text": [
+  {
+   "rule": "bank",
+   "text": "2026112300045678",
+   "boxes": [
+    [
+     370.8,
+     660.5,
+     426.3,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "url",
+   "text": "https://www.example-hotel.jp/reserve/88213045",
+   "boxes": [
+    [
+     216,
+     1116.4,
+     805.5,
+     72
+    ],
+    [
+     216,
+     1183.5,
+     283.4,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "phone",
+   "text": "138 0013 9921",
+   "boxes": [
+    [
+     466.8,
+     1377.9,
+     314.6,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "xiaolin@example.com",
+   "boxes": [
+    [
+     418.8,
+     1639.4,
+     495.4,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "ref",
+   "text": "PC2026112300188",
+   "boxes": [
+    [
+     418.8,
+     2010.1,
+     407.3,
+     72
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "10.8.0.12",
+   "boxes": [
+    [
+     426.2,
+     2769.6,
+     199.9,
+     72
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "passport",
+   "text": "EF1234567",
+   "boxes": [
+    [
+     216,
+     727.7,
+     241.3,
+     72
+    ]
+   ]
+  },
+  {
+   "kind": "name",
+   "text": "王小雨",
+   "boxes": [
+    [
+     322.8,
+     4501.8,
+     144,
+     72
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": [
+  {
+   "type": "qr",
+   "payload": "https://example.com/join/quickcover-sample",
+   "box": [
+    204,
+    3164.3,
+    451,
+    451
+   ]
+  }
+ ]
+}

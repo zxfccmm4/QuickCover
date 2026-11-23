@@ -1,0 +1,40 @@
+{
+ "id": "photo_06_backlit",
+ "file": "photo_06_backlit.jpg",
+ "category": "photo",
+ "variant": "original",
+ "source": "imagegen",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Face 1 wears a face mask (box includes the mask). Fringes hide the hairline of faces 0 and 3. Excluded: the two tiny figures on the far beach, seen from behind (x 1430-1500 / y 360-420, heads ≈8 px).",
+ "text": [],
+ "shadow": [],
+ "faces": [
+  [
+   169.0,
+   246.0,
+   339.0,
+   262.0
+  ],
+  [
+   497.0,
+   382.0,
+   214.0,
+   261.0
+  ],
+  [
+   857.0,
+   402.0,
+   145.0,
+   175.0
+  ],
+  [
+   1083.0,
+   274.0,
+   243.0,
+   170.0
+  ]
+ ],
+ "codes": []
+}

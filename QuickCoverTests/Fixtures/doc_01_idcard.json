@@ -1,0 +1,20 @@
+{
+  "id": "doc_01_idcard",
+  "file": "doc_01_idcard.png",
+  "category": "doc",
+  "variant": "original",
+  "source": "html",
+  "width": 1560,
+  "height": 1000,
+  "orientation": 1,
+  "notes": "ID-style card on a grey desk; portrait is the face box; faint watermark in the empty middle-right band of the card.",
+  "text": [
+    { "rule": "id", "text": "310115199203084216", "boxes": [[368.4, 785.3, 714.7, 60]] }
+  ],
+  "shadow": [
+    { "kind": "name", "text": "李明", "boxes": [[608.4, 149.3, 84, 60]] },
+    { "kind": "address", "text": "上海市浦东新区张江路 88 弄 3 号 502 室", "boxes": [[608.4, 332.3, 662.8, 57]] }
+  ],
+  "faces": [[140.4, 299.3, 336, 396]],
+  "codes": []
+}

@@ -1,0 +1,28 @@
+{
+ "id": "plate_03_small",
+ "file": "plate_03_small.jpg",
+ "category": "plate",
+ "variant": "original",
+ "source": "composite",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Small plate: far car, plate ≈116 px wide (characters ≈22 px tall).",
+ "text": [
+  {
+   "rule": "plate",
+   "text": "京AF0K2L",
+   "boxes": [
+    [
+     705.4,
+     452.5,
+     116,
+     36.9
+    ]
+   ]
+  }
+ ],
+ "shadow": [],
+ "faces": [],
+ "codes": []
+}

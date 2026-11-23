@@ -1,0 +1,46 @@
+{
+ "id": "photo_01_friends",
+ "file": "photo_01_friends.jpg",
+ "category": "photo",
+ "variant": "original",
+ "source": "imagegen",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "",
+ "text": [],
+ "shadow": [],
+ "faces": [
+  [
+   100.0,
+   196.0,
+   326.0,
+   356.0
+  ],
+  [
+   460.0,
+   390.0,
+   170.0,
+   250.0
+  ],
+  [
+   723.0,
+   262.0,
+   215.0,
+   246.0
+  ],
+  [
+   978.0,
+   376.0,
+   185.0,
+   209.0
+  ],
+  [
+   1195.0,
+   466.0,
+   231.0,
+   226.0
+  ]
+ ],
+ "codes": []
+}

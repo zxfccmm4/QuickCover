@@ -1,0 +1,52 @@
+{
+ "id": "chat_07_qr",
+ "file": "chat_07_qr.png",
+ "category": "chat",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 2532,
+ "orientation": 1,
+ "notes": "One-on-one chat with a payment QR as a left image message (white padded card; the 164 CSS px QR box includes its 4-module quiet zone). Title 王芳 is shadow:name.",
+ "text": [
+  {
+   "rule": "phone",
+   "text": "13900128867",
+   "boxes": [
+    [
+     216,
+     1450.2,
+     311.4,
+     75
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "name",
+   "text": "王芳",
+   "boxes": [
+    [
+     534,
+     169.5,
+     102,
+     75
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": [
+  {
+   "type": "qr",
+   "payload": "wxp://quickcover-test-sample-only/0001",
+   "box": [
+    204,
+    617.4,
+    492,
+    492
+   ]
+  }
+ ]
+}

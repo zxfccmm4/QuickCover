@@ -1,0 +1,53 @@
+{
+ "id": "chat_05_small",
+ "file": "chat_05_small.jpg",
+ "category": "chat",
+ "variant": "small",
+ "source": "html",
+ "width": 720,
+ "height": 1558,
+ "orientation": 1,
+ "notes": "Group chat (Android-style WeChat layout, 16 CSS px text; the content does not fit at 17 px) rendered clean at 1170x2532, then downscaled to 720 wide (scale=720:-2), JPEG q=6. Boxes scaled by 720/1170 and 1558/2532. The URL breaks across two lines (two boxes). 021-6888 1234 is shadow:landline.",
+ "text": [
+  {
+   "rule": "ref",
+   "text": "03300210021112345678",
+   "boxes": [
+    [
+     132.9,
+     328.2,
+     327.9,
+     44.3
+    ]
+   ]
+  },
+  {
+   "rule": "bank",
+   "text": "6217 8500 1234 5678",
+   "boxes": [
+    [
+     132.9,
+     608.7,
+     282.2,
+     44.3
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "landline",
+   "text": "021-6888 1234",
+   "boxes": [
+    [
+     316.8,
+     447.8,
+     197.2,
+     44.3
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": []
+}

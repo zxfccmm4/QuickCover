@@ -1,0 +1,27 @@
+{
+  "id": "doc_05_invoice",
+  "file": "doc_05_invoice.png",
+  "category": "doc",
+  "variant": "original",
+  "source": "html",
+  "width": 1240,
+  "height": 1754,
+  "orientation": 1,
+  "notes": "E-invoice page on grey; 18-digit account number tagged id per the §3.1 order; watermark in the remarks cell.",
+  "text": [
+    { "rule": "ref", "text": "033002100211", "boxes": [[671, 234.8, 212.2, 48]] },
+    { "rule": "ref", "text": "82513098760243156789", "boxes": [[506, 387.8, 447.4, 54]] },
+    { "rule": "ref", "text": "91110108MA01AB2C3X", "boxes": [[281, 600.8, 321.7, 45]] },
+    { "rule": "ref", "text": "91310115MA1K2X88B4", "boxes": [[860.3, 600.8, 318.4, 45]] },
+    { "rule": "id", "text": "310022334455667788", "boxes": [[815, 1232.3, 327.7, 48]] }
+  ],
+  "shadow": [
+    { "kind": "name", "text": "李娜", "boxes": [[204.5, 1544.3, 66, 48]] },
+    { "kind": "name", "text": "王强", "boxes": [[468.5, 1544.3, 66, 48]] },
+    { "kind": "name", "text": "陈静", "boxes": [[765.5, 1544.3, 66, 48]] }
+  ],
+  "faces": [],
+  "codes": [
+    { "type": "qr", "payload": "example-invoice:033002100211", "box": [56, 78.8, 390, 390] }
+  ]
+}

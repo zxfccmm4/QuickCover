@@ -1,0 +1,28 @@
+{
+ "id": "photo_02_couple",
+ "file": "photo_02_couple.jpg",
+ "category": "photo",
+ "variant": "original",
+ "source": "imagegen",
+ "width": 1536,
+ "height": 1024,
+ "orientation": 1,
+ "notes": "Face 0 is turned towards face 1: his far ear is hidden, the box ends at the far cheek edge; his beard is included.",
+ "text": [],
+ "shadow": [],
+ "faces": [
+  [
+   383.0,
+   150.0,
+   439.0,
+   474.0
+  ],
+  [
+   830.0,
+   348.0,
+   374.0,
+   398.0
+  ]
+ ],
+ "codes": []
+}

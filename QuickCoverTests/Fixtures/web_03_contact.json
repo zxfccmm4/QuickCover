@@ -1,0 +1,124 @@
+{
+ "id": "web_03_contact",
+ "file": "web_03_contact.png",
+ "category": "web",
+ "variant": "original",
+ "source": "html",
+ "width": 1170,
+ "height": 2532,
+ "orientation": 1,
+ "notes": "Contact-us page. qc_support_2026 is deliberately untagged (underscore breaks the ref rule). QR 136.7 CSS px beside the WeChat id (box includes the 4-module quiet zone). CSS map placeholder without text.",
+ "text": [
+  {
+   "rule": "phone",
+   "text": "139 0012 8867",
+   "boxes": [
+    [
+     797.1,
+     698.1,
+     294.9,
+     63
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "service@example.com",
+   "boxes": [
+    [
+     620.2,
+     794.1,
+     471.8,
+     63
+    ]
+   ]
+  },
+  {
+   "rule": "email",
+   "text": "hr@example.com",
+   "boxes": [
+    [
+     722.8,
+     890.1,
+     369.2,
+     63
+    ]
+   ]
+  },
+  {
+   "rule": "url",
+   "text": "https://www.example.com/support",
+   "boxes": [
+    [
+     351.5,
+     986.1,
+     740.5,
+     63
+    ]
+   ]
+  },
+  {
+   "rule": "url",
+   "text": "example.com/careers",
+   "boxes": [
+    [
+     641.1,
+     1082.1,
+     450.9,
+     63
+    ]
+   ]
+  },
+  {
+   "rule": "ipv4",
+   "text": "172.16.8.4",
+   "boxes": [
+    [
+     879.6,
+     1178.1,
+     212.4,
+     63
+    ]
+   ]
+  }
+ ],
+ "shadow": [
+  {
+   "kind": "landline",
+   "text": "400-800-1234",
+   "boxes": [
+    [
+     753.3,
+     545.1,
+     338.7,
+     75
+    ]
+   ]
+  },
+  {
+   "kind": "address",
+   "text": "上海市浦东新区张江路 88 弄 3 号 502 室",
+   "boxes": [
+    [
+     78,
+     1886.5,
+     742.3,
+     60
+    ]
+   ]
+  }
+ ],
+ "faces": [],
+ "codes": [
+  {
+   "type": "qr",
+   "payload": "https://example.com/wechat/quickcover-sample",
+   "box": [
+    682,
+    1335.6,
+    410,
+    410
+   ]
+  }
+ ]
+}
