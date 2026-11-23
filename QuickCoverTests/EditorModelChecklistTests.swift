@@ -179,8 +179,80 @@ struct EditorModelChecklistTests {
         ])
         #expect(RowKind.plate.footnoteKey == "4.5.14")
         #expect(RowKind.face.footnoteKey == nil)
-        #expect(RowKind(of: MaskItem(id: 1, group: .text, origin: .manual, rule: nil, quad: [], isOn: true, evidence: "")) == .manual)
-        #expect(RowKind(of: MaskItem(id: 1, group: .text, origin: .suggestion, rule: .bankCard, quad: [], isOn: true, evidence: "")) == .bankCard)
-        #expect(RowKind(of: MaskItem(id: 1, group: .text, origin: .textLine, rule: nil, quad: [], isOn: true, evidence: "")) == .text)
+        #expect(RowKind(of: MaskItem(id: 1, group: .text, origin: .manual, rule: nil, quad: quad(0, 0, 10, 10), isOn: true, evidence: "")) == .manual)
+        #expect(RowKind(of: MaskItem(id: 1, group: .text, origin: .suggestion, rule: .bankCard, quad: quad(0, 0, 10, 10), isOn: true, evidence: "")) == .bankCard)
+        #expect(RowKind(of: MaskItem(id: 1, group: .text, origin: .textLine, rule: nil, quad: quad(0, 0, 10, 10), isOn: true, evidence: "")) == .text)
+    }
+
+    // MARK: An item of several boxes (design.md §0, §5)
+
+    @Test
+    func aValueWrappedOntoTwoLinesIsTwoBoxesAndOneItem() {
+        let top = quad(10, 10, 120, 14)
+        let bottom = quad(10, 30, 80, 14)
+        let item = MaskItem(id: 1, group: .text, origin: .suggestion, rule: .reference, quads: [top, bottom],
+                            isOn: true, evidence: "1234 5678")
+        #expect(item.quads == [top, bottom])
+        #expect(item.quad == top, "the first box, for code written when an item was one")
+        #expect(item.finding.quad == top)
+        #expect(item.findings.map(\.quad) == [top, bottom], "the export gets one finding per box")
+        #expect(item.findings.allSatisfy { $0.kind == .text && $0.rule == .reference && $0.evidence == "1234 5678" })
+        #expect(item.bounds == CGRect(x: 10, y: 10, width: 120, height: 34), "locate goes by the boxes together")
+        #expect(item.rowKind == .reference, "one row, whatever the number of boxes")
+
+        let same = MaskItem(id: 1, group: .text, origin: .suggestion, rule: .reference, quads: [top, bottom],
+                            isOn: true, evidence: "1234 5678")
+        let oneBox = MaskItem(id: 1, group: .text, origin: .suggestion, rule: .reference, quad: top,
+                              isOn: true, evidence: "1234 5678")
+        #expect(item == same)
+        #expect(item != oneBox, "two boxes are not one box")
+
+        // Given as one box either way, it is the same item.
+        #expect(oneBox == MaskItem(id: 1, group: .text, origin: .suggestion, rule: .reference, quads: [top],
+                                   isOn: true, evidence: "1234 5678"))
+        #expect(oneBox.quads == [top])
+        #expect(oneBox.bounds == CGRect(x: 10, y: 10, width: 120, height: 14))
+    }
+
+    @Test
+    func aCodeIsQRCodeOrBarcodeByAllItsBoxesTogether() {
+        // Two square boxes side by side: together a long one, so a barcode.
+        let item = MaskItem(id: 1, group: .code, origin: .suggestion, rule: nil,
+                            quads: [quad(0, 0, 60, 60), quad(80, 0, 60, 60)], isOn: true, evidence: "")
+        #expect(item.codeKind == .barcode)
+        #expect(item.bounds == CGRect(x: 0, y: 0, width: 140, height: 60))
+        // One above the other: together a tall one.
+        let stacked = MaskItem(id: 1, group: .code, origin: .suggestion, rule: nil,
+                               quads: [quad(0, 0, 60, 60), quad(0, 80, 60, 60)], isOn: true, evidence: "")
+        #expect(stacked.codeKind == .barcode)
+    }
+
+    @Test
+    func theSummaryCountsBoxesNotItemsAndNotRuleHits() {
+        let items = [
+            MaskItem(id: 1, group: .face, origin: .suggestion, rule: nil, quad: quad(0, 0, 60, 60), isOn: true, evidence: ""),
+            // Two phone numbers stuck into one string: one box, one item, though two rules hit.
+            MaskItem(id: 2, group: .text, origin: .suggestion, rule: .phone, quad: quad(0, 60, 120, 14), isOn: true, evidence: "1381234567813812345679"),
+            // A long number wrapped onto two lines: two boxes, one item.
+            MaskItem(id: 3, group: .text, origin: .suggestion, rule: .reference,
+                     quads: [quad(0, 100, 120, 14), quad(0, 120, 80, 14)], isOn: true, evidence: ""),
+            MaskItem(id: 4, group: .text, origin: .textLine, rule: nil, quad: quad(0, 80, 120, 14), isOn: false, evidence: ""),
+            MaskItem(id: 5, group: .code, origin: .suggestion, rule: nil, quad: quad(0, 20, 60, 60), isOn: true, evidence: ""),
+            MaskItem(id: 6, group: .text, origin: .manual, rule: nil, quad: quad(0, 140, 120, 14), isOn: true, evidence: ""),
+        ]
+        #expect(items.filter { $0.origin != .manual }.count == 5, "items")
+        #expect(FoundCounts(counting: items) == FoundCounts(faces: 1, textLines: 4, qrCodes: 1, barcodes: 0), "boxes")
+        #expect(FoundCounts(counting: []).isEmpty)
+    }
+
+    @Test
+    @MainActor
+    func findingsArriveAsOneItemPerFindingWithAllItsBoxes() throws {
+        // Through the temporary Finding.quads, a finding is one box: one item of one box.
+        let model = try makeModel()
+        model.adopt(result())
+        #expect(model.items.count == 7)
+        #expect(model.items.allSatisfy { $0.quads.count == 1 })
+        #expect(model.enabledItems.flatMap(\.findings).count == 5, "one finding per box, on ones only")
     }
 }

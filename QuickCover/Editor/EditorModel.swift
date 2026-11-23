@@ -22,17 +22,50 @@ struct MaskItem: Identifiable, Equatable, Sendable {
     var origin: Origin
     /// For text that matched a rule, which one.
     var rule: TextRule?
-    /// Top-left, top-right, bottom-right, bottom-left, in upright full-size pixels.
-    var quad: [CGPoint]
+    /// The boxes of the item, each top-left, top-right, bottom-right, bottom-left, in upright
+    /// full-size pixels. One as a rule; two when a value was wrapped onto two lines, which is still
+    /// one item: one row, one switch (design.md §0). At least one, always.
+    var quads: [[CGPoint]]
     var isOn: Bool
     /// What was read there. For the checklist's accessibility label and for tests.
     var evidence: String
+
+    init(id: Int, group: Group, origin: Origin, rule: TextRule?, quads: [[CGPoint]], isOn: Bool, evidence: String) {
+        precondition(!quads.isEmpty, "an item is at least one box")
+        self.id = id
+        self.group = group
+        self.origin = origin
+        self.rule = rule
+        self.quads = quads
+        self.isOn = isOn
+        self.evidence = evidence
+    }
+
+    /// An item of one box.
+    init(id: Int, group: Group, origin: Origin, rule: TextRule?, quad: [CGPoint], isOn: Bool, evidence: String) {
+        self.init(id: id, group: group, origin: origin, rule: rule, quads: [quad], isOn: isOn, evidence: evidence)
+    }
+
+    /// The first box: what an item was before it could hold several. New code reads `quads`.
+    var quad: [CGPoint] { quads[0] }
+
+    /// All the boxes together: where the picture goes for「locate」and where the outline goes.
+    var bounds: CGRect {
+        quads.map { Geometry.bounds(of: $0) }.reduce(CGRect.null) { $0.union($1) }
+    }
 
     /// Whether the checklist shows it: suggestions and hand-drawn boxes always, plain text lines
     /// only once they are on.
     var isListed: Bool { origin != .textLine || isOn }
 
-    var finding: Finding { Finding(kind: Kind.of(group), rule: rule, quad: quad, evidence: evidence) }
+    /// The first box as the renderer takes it; see `findings` for all of them.
+    var finding: Finding { findings[0] }
+
+    /// One finding per box, in the order of `quads`: what the export fills in. The boxes of an item
+    /// go together, so one switch covers or uncovers them all.
+    var findings: [Finding] {
+        quads.map { Finding(kind: Kind.of(group), rule: rule, quad: $0, evidence: evidence) }
+    }
 
     private enum Kind {
         static func of(_ group: Group) -> Finding.Kind {
@@ -184,13 +217,15 @@ final class EditorModel {
         var new: [MaskItem] = []
         for finding in result.findings {
             let scaled = finding.scaled(by: scale)
+            // TEMP(fix-merge): `quads` is the temporary extension in Components/Finding+Quads.swift until
+            // the recognizer's findings carry their boxes themselves.
             new.append(MaskItem(id: nextID, group: group(of: finding), origin: .suggestion, rule: finding.rule,
-                                quad: scaled.quad, isOn: true, evidence: finding.evidence))
+                                quads: scaled.quads, isOn: true, evidence: finding.evidence))
             nextID += 1
         }
         for line in result.textLines {
             new.append(MaskItem(id: nextID, group: .text, origin: .textLine, rule: nil,
-                                quad: line.quad.map { CGPoint(x: $0.x * scale.width, y: $0.y * scale.height) },
+                                quads: [line.quad.map { CGPoint(x: $0.x * scale.width, y: $0.y * scale.height) }],
                                 isOn: false, evidence: line.text))
             nextID += 1
         }
@@ -256,8 +291,8 @@ final class EditorModel {
         guard rect.width >= 4, rect.height >= 4 else { return }
         pushUndo()
         items.append(MaskItem(id: nextID, group: .text, origin: .manual, rule: nil,
-                              quad: [CGPoint(x: rect.minX, y: rect.minY), CGPoint(x: rect.maxX, y: rect.minY),
-                                     CGPoint(x: rect.maxX, y: rect.maxY), CGPoint(x: rect.minX, y: rect.maxY)],
+                              quads: [[CGPoint(x: rect.minX, y: rect.minY), CGPoint(x: rect.maxX, y: rect.minY),
+                                      CGPoint(x: rect.maxX, y: rect.maxY), CGPoint(x: rect.minX, y: rect.maxY)]],
                               isOn: true, evidence: ""))
         nextID += 1
     }
@@ -313,7 +348,8 @@ final class EditorModel {
     /// The result file, same pixel size as the original, covers pressed in. Encoded off the main actor.
     func exportData() async throws -> Data {
         let picture = picture
-        let findings = enabledItems.map(\.finding)
+        // One finding per box: an item of two boxes is covered as the two of them.
+        let findings = enabledItems.flatMap(\.findings)
         let options = MaskRenderer.Options(style: preferences.style, stripMetadata: preferences.stripMetadata)
         return try await Task.detached(priority: .userInitiated) {
             try MaskRenderer.encode(picture.source, orientation: picture.orientation, findings: findings, options: options)

@@ -1,8 +1,9 @@
 import CoreGraphics
 import Foundation
 
-/// What the recognizer found, counted the way the summary counts (copy.md §4.3): it doesn't matter
-/// whether anything is on, and hand-drawn boxes aren't counted.
+/// What the recognizer found, counted the way the summary counts it (copy.md §4.3, design.md §0,
+/// §7.4.2): in boxes, whether anything is on or not; hand-drawn boxes aren't counted. An item of
+/// two boxes counts two, here as in the picture; the count of a rule's hits is not what's counted.
 struct FoundCounts: Equatable, Sendable {
     var faces = 0
     var textLines = 0
@@ -11,6 +12,23 @@ struct FoundCounts: Equatable, Sendable {
 
     /// Nothing at all: there is no summary then, and the callout of design.md §7.3.4 instead.
     var isEmpty: Bool { faces == 0 && textLines == 0 && qrCodes == 0 && barcodes == 0 }
+}
+
+extension FoundCounts {
+    /// Counts what the given items hold, box by box.
+    init(counting items: [MaskItem]) {
+        self.init()
+        for item in items where item.origin != .manual {
+            switch item.group {
+            case .face:
+                faces += item.quads.count
+            case .text:
+                textLines += item.quads.count
+            case .code:
+                if item.codeKind == .qr { qrCodes += item.quads.count } else { barcodes += item.quads.count }
+            }
+        }
+    }
 }
 
 /// The kinds of row Review Each Item lists, in the fixed order of design.md §7.4.3. Each one's raw
@@ -95,7 +113,7 @@ extension MaskItem {
     /// long. A square code of another symbology (Data Matrix, Aztec) is listed as a QR code.
     var codeKind: CodeKind? {
         guard group == .code else { return nil }
-        let bounds = Geometry.bounds(of: quad)
+        let bounds = self.bounds
         guard bounds.height > 0 else { return nil }
         let aspect = bounds.width / bounds.height
         return (0.75...1.33).contains(aspect) ? .qr : .barcode
@@ -107,20 +125,10 @@ extension MaskItem {
 
 extension EditorModel {
 
-    /// What was found, the way copy.md §4.3 counts it.
+    /// What was found, the way copy.md §4.3 counts it: boxes, the same number the boxes drawn on
+    /// the picture give.
     var found: FoundCounts {
-        var counts = FoundCounts()
-        for item in items where item.origin != .manual {
-            switch item.group {
-            case .face:
-                counts.faces += 1
-            case .text:
-                counts.textLines += 1
-            case .code:
-                if item.codeKind == .qr { counts.qrCodes += 1 } else { counts.barcodes += 1 }
-            }
-        }
-        return counts
+        FoundCounts(counting: items)
     }
 
     /// Whether the picture has text lines at all: the text section of Review Each Item exists only
@@ -143,7 +151,7 @@ extension EditorModel {
             if ka != kb {
                 return RowKind.allCases.firstIndex(of: ka)! < RowKind.allCases.firstIndex(of: kb)!
             }
-            let (ba, bb) = (Geometry.bounds(of: a.quad), Geometry.bounds(of: b.quad))
+            let (ba, bb) = (a.bounds, b.bounds)
             if ba.minY != bb.minY { return ba.minY < bb.minY }
             if ba.minX != bb.minX { return ba.minX < bb.minX }
             return a.id < b.id
