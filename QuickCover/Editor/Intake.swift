@@ -28,9 +28,10 @@ enum Intake {
     /// The newest screenshot that is on this device; nil when there is none stored locally.
     static func latestScreenshot() async -> PictureSource? {
         let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "mediaSubtype & %d != 0", PHAssetMediaSubtype.photoScreenshot.rawValue)
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.fetchLimit = 5
-        let assets = PHAsset.fetchAssets(with: .screenshot, options: options)
+        let assets = PHAsset.fetchAssets(with: PHAssetMediaType.image, options: options)
         for index in 0..<assets.count {
             if let data = await imageData(of: assets.object(at: index)), let source = try? PictureSource(data: data) {
                 return source
@@ -67,7 +68,7 @@ enum Intake {
     static func pictureFromPasteboard() -> PictureSource? {
         let pasteboard = UIPasteboard.general
         let types = [UTType.heic, .jpeg, .png, .tiff, .gif, .webP].map(\.identifier)
-        for type in types where pasteboard.contains(pasteboardTypes: [type], options: nil) {
+        for type in types where pasteboard.contains(pasteboardTypes: [type]) {
             if let data = pasteboard.data(forPasteboardType: type), let source = try? PictureSource(data: data) {
                 return source
             }

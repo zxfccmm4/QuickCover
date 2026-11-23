@@ -2,3 +2,7 @@
 build/
 *.xcuserstate
 xcuserdata/
+
+# Python bytecode
+__pycache__/
+*.pyc

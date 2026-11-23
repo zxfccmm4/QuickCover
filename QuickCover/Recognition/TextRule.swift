@@ -25,6 +25,48 @@ struct RuleMatch: Equatable, Sendable {
     let end: Int
 }
 
+extension RuleMatch {
+
+    /// A rule can match part of one number, code or address: 16 digits of "R2026112300045678".
+    /// Each match is grown to the whole run of characters it sits in, and runs that touch are
+    /// joined: what is left showing still identifies, so all of it is hidden.
+    static func grow(_ matches: [RuleMatch], in scalars: [Unicode.Scalar]) -> [RuleMatch] {
+        func text(_ from: Int, _ to: Int) -> String { String(String.UnicodeScalarView(scalars[from..<to])) }
+        var joined: [RuleMatch] = []
+        for m in matches.sorted(by: { $0.start < $1.start }) {
+            guard m.end > m.start, m.start >= 0, m.end <= scalars.count else { joined.append(m); continue }
+            var start = m.start, end = m.end
+            while start > 0, isRunCharacter(scalars[start - 1]) { start -= 1 }
+            while end < scalars.count, isRunCharacter(scalars[end]) { end += 1 }
+            if let last = joined.last, start <= last.end {
+                joined[joined.count - 1] = RuleMatch(rule: last.rule, text: text(last.start, max(end, last.end)),
+                                                     tolerant: last.tolerant, start: last.start, end: max(end, last.end))
+            } else {
+                joined.append(RuleMatch(rule: m.rule, text: text(start, end), tolerant: m.tolerant, start: start, end: end))
+            }
+        }
+        return joined
+    }
+
+    /// A character that belongs to a number, code, address or Latin word: a letter that is not
+    /// Chinese, Japanese or Korean, a digit, a sign, and the three marks that sit inside codes
+    /// (the dash, the underscore, the full stop). Chinese characters, spaces and every other
+    /// mark end the run: "卡号6222…" hides the number, not the word before it.
+    static func isRunCharacter(_ s: Unicode.Scalar) -> Bool {
+        if s.properties.isWhitespace { return false }
+        switch s.value {
+        case 0x2E80...0x9FFF, 0xAC00...0xD7AF, 0xF900...0xFAFF, 0xFE30...0xFE4F, 0xFF00...0xFFEF: return false
+        default: break
+        }
+        switch s.properties.generalCategory {
+        case .dashPunctuation, .connectorPunctuation: return true
+        case .initialPunctuation, .finalPunctuation, .openPunctuation, .closePunctuation, .otherPunctuation:
+            return s == "."
+        default: return true
+        }
+    }
+}
+
 /// Decides which recognized text lines carry something that should be hidden.
 ///
 /// Three rules ignore separators: a phone, ID or card number printed in groups still counts,
@@ -70,11 +112,16 @@ enum TextRuleMatcher {
         scan(idPattern, v.tolerant, rule: .idNumber, map: v.digitsMap, tolerant: true)
         scan(bankPattern, v.tolerant, rule: .bankCard, map: v.digitsMap, tolerant: true)
 
-        // Plates keep their Chinese province character, so they match on the full string.
-        let plateNS = v.normalized as NSString
-        for m in platePattern.matches(in: v.normalized, range: NSRange(location: 0, length: plateNS.length)) {
-            guard let range = Range(m.range, in: v.normalized) else { continue }
-            let scalars = v.normalized.unicodeScalars
+        // Plates keep their Chinese province character, so they match on the full string, with the
+        // dot and the province put in the spelling the pattern knows. One character becomes one
+        // character, so a place in the mended text is the same place in the line.
+        var plateScalars = String.UnicodeScalarView()
+        plateScalars.append(contentsOf: v.normalized.unicodeScalars.map { plateSpelling[$0] ?? $0 })
+        let plateText = String(plateScalars)
+        let plateNS = plateText as NSString
+        for m in platePattern.matches(in: plateText, range: NSRange(location: 0, length: plateNS.length)) {
+            guard let range = Range(m.range, in: plateText) else { continue }
+            let scalars = plateText.unicodeScalars
             let start = scalars.distance(from: scalars.startIndex, to: range.lowerBound)
             let end = scalars.distance(from: scalars.startIndex, to: range.upperBound)
             candidates.append(Candidate(rule: .plate, start: start, end: end, tolerant: false))
@@ -194,8 +241,17 @@ enum TextRuleMatcher {
     /// plain word is a word.
     nonisolated(unsafe) private static let referencePattern =
         try! NSRegularExpression(pattern: #"(?<![0-9A-Z])(?:[0-9]{10,}|(?=[0-9A-Z]{10,}(?![0-9A-Z]))(?=[0-9]*[A-Z])(?=[A-Z]*[0-9])[0-9A-Z]{10,})(?![0-9A-Z])"#)
-    /// Mainland plate: province, city letter, optional dot, five (or six for new energy) characters,
-    /// optional suffix.
+    /// Mainland plate: province, city letter, five (or six for new energy) characters, optional
+    /// suffix. The dot may be printed after the city letter or after the first character.
     nonisolated(unsafe) private static let platePattern =
-        try! NSRegularExpression(pattern: #"[京津沪渝冀晋辽吉黑苏浙皖闽赣鲁豫鄂湘粤桂琼川贵云藏陕甘青蒙新宁使领][A-Z][·.•\- ]?[A-Z0-9]{5,6}[挂学警港澳]?(?![A-Z0-9])"#)
+        try! NSRegularExpression(pattern: #"[京津沪渝冀晋辽吉黑苏浙皖闽赣鲁豫鄂湘粤桂琼川贵云藏陕甘青蒙新宁使领][A-Z][·\- ]?[A-Z0-9][·\- ]?[A-Z0-9]{4,5}[挂学警港澳]?(?![A-Z0-9])"#)
+
+    /// What a reader prints for a plate's dot and for a province in its older spelling, one
+    /// character each, so the plate text is put right before the pattern sees it and nothing else
+    /// is let through.
+    nonisolated(unsafe) private static let plateSpelling: [Unicode.Scalar: Unicode.Scalar] = [
+        "・": "·", "•": "·", "‧": "·", "∙": "·", "⋅": "·", "●": "·", "･": "·", ".": "·",
+        "粵": "粤", "滬": "沪", "蘇": "苏", "閩": "闽", "贛": "赣", "魯": "鲁", "瓊": "琼", "貴": "贵", "雲": "云", "陝": "陕",
+        "寧": "宁", "遼": "辽", "晉": "晋",
+    ]
 }

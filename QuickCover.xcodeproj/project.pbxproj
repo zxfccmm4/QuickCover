@@ -24,6 +24,9 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A1B2C3D40000000000000003 /* QuickCoverTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+				Fixtures = folder;
+			};
 			path = QuickCoverTests;
 			sourceTree = "<group>";
 		};
@@ -63,7 +66,10 @@
 		A1B2C3D40000000000000004 /* QuickCoverTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A1B2C3D40000000000000005;
-			buildPhases = (A1B2C3D40000000000000006 /* Sources */,);
+			buildPhases = (
+				A1B2C3D40000000000000006 /* Sources */,
+				A1B2C3D4000000000000000F /* Resources */,
+			);
 			buildRules = ();
 			dependencies = (A1B2C3D40000000000000007 /* App dependency */,);
 			fileSystemSynchronizedGroups = (A1B2C3D40000000000000003 /* QuickCoverTests */,);
@@ -133,6 +139,13 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A1B2C3D4000000000000000F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		64723A455F920BBCE48BF909 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;

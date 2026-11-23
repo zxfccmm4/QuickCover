@@ -35,6 +35,42 @@ enum Sample {
         }.cgImage!
     }
 
+    /// A white picture with black text lines, one under another, starting at a top-left point.
+    static func lines(_ strings: [String], at point: CGPoint, lineHeight: CGFloat,
+                      size: CGSize = CGSize(width: 900, height: 400), fontSize: CGFloat = 40) -> CGImage {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        return renderer.image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: fontSize, weight: .semibold),
+                .foregroundColor: UIColor.black,
+            ]
+            for (index, string) in strings.enumerated() {
+                (string as NSString).draw(at: CGPoint(x: point.x, y: point.y + CGFloat(index) * lineHeight), withAttributes: attributes)
+            }
+        }.cgImage!
+    }
+
+    /// The first and last row of the glyphs of line `index`, counted from the top of the picture:
+    /// the rows between that line's top and the next line's where something is darker than mid-grey.
+    static func inkRows(of image: CGImage, line index: Int, firstTop: CGFloat, lineHeight: CGFloat) -> ClosedRange<CGFloat> {
+        let width = image.width, height = image.height
+        let context = CGImage.rgbaContext(width: width, height: height)!
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let stride = context.bytesPerRow
+        let buffer = context.data!.assumingMemoryBound(to: UInt8.self)
+        let top = Int(firstTop + CGFloat(index) * lineHeight)
+        let bottom = min(Int(firstTop + CGFloat(index + 1) * lineHeight), height)
+        let rows = (top..<bottom).filter { row in
+            (0..<width).contains { buffer[row * stride + $0 * 4] < 128 }
+        }
+        return CGFloat(rows.first ?? top)...CGFloat(rows.last ?? top)
+    }
+
     /// A JPEG of `image` with the given EXIF orientation tag and, optionally, a location and a date.
     static func jpeg(_ image: CGImage, orientation: UInt32 = 1, metadata: Bool = false) -> Data {
         let data = NSMutableData()
@@ -119,6 +155,13 @@ struct TextRuleMatcherTests {
         #expect(rules("详见 https://example.com/orders/1?token=abc") == [.url])
         #expect(rules("服务器 192.168.1.25") == [.ipv4])
         #expect(rules("京A12345") == [.plate])
+        // What the reader makes of a plate photo: other dots, the dot in either place, an older province glyph.
+        #expect(rules("粤B8S6Q0") == [.plate])
+        #expect(rules("粵B•8S600") == [.plate])
+        #expect(rules("京A・FOK2L") == [.plate])
+        #expect(rules("粵AD・12345") == [.plate])
+        #expect(rules("苏E・7H3M6") == [.plate])
+        #expect(rules("A12345 北京") == [])
         #expect(rules("订单号 QC20260307A1B2C3") == [.reference])
     }
 
@@ -194,6 +237,91 @@ struct RecognizerTests {
         let result = try await Recognizer().recognize(raw, orientation: .right)
         #expect(result.size == CGSize(width: 600, height: 300))
         #expect(result.findings.contains { $0.rule == .phone })
+    }
+
+    @Test
+    func numberWrappedToTheNextLineIsHiddenOnBoth() async throws {
+        // Cut after fifteen digits, an ID reads as a long number on one line and three stray digits
+        // below, with an ordinary line above and one under.
+        let image = Sample.lines(["第一行普通文字", "身份证号是 110101198807154", "417", "第三行普通文字"],
+                                 at: CGPoint(x: 20, y: 20), lineHeight: 56)
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.idNumber, .idNumber])
+        #expect(hits.map(\.evidence) == ["110101198807154", "417"])
+        try #require(hits.count == 2)
+
+        // Where the glyphs of each line are, read from the picture itself.
+        let ink = (0..<4).map { Sample.inkRows(of: image, line: $0, firstTop: 20, lineHeight: 56) }
+        for (index, rows) in ink.enumerated() {
+            let top = 20 + CGFloat(index) * 56
+            #expect(rows.lowerBound > top && rows.upperBound < top + 56)
+        }
+
+        // Both pieces are hidden, each under a mask on its own line.
+        #expect(hits[0].box.minY <= ink[1].lowerBound && hits[0].box.maxY >= ink[1].upperBound)
+        #expect(hits[1].box.minY <= ink[2].lowerBound && hits[1].box.maxY >= ink[2].upperBound)
+
+        // The margins are the tuned ones and no wider, give or take three pixels. Measured on the
+        // simulator: the number's mask reaches 20 pixels above its glyphs and 12.6 under them, the
+        // stray digits' 18 above and 11.4 under. The two masks may meet in the space between the
+        // lines, which was taken as the price of never leaving the top of a digit bare.
+        let slack: CGFloat = 3
+        #expect(ink[1].lowerBound - hits[0].box.minY <= 20 + slack)
+        #expect(hits[0].box.maxY - ink[1].upperBound <= 12.6 + slack)
+        #expect(ink[2].lowerBound - hits[1].box.minY <= 18 + slack)
+        #expect(hits[1].box.maxY - ink[2].upperBound <= 11.4 + slack)
+
+        // A line one row further off is never touched.
+        #expect(hits[1].box.minY > ink[0].upperBound)
+        #expect(hits[0].box.maxY < ink[3].lowerBound)
+    }
+
+    @Test
+    func textMarginsStayAtTheTunedSize() {
+        // A line box 40 pixels tall, as Vision gives one for text of about that size.
+        let line = Recognizer.textPadding(for: .idNumber, lineHeight: 40)
+        #expect(abs(line.top - 21) <= 0.5)
+        #expect(abs(line.bottom - 9) <= 0.5)
+        #expect(abs(line.side - 11) <= 0.5)
+        let plate = Recognizer.textPadding(for: .plate, lineHeight: 40)
+        #expect(abs(plate.top - 15) <= 0.5)
+        #expect(abs(plate.bottom - 13) <= 0.5)
+        #expect(abs(plate.side - 21) <= 0.5)
+        // A box too shallow to take a share keeps two pixels and the one on top, whatever the rule.
+        for rule in TextRule.allCases.map({ Optional($0) }) + [nil] {
+            let tiny = Recognizer.textPadding(for: rule, lineHeight: 2)
+            #expect(abs(tiny.top - 3) <= 0.01 && abs(tiny.bottom - 3) <= 0.01 && abs(tiny.side - 3) <= 0.01)
+        }
+    }
+
+    @Test
+    func addressWrappedToTheNextLineIsHiddenOnBoth() async throws {
+        let image = Sample.lines(["攻略 https://docs.example.c", "om/hike/2026.pdf"], at: CGPoint(x: 20, y: 20), lineHeight: 56)
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.url, .url])
+        #expect(hits.map(\.evidence) == ["https://docs.example.c", "om/hike/2026.pdf"])
+    }
+
+    @Test
+    func lineBelowAWholeNumberStaysOutWhenItStartsWithWords() async throws {
+        let image = Sample.lines(["电话 13812345678", "明天下午三点在会议室见"], at: CGPoint(x: 20, y: 20), lineHeight: 56)
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.phone])
+    }
+
+    @Test
+    func sentenceUnderAHitIsNotTakenForItsTail() async throws {
+        let image = Sample.lines(["邮箱 zhang.wei@example.com", "Thanks."], at: CGPoint(x: 20, y: 20), lineHeight: 56)
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.email])
+    }
+
+    @Test
+    func datedRowUnderAHitIsNotTakenForItsTail() async throws {
+        let image = Sample.lines(["from 192.168.1.23", "2026-11-23 09:00:02 login ok", "13800138000", "2026年1月5日 交费"],
+                                at: CGPoint(x: 20, y: 20), lineHeight: 56)
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.ipv4, .phone])
     }
 
     @Test
