@@ -13,14 +13,27 @@ archive="$out/QuickCoverSelfCheck.xcarchive"
 rm -rf -- "$out"
 mkdir -p "$out"
 
+# A device build, Release: left to itself the archive comes out for the simulator, in Debug.
 airbuild-xcode archive \
   -project QuickCover.xcodeproj \
   -scheme QuickCover \
+  -configuration Release \
+  -sdk iphoneos \
+  -destination 'generic/platform=iOS' \
   -archivePath "$archive" \
-  SWIFT_ACTIVE_COMPILATION_CONDITIONS=SELF_CHECK
+  "SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) SELF_CHECK" \
+  CODE_SIGNING_ALLOWED=NO
 
 app="$archive/Products/Applications/QuickCover.app"
 test -d "$app"
+
+# What the package says of itself, and a stop if it is not a device build.
+for key in DTPlatformName DTSDKName CFBundleIdentifier CFBundleShortVersionString CFBundleVersion CFBundleDisplayName MinimumOSVersion; do
+  printf '%s = %s\n' "$key" "$(/usr/libexec/PlistBuddy -c "Print :$key" "$app/Info.plist" 2>/dev/null || echo '-')"
+done
+lproj=$(ls -d "$app"/*.lproj 2>/dev/null | xargs -n1 basename | tr '\n' ' ')
+echo "languages = $lproj"
+test "$(/usr/libexec/PlistBuddy -c 'Print :DTPlatformName' "$app/Info.plist" | tr 'A-Z' 'a-z')" = iphoneos
 
 # The pictures travel with the test target only; this package carries them too.
 cp -R QuickCoverTests/Fixtures "$app/SelfCheckFixtures"
