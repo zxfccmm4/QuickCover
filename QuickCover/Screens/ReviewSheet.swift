@@ -1,22 +1,143 @@
 import SwiftUI
+import UIKit
 
-/// Review Each Item (design.md §7.4, copy.md §4.4–§4.6): a sheet that starts 300 from the top of the
-/// screen, pulls up to full screen and down to close; shown by `EditorModel.reviewShown`. Top to
-/// bottom: the grabber and 4.4.1, `SummaryText`, 4.4.2, the cards of §7.4.3 in the order of
-/// `EditorModel.checklistOrder`, and the style picker 4.7.1–4.7.5 at the bottom.
+/// Review Each Item (design.md §7.4, copy.md §4.4–§4.6): a sheet 300 under the top of the screen
+/// that pulls up to full screen and down to close; shown by `EditorModel.reviewShown`. Top to
+/// bottom: the grabber and 4.4.1, `SummaryText`, 4.4.2, the cards of §7.4.3 (the picture, the
+/// items by kind, the text lines with their switch off until turned on), and the style picker
+/// 4.7.1–4.7.5 pinned at the bottom. The rows go under the title as the sheet scrolls, and the
+/// last card's bottom is 20 above the picker, so the sheet can be pulled up by anything that is
+/// left under it.
 ///
 /// One row is one item, one switch, also when the item holds two boxes (`MaskItem.quads`, a value
-/// wrapped onto two lines); the summary above counts boxes (`EditorModel.found`). The style picker
-/// is the system segmented control, its selected segment left in the system's own colour (design.md
-/// §7.4.4). Only when the user taps「模糊」now does 4.7.5 come under it, `exclamationmark.triangle`
-/// and the text, with no button (`NoticeBar` with an empty end); a blur left from last time
-/// doesn't.
-///
-/// Only declared here; the page is still to be built.
+/// wrapped onto two lines); the summary above counts boxes (`EditorModel.found`). A row's switch
+/// covers or uncovers its item; a tap on its words shows the item in the picture (4.4.4), and the
+/// sheet stays up so it can be switched off right after.
 struct ReviewSheet: View {
     @Environment(EditorModel.self) private var model
+    @Environment(ShellModel.self) private var shell
+
+    private var suggestions: [MaskItem] { ReviewSheetSections.suggestions(in: model.items) }
+    private var textLines: [MaskItem] { ReviewSheetSections.textLines(in: model.items) }
 
     var body: some View {
-        Theme.page.ignoresSafeArea()
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    summary
+                    cards
+                        .padding(.bottom, Metrics.cardSpacing)
+                }
+                .padding(.horizontal, Metrics.pageInset)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            StylePicker()
+        }
+        .background(Theme.page)
+        .safeAreaInset(edge: .top, spacing: 0) { title }
+        .presentationDetents([.height(Screen.size.height - EditorLayout.sheetTop), .large])
+        .presentationCornerRadius(Metrics.cardRadius)
+        .presentationBackground(Theme.page)
+        .presentationBackgroundInteraction(.enabled)
+        .task { AccessibilityNotification.Announcement(L10n.text("4.4.1")).post() }
+    }
+
+    /// 4.4.1, 19 under the sheet's edge (under the system's grabber) and 8 over the summary.
+    private var title: some View {
+        Text("4.4.1")
+            .font(.headline)
+            .foregroundStyle(Theme.body)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 19)
+            .padding(.bottom, 8)
+            .background(Theme.page)
+    }
+
+    // MARK: - Summary
+
+    @ViewBuilder private var summary: some View {
+        if !model.found.isEmpty {
+            SummaryText(found: model.found)
+            Text("4.4.2")
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryLabel)
+                .padding(.top, 6)
+                .padding(.bottom, 14)
+        }
+    }
+
+    // MARK: - Cards
+
+    @ViewBuilder private var cards: some View {
+        ChecklistCard {
+            ToggleRow(systemImage: "eye", title: Text("7.3"), isOn: originalBinding, stateKeys: nil, hint: nil)
+        }
+
+        if !suggestions.isEmpty {
+            Spacer().frame(height: Metrics.cardSpacing)
+            ChecklistCard {
+                ForEach(Array(suggestions.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 { RowSeparator() }
+                    ChecklistRow(item: item, number: model.ordinal(of: item), isOn: binding(item)) {
+                        locate(item)
+                    }
+                }
+            }
+        }
+
+        if !textLines.isEmpty {
+            Spacer().frame(height: Metrics.cardSpacing)
+            ChecklistCard {
+                CoverAllTextRow(isOn: model.coversAllText) { model.setAllText($0) }
+            }
+
+            if model.hasUncoveredTextLines {
+                UncoveredTextReminder(draw: startDrawing)
+                    .padding(.vertical, 12)
+            } else {
+                Spacer().frame(height: Metrics.cardSpacing)
+            }
+
+            ChecklistCard {
+                ForEach(Array(textLines.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 { RowSeparator() }
+                    ChecklistRow(item: item, number: model.ordinal(of: item), isOn: binding(item)) {
+                        locate(item)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private func binding(_ item: MaskItem) -> Binding<Bool> {
+        Binding(get: { item.isOn }, set: { model.setOn(item.id, $0) })
+    }
+
+    private var originalBinding: Binding<Bool> {
+        Binding(get: { model.showsOriginal }, set: { model.showsOriginal = $0 })
+    }
+
+    /// 4.4.4: the sheet goes down, the ring comes up over the item and the picture scrolls to it.
+    private func locate(_ item: MaskItem) {
+        model.requestLocate(item.id)
+        shell.hideReview()
+    }
+
+    /// 4.8.3: the sheet goes down and the drawing tool goes on.
+    private func startDrawing() {
+        shell.hideReview()
+        model.drawToolOn = true
+    }
+}
+
+/// The screen the app is on; only its height is wanted here, for the sheet's 300-from-the-top.
+@MainActor
+private enum Screen {
+    static var size: CGSize {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let height = scenes.first?.screen.bounds.height ?? 874
+        return CGSize(width: scenes.first?.screen.bounds.width ?? 402, height: height)
     }
 }
