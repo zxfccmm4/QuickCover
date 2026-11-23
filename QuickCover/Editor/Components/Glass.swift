@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A 44×44 circle of glass with a 21 pt white symbol (design.md §6): 還原, 重做 and 手動框選 on the
 /// editor's glass bar. What can't be done stays where it is at 42%. A selected tool is a solid
-/// `#C77DFF` circle with a `#1A0033` symbol.
+/// `Theme.accent` circle with a `Theme.onAccent` symbol.
 struct GlassIconButton: View {
     let systemImage: String
     /// The copy.md number that names the button.
@@ -67,7 +67,7 @@ struct GlassLabelButton: View {
     }
 }
 
-/// 「匯出」on the glass bar (design.md §6): 44 high, corner 23, at least 100 wide, solid `#7B2FE0`
+/// 「匯出」on the glass bar (design.md §6): 44 high, corner 23, at least 100 wide, solid `Theme.accentButton`
 /// rather than glass, which would let the picture show through under white text. From accessibility
 /// text sizes on only a symbol stays (§9.5); the spec names none for it, so this is
 /// `square.and.arrow.up`.

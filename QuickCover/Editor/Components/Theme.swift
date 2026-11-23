@@ -5,12 +5,13 @@ import UIKit
 /// single value. Six colours are the asset catalog's colour sets and carry the names the spec uses;
 /// Any and Dark hold the same value, so a screen that forgot to force dark shows nothing odd either.
 enum Theme {
-    /// `#C77DFF`: what can be tapped and the selected tool. 7.8:1 on black, 6.3:1 on a card.
+    /// `#6FE0DA`: what can be tapped and the selected tool. 13.3:1 on black, 10.8:1 on a card.
     static let accent = Color("AccentColor")
-    /// `#C77DFF`, on the picture and on glass: the drawn and located edges, the selected tool,
+    /// `#6FE0DA`, on the picture and on glass: the drawn and located edges, the selected tool,
     /// button text on the picture.
     static let accentOnBlack = Color("AccentOnBlack")
-    /// `#7B2FE0`: the ground of the primary button and of「匯出」. White on it is 6.3:1.
+    /// `#0B7A7A`: the ground of the primary button, of「匯出」and of the picker's first icon tile. White
+    /// on it is 5.2:1.
     static let accentButton = Color("AccentButton")
     /// `#A5A5AA`: explanatory text. Not `.secondary`, which follows the appearance and the material.
     static let secondaryLabel = Color("SecondaryLabel")
@@ -33,8 +34,9 @@ enum Theme {
     /// `#FF9F0A` at 16%: the blur notice. Its symbol is `#C86A00`, 3.3:1 on it.
     static let blurNotice = Color(hex: 0xFF9F0A).opacity(0.16)
     static let blurNoticeIcon = Color(hex: 0xC86A00)
-    /// `#1A0033`: the symbol on the selected tool, on `#C77DFF`. 7.1:1.
-    static let onAccent = Color(hex: 0x1A0033)
+    /// `#0B3B3F`: the symbol on the selected tool, on `Theme.accent`. 7.8:1. The one place it is used,
+    /// so the spec asks for no colour set (§2).
+    static let onAccent = Color(hex: 0x0B3B3F)
     /// `#6FE0A0`: the checkmark of the「已存到照片」toast.
     static let saved = Color(hex: 0x6FE0A0)
     /// The symbol of a notice that failed: `#FF3B30` on the second fill, `#FF453A` on a card.
