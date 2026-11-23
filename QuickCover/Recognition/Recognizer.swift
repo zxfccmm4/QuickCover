@@ -323,37 +323,69 @@ struct Recognizer: Sendable {
 
     private static func textFindings(_ lines: [RecognizedTextObservation], in size: CGSize, scale: CGSize) -> [Finding] {
         let read = lines.map { Self.readLine($0, in: size) }
-        var byLine: [[Finding]] = read.map { line in
-            line.runs.map { m in
-                let p = line.padding(for: m.rule)
-                let grown = Self.padded(line.quad(from: m.start, to: m.end), top: p.top, bottom: p.bottom, side: p.side)
-                return Finding(kind: .text, rule: m.rule,
-                               quad: grown.map { Self.scaled($0, scale) },
-                               evidence: m.text, tolerant: m.tolerant)
-            }
+
+        // One line's share of a value: the characters it covers on that line, and the box that
+        // hides them, in upright pixels, padded.
+        struct Piece {
+            let line: Int
+            let range: Range<Int>
+            let rule: TextRule
+            let quad: [CGPoint]
+            let evidence: String
+            let tolerant: Bool
+        }
+        func piece(_ line: Int, _ range: Range<Int>, _ rule: TextRule, evidence: String? = nil, tolerant: Bool = false) -> Piece {
+            let l = read[line]
+            let p = l.padding(for: rule)
+            let quad = Self.padded(l.quad(from: range.lowerBound, to: range.upperBound), top: p.top, bottom: p.bottom, side: p.side)
+                .map { Self.scaled($0, scale) }
+            return Piece(line: line, range: range, rule: rule, quad: quad,
+                         evidence: evidence ?? String(String.UnicodeScalarView(l.scalars[range])), tolerant: tolerant)
+        }
+        // Whether `q` is `p` over again: the same characters of the same line, or more around
+        // them, or a box cut from the line a second time that holds p a pixel aside on every side.
+        func taken(_ p: Piece, by q: Piece) -> Bool {
+            guard p.line == q.line else { return false }
+            if q.range.lowerBound <= p.range.lowerBound, p.range.upperBound <= q.range.upperBound { return true }
+            let a = Geometry.bounds(of: p.quad), b = Geometry.bounds(of: q.quad), slack = WrapGeometry.takenSlack
+            return a.minX >= b.minX - slack && a.maxX <= b.maxX + slack && a.minY >= b.minY - slack && a.maxY <= b.maxY + slack
+        }
+        // A value a wrap cut in two or three: its pieces in the order of its lines, and what it reads.
+        struct Value {
+            let pieces: [Piece]
+            let evidence: String
         }
 
-        // A line that wraps carries the rest of its number or address down to the next line, where
-        // no rule can know the piece for what it is. The piece is hidden with what it continues.
-        for (i, line) in read.enumerated() where !byLine[i].isEmpty {
+        // 1. What each line carries whole.
+        var singles: [Piece] = []
+        for (i, line) in read.enumerated() {
+            for m in line.runs { singles.append(piece(i, m.start..<m.end, m.rule, evidence: m.text, tolerant: m.tolerant)) }
+        }
+
+        // 2. A line that wraps carries the rest of its number or address down to the next line,
+        // where no rule can know the piece for what it is. The piece is hidden with what it
+        // continues, as one item: one box each, one switch in the checklist.
+        var continued: [Value] = []
+        for (i, line) in read.enumerated() where !line.matches.isEmpty {
             guard let last = line.matches.last, line.scalars[last.end...].allSatisfy({ $0.properties.isWhitespace }),
-                  let below = Self.lineBelow(i, in: read), let piece = Self.continuation(read[below], of: last) else { continue }
-            let p = read[below].padding(for: piece.rule ?? last.rule)
-            byLine[i].append(Finding(kind: .text, rule: piece.rule ?? last.rule,
-                                     quad: Self.padded(read[below].quad(from: 0, to: piece.end), top: p.top, bottom: p.bottom, side: p.side)
-                                         .map { Self.scaled($0, scale) },
-                                     evidence: read[below].text(to: piece.end), tolerant: last.tolerant))
-            if let rule = piece.rule {
-                byLine[i][byLine[i].count - 2] = byLine[i][byLine[i].count - 2].labelled(rule)
-            }
+                  let below = Self.lineBelow(i, in: read), let rest = Self.continuation(read[below], of: last) else { continue }
+            let rule = rest.rule ?? last.rule
+            // The value follows another rule once its halves are counted together: sixteen digits
+            // and two more are an ID number. The box is the one its line hid already.
+            let k = singles.firstIndex { $0.line == i && $0.range.lowerBound <= last.start && last.end <= $0.range.upperBound }
+            let anchor = piece(i, k.map { singles[$0].range } ?? last.start..<last.end, rule,
+                               evidence: k.map { singles[$0].evidence } ?? last.text, tolerant: k.map { singles[$0].tolerant } ?? last.tolerant)
+            if let k { singles[k] = anchor }
+            let tail = piece(below, 0..<rest.end, rule, evidence: read[below].text(to: rest.end), tolerant: anchor.tolerant)
+            // A number printed in groups keeps a space between the groups it was cut in; a value
+            // cut inside a run reads on without one.
+            let apart = rule == .phone || rule == .bankCard
+            continued.append(Value(pieces: [anchor, tail], evidence: anchor.evidence + (apart ? " " : "") + tail.evidence))
         }
 
-        // A value the wrap cut where no rule can know either piece for what it is: read as one
+        // 3. A value the wrap cut where no rule can know either piece for what it is: read as one
         // line, the lines match across the cut. A line and the one under it that starts at the
-        // same left edge are where a wrap is; a value may be cut twice, over three lines. The
-        // pieces are one item: one finding of two or three boxes, so one switch in the checklist
-        // hides them all.
-        var found = byLine.flatMap { $0 }
+        // same left edge are where a wrap is; a value may be cut twice, over three lines.
         let lines = read.indices.sorted { (read[$0].box.minY, read[$0].box.minX) < (read[$1].box.minY, read[$1].box.minX) }
         func wraps(_ a: Int, _ b: Int) -> Bool {
             WrapGeometry.wraps(from: read[a].box, characters: read[a].scalars.count, to: read[b].box)
@@ -369,49 +401,67 @@ struct Recognizer: Sendable {
                 pairs.append([a, b])
             }
         }
+        var joined: [Value] = []
         for group in triples + pairs {
             for match in TextRuleMatcher.junctionMatches(lines: group.map { read[$0].text }) {
-                // A piece its line hides already is not new: it is dropped when a finding standing
-                // on that line, of any rule, has a box that holds it, a pixel aside on every side.
-                // Which line a finding stands on is told in upright pixels, where findings are.
-                let pieces: [[CGPoint]] = zip(group, match.ranges).compactMap { (index: Int, range: Range<Int>?) -> [CGPoint]? in
+                let pieces = zip(group, match.ranges).compactMap { (index: Int, range: Range<Int>?) -> Piece? in
                     guard let range, !range.isEmpty else { return nil }
-                    let line = read[index]
-                    let p = line.padding(for: match.rule)
-                    let quad = Self.padded(line.quad(from: range.lowerBound, to: range.upperBound),
-                                           top: p.top, bottom: p.bottom, side: p.side).map { Self.scaled($0, scale) }
-                    let box = Geometry.bounds(of: quad)
-                    let onLine = CGRect(x: line.box.minX * scale.width, y: line.box.minY * scale.height,
-                                        width: line.box.width * scale.width, height: line.box.height * scale.height)
-                    let slack = WrapGeometry.takenSlack
-                    let taken = found.contains { f in
-                        onLine.contains(CGPoint(x: f.lineBox.midX, y: f.lineBox.midY))
-                            && f.boxes.contains { $0.insetBy(dx: -slack, dy: -slack).contains(box) }
-                    }
-                    return taken ? nil : quad
+                    return piece(index, range, match.rule, evidence: match.text)
                 }
-                guard !pieces.isEmpty else { continue }
-                let finding = Finding(kind: .text, rule: match.rule, pieces: pieces, evidence: match.text)
-                byLine[group[0]].append(finding)
-                found.append(finding)
+                // The same value told already, in one item: its pair inside its triple, or the cut
+                // its pieces were hidden by on their own lines. Every piece of it is a piece of that
+                // one value.
+                guard !(continued + joined).contains(where: { told in pieces.allSatisfy({ p in told.pieces.contains { taken(p, by: $0) } }) }) else { continue }
+                joined.append(Value(pieces: pieces, evidence: match.text))
             }
         }
-        return byLine.flatMap { $0 }
+
+        // 4. One value, one item. A wrapped value takes in the pieces that hid its parts on their
+        // own lines and goes in place of the first of them; the others are not told a second time.
+        let values = continued + joined
+        var out: [Finding] = []
+        var told = Array(repeating: false, count: values.count)
+        func tell(_ n: Int) {
+            guard !told[n] else { return }
+            told[n] = true
+            let v = values[n]
+            out.append(Finding(kind: .text, rule: v.pieces[0].rule, pieces: v.pieces.map(\.quad), evidence: v.evidence,
+                               tolerant: v.pieces.contains { $0.tolerant }))
+        }
+        for i in read.indices {
+            for s in singles where s.line == i {
+                if let n = values.firstIndex(where: { v in v.pieces.contains { taken(s, by: $0) } }) { tell(n) }
+                else { out.append(Finding(kind: .text, rule: s.rule, quad: s.quad, evidence: s.evidence, tolerant: s.tolerant)) }
+            }
+            for n in values.indices where !told[n] && values[n].pieces.first?.line == i { tell(n) }
+        }
+        return out
     }
 
     /// One recognized line: where it is in working pixels, its characters, and what matched in them.
     private struct ReadLine {
         let quad: [CGPoint]
         let box: CGRect
+        /// The line as the rules read it (`TextRuleMatcher.reading(of:)`): NFKC, and without the
+        /// space Vision puts into a dotted name before the letter of an address.
         let text: String
         let scalars: [Unicode.Scalar]
+        /// Where in the NFKC line each space `text` leaves out stood, as scalar indices.
+        let dropped: [Int]
         /// How much of the line's width each character takes: a Latin character is a little over
-        /// half of a Chinese one.
+        /// half of a Chinese one. One for each character of the NFKC line, the spaces left out included.
         let widths: [CGFloat]
         let total: CGFloat
         let matches: [RuleMatch]
         /// Vision's own placing of the line's characters, when its text and the line's read the same.
         let placed: Placement?
+
+        /// Where in the NFKC line the character at `index` of the text stands.
+        func original(_ index: Int) -> Int {
+            var at = index
+            for d in dropped where d <= at { at += 1 }
+            return at
+        }
 
         /// How far a mask for `rule` reaches beyond this line's box on each side.
         func padding(for rule: TextRule?) -> (top: CGFloat, bottom: CGFloat, side: CGFloat) {
@@ -435,11 +485,12 @@ struct Recognizer: Sendable {
         /// it is no narrower than a third of what the widths say, since it tells whole words and
         /// not characters, and the line's own top and bottom are kept.
         func quad(from start: Int, to end: Int) -> [CGPoint] {
-            let e0 = share(start), e1 = share(end)
+            let (from, to) = (original(start), original(end))
+            let e0 = share(from), e1 = share(to)
             let a = quad[0], b = quad[1]
             let ux = b.x - a.x, uy = b.y - a.y
             let squared = ux * ux + uy * uy
-            if let placed, squared > 0, let corners = placed.corners(from: start, to: end) {
+            if let placed, squared > 0, let corners = placed.corners(from: from, to: to) {
                 func along(_ p: CGPoint, _ q: CGPoint) -> CGFloat { ((p.x + q.x) / 2 - a.x) * ux + ((p.y + q.y) / 2 - a.y) * uy }
                 let v0 = along(corners[0], corners[3]) / squared
                 let v1 = along(corners[1], corners[2]) / squared
@@ -459,14 +510,15 @@ struct Recognizer: Sendable {
             .map { $0.toImageCoordinates(size, origin: .upperLeft) }
         // A rule usually matches part of a line; where it sits comes from Vision when it says,
         // and is estimated from the characters before it when it does not.
-        let text = line.transcript.precomposedStringWithCompatibilityMapping
+        let (text, dropped) = TextRuleMatcher.reading(of: line.transcript)
         let scalars = Array(text.unicodeScalars)
-        let widths: [CGFloat] = scalars.map { $0.isASCII ? 0.6 : 1.0 }
+        let original = Array(line.transcript.precomposedStringWithCompatibilityMapping.unicodeScalars)
+        let widths: [CGFloat] = original.map { $0.isASCII ? 0.6 : 1.0 }
         let candidate = line.topCandidates(1).first
-        let placed = candidate.flatMap { $0.string.unicodeScalars.count == scalars.count ? Placement(candidate: $0, size: size) : nil }
-        return ReadLine(quad: quad, box: Geometry.bounds(of: quad), text: text, scalars: scalars, widths: widths,
+        let placed = candidate.flatMap { $0.string.unicodeScalars.count == original.count ? Placement(candidate: $0, size: size) : nil }
+        return ReadLine(quad: quad, box: Geometry.bounds(of: quad), text: text, scalars: scalars, dropped: dropped, widths: widths,
                         total: widths.reduce(0, +),
-                        matches: TextRuleMatcher.matches(in: line.transcript).sorted { $0.start < $1.start },
+                        matches: TextRuleMatcher.matches(in: text).sorted { $0.start < $1.start },
                         placed: placed)
     }
 
@@ -488,15 +540,31 @@ struct Recognizer: Sendable {
 
     /// The next line of the same paragraph: right under line `i`, starting where a wrapped line
     /// starts. A paragraph's first line may be indented, so the line below may start further left.
+    /// A line that starts with the colon of a label stands in the value column, right of the label;
+    /// the rest of its value goes back to the margin the label stands on, where other lines of the
+    /// page start too.
     private static func lineBelow(_ i: Int, in read: [ReadLine]) -> Int? {
         let line = read[i]
         let em = max(line.box.height, 1)
+        let inValueColumn = line.scalars.drop(while: { $0.properties.isWhitespace }).first.map { $0 == ":" } ?? false
         var best: (index: Int, gap: CGFloat)?
         for (j, other) in read.enumerated() where j != i {
-            guard other.box.minY >= line.box.midY, other.box.minX < line.box.maxX, other.box.maxX > line.box.minX else { continue }
+            guard other.box.minY >= line.box.midY else { continue }
             let gap = other.box.minY - line.box.maxY
+            guard gap <= 1.2 * em else { continue }
             let indent = other.box.minX - line.box.minX
-            guard gap <= 1.2 * em, indent >= -2.5 * em, indent <= 0.75 * em else { continue }
+            let under = other.box.minX < line.box.maxX && other.box.maxX > line.box.minX
+            let margin = WrapGeometry.leftSlack * WrapGeometry.charWidth(of: other.box, characters: other.scalars.count)
+            let onTheMargin = read.indices.contains { k in
+                k != i && k != j && abs(read[k].box.minX - other.box.minX) <= margin
+            }
+            if under, indent >= -2.5 * em, indent <= 0.75 * em {
+                // The paragraph's own left edge, a little indented or outdented.
+            } else if inValueColumn, indent < -2.5 * em, !under, onTheMargin {
+                // Back to the margin the label stands on.
+            } else {
+                continue
+            }
             if best.map({ gap < $0.gap }) ?? true { best = (j, gap) }
         }
         return best?.index
@@ -516,12 +584,15 @@ struct Recognizer: Sendable {
         case .plate:
             return nil
         }
-        // Sixteen digits and two more make eighteen: an ID cut in two, not a card.
+        // Sixteen digits and two more make eighteen: an ID cut in two, not a card. Seventeen digits
+        // and an X make one too.
         guard anchor.rule == .bankCard || anchor.rule == .reference else { return (end, nil) }
-        let digits = (anchor.text + line.text(to: end)).unicodeScalars.filter(Self.isDigit).count
-        switch digits {
-        case 18: return (end, .idNumber)
-        case 16...19: return (end, anchor.rule == .reference ? .bankCard : nil)
+        let number = Array((anchor.text + line.text(to: end)).unicodeScalars)
+        let digits = number.filter(Self.isDigit).count
+        let endsInX = number.last.map { $0.value == 88 || $0.value == 120 } ?? false
+        switch (digits, endsInX) {
+        case (18, false), (17, true): return (end, .idNumber)
+        case (16...19, false): return (end, anchor.rule == .reference ? .bankCard : nil)
         default: return (end, nil)
         }
     }

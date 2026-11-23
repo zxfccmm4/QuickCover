@@ -246,9 +246,13 @@ struct RecognizerTests {
         let image = Sample.lines(["第一行普通文字", "身份证号是 110101198807154", "417", "第三行普通文字"],
                                  at: CGPoint(x: 20, y: 20), lineHeight: 56)
         let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
-        #expect(hits.map(\.rule) == [.idNumber, .idNumber])
-        #expect(hits.map(\.evidence) == ["110101198807154", "417"])
-        try #require(hits.count == 2)
+        #expect(hits.map(\.rule) == [.idNumber])
+        #expect(hits.map(\.evidence) == ["110101198807154417"])
+        try #require(hits.count == 1)
+        // One item of two boxes: the number on its line, the stray digits on theirs.
+        #expect(hits[0].parts.count == 1)
+        let boxes = hits[0].boxes
+        #expect(boxes.count == 2)
 
         // Where the glyphs of each line are, read from the picture itself.
         let ink = (0..<4).map { Sample.inkRows(of: image, line: $0, firstTop: 20, lineHeight: 56) }
@@ -257,23 +261,23 @@ struct RecognizerTests {
             #expect(rows.lowerBound > top && rows.upperBound < top + 56)
         }
 
-        // Both pieces are hidden, each under a mask on its own line.
-        #expect(hits[0].box.minY <= ink[1].lowerBound && hits[0].box.maxY >= ink[1].upperBound)
-        #expect(hits[1].box.minY <= ink[2].lowerBound && hits[1].box.maxY >= ink[2].upperBound)
+        // Both pieces are hidden, each under a box of the one item on its own line.
+        #expect(boxes[0].minY <= ink[1].lowerBound && boxes[0].maxY >= ink[1].upperBound)
+        #expect(boxes[1].minY <= ink[2].lowerBound && boxes[1].maxY >= ink[2].upperBound)
 
         // The margins are the tuned ones and no wider, give or take three pixels. Measured on the
         // simulator: the number's mask reaches 20 pixels above its glyphs and 12.6 under them, the
         // stray digits' 18 above and 11.4 under. The two masks may meet in the space between the
         // lines, which was taken as the price of never leaving the top of a digit bare.
         let slack: CGFloat = 3
-        #expect(ink[1].lowerBound - hits[0].box.minY <= 20 + slack)
-        #expect(hits[0].box.maxY - ink[1].upperBound <= 12.6 + slack)
-        #expect(ink[2].lowerBound - hits[1].box.minY <= 18 + slack)
-        #expect(hits[1].box.maxY - ink[2].upperBound <= 11.4 + slack)
+        #expect(ink[1].lowerBound - boxes[0].minY <= 20 + slack)
+        #expect(boxes[0].maxY - ink[1].upperBound <= 12.6 + slack)
+        #expect(ink[2].lowerBound - boxes[1].minY <= 18 + slack)
+        #expect(boxes[1].maxY - ink[2].upperBound <= 11.4 + slack)
 
         // A line one row further off is never touched.
-        #expect(hits[1].box.minY > ink[0].upperBound)
-        #expect(hits[0].box.maxY < ink[3].lowerBound)
+        #expect(boxes[1].minY > ink[0].upperBound)
+        #expect(boxes[0].maxY < ink[3].lowerBound)
     }
 
     @Test
@@ -298,8 +302,34 @@ struct RecognizerTests {
     func addressWrappedToTheNextLineIsHiddenOnBoth() async throws {
         let image = Sample.lines(["攻略 https://docs.example.c", "om/hike/2026.pdf"], at: CGPoint(x: 20, y: 20), lineHeight: 56)
         let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
-        #expect(hits.map(\.rule) == [.url, .url])
-        #expect(hits.map(\.evidence) == ["https://docs.example.c", "om/hike/2026.pdf"])
+        #expect(hits.map(\.rule) == [.url])
+        #expect(hits.map(\.evidence) == ["https://docs.example.com/hike/2026.pdf"])
+        // One item of two boxes, the scheme and most of the host on the first line, the rest under it.
+        #expect(hits.count == 1 && hits[0].parts.count == 1)
+    }
+
+    @Test
+    func valueColumnWrapGoesBackToTheMargin() async throws {
+        // A label column and a value column, as on a waybill: the label on one line, the value after
+        // a colon on the next, and the rest of the value back at the left margin under it.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 900, height: 400), format: format).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 900, height: 400))
+            let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 40, weight: .semibold), .foregroundColor: UIColor.black]
+            ("ID NO" as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: attributes)
+            ("： 44030119870" as NSString).draw(at: CGPoint(x: 320, y: 76), withAttributes: attributes)
+            ("3124916" as NSString).draw(at: CGPoint(x: 20, y: 132), withAttributes: attributes)
+        }.cgImage!
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.idNumber])
+        #expect(hits.map(\.evidence) == ["440301198703124916"])
+        try #require(hits.count == 1 && hits[0].parts.count == 1)
+        // The first box stands on the value line, right of the label; the second back on the margin.
+        #expect(hits[0].lineBox.minX > 280)
+        #expect(Geometry.bounds(of: hits[0].parts[0]).minX < 120)
     }
 
     @Test

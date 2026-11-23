@@ -113,8 +113,67 @@ extension RuleMatch {
 /// keeps every separator, so `400-800-1234`, `1,234,567,890` and `qc_support_2026` stay out.
 enum TextRuleMatcher {
 
+    /// The line as the rules read it: NFKC, and with the space Vision puts into an address whose
+    /// local part is a dotted name cut at its full stop left out: "ou.yang. f@fict-mail.cn" reads
+    /// "ou.yang.f@fict-mail.cn", which is the address, where a letter on its own is not one.
+    /// `dropped` tells where in the NFKC line each space left out stood, as scalar indices, so
+    /// that the characters after it can still be placed on the picture.
+    static func reading(of line: String) -> (text: String, dropped: [Int]) {
+        let normalized = line.precomposedStringWithCompatibilityMapping
+        guard let cut = try? NSRegularExpression(pattern: #"(?<=[0-9A-Za-z]\.)\s(?=[0-9A-Za-z]@)"#) else { return (normalized, []) }
+        let matches = cut.matches(in: normalized, range: NSRange(location: 0, length: (normalized as NSString).length))
+        guard !matches.isEmpty else { return (normalized, []) }
+        let cuts = Set(matches.map(\.range.location))
+        var text = String.UnicodeScalarView()
+        var dropped: [Int] = []
+        var utf16 = 0, scalar = 0
+        for s in normalized.unicodeScalars {
+            if cuts.contains(utf16) { dropped.append(scalar) } else { text.append(s) }
+            utf16 += String(s).utf16.count
+            scalar += 1
+        }
+        return (String(text), dropped)
+    }
+
     static func matches(in line: String) -> [RuleMatch] {
         scan(views(for: line))
+    }
+
+    /// Whether `text` is a value whole on its own line, by any rule. `ref` counts: ten characters
+    /// or more that the rules know as a code are one. An address with a scheme is whole only when
+    /// its host is: the scheme form takes any host at all, "https://shop.example.c" included, which
+    /// is a domain cut before its end.
+    static func whole(_ text: String) -> Bool { covers(text, named: false) }
+
+    /// The same by the rules that know a value by its shape alone: a phone, an ID number, a card,
+    /// an address, an IP address or a plate. A code by `ref` is not whole by itself, since the rule
+    /// takes the first ten characters of a longer code just as well as a whole one.
+    static func wholeByShape(_ text: String) -> Bool { covers(text, named: true) }
+
+    private static func covers(_ text: String, named: Bool) -> Bool {
+        let n = reading(of: text).text.unicodeScalars.count
+        return matches(in: text).contains { m in
+            guard m.start == 0, m.end == n, !named || m.rule != .reference else { return false }
+            return m.rule != .url || hostIsWhole(text)
+        }
+    }
+
+    /// Whether an address is whole as it stands. The scheme form takes any host at all,
+    /// "https://shop.example.c" included, which is a domain cut before its end: the host must end
+    /// in a label of two letters or more. And the address must not stop where its path would go on,
+    /// at a slash, a question mark or the like.
+    private static func hostIsWhole(_ text: String) -> Bool {
+        let address = reading(of: text).text
+        guard let cut = address.range(of: "://") else { return true }
+        let after = Array(address[cut.upperBound...].unicodeScalars)
+        let stop = after.firstIndex(where: { "/?#:".unicodeScalars.contains($0) }) ?? after.count
+        let scalars = Array(after[..<stop])
+        // The last label of the host, or the whole of it when it has no full stop.
+        let dot = scalars.lastIndex(of: ".")
+        let label = scalars[(dot.map { $0 + 1 } ?? 0)...]
+        let letters = label.filter { $0.properties.isAlphabetic }.count
+        let open: Set<Unicode.Scalar> = ["/", "?", "#", "=", "&", "."]
+        return letters >= 2 && letters == label.count && !(after.last.map(open.contains) ?? true)
     }
 
     /// What a line carries to hide: its matches, each grown to the whole run of characters it
@@ -138,10 +197,16 @@ enum TextRuleMatcher {
 
         func scan(_ pattern: NSRegularExpression, _ text: String, rule: TextRule, map: [Int]?, tolerant: Bool) {
             let ns = text as NSString
+            let scalars = Array(text.unicodeScalars)
             for m in pattern.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
                 let location = m.range.location
-                let length = m.range.length
+                var length = m.range.length
                 guard length > 0 else { continue }
+                // An address ends before the mark that closes the sentence it stands in: "…/help,"
+                // hides the address, not the comma. (The fold is one UTF-16 unit a scalar.)
+                if rule == .url, scalars.count == ns.length {
+                    while length > 1, closingMarks.contains(scalars[location + length - 1]) { length -= 1 }
+                }
                 if let map {
                     candidates.append(Candidate(rule: rule, start: map[location], end: map[location + length - 1] + 1, tolerant: tolerant))
                 } else {
@@ -335,7 +400,7 @@ enum TextRuleMatcher {
     /// space. No piece of such a value matches alone, so a match that stays inside one line is
     /// not new and is left out. One value is told once: see `JunctionMatch.distinct`.
     static func junctionMatches(lines: [String]) -> [JunctionMatch] {
-        let read = lines.map { Array($0.precomposedStringWithCompatibilityMapping.unicodeScalars) }
+        let read = lines.map { Array(reading(of: $0).text.unicodeScalars) }
         guard (2...3).contains(read.count) else { return [] }
         // The readings with spaces first, so that the text kept for a value is the one a reader sees.
         var readings: [Int: [(match: RuleMatch, places: [Range<Int>?])]] = [:]
@@ -355,15 +420,20 @@ enum TextRuleMatcher {
         return JunctionMatch.distinct(found)
     }
 
-    /// The lines read as one with a space at the cuts named in `parted`: what the reading matches,
-    /// and where each match sits on each line, as scalar indices into that line, or nil for a line
-    /// the match does not reach.
+    /// The lines read as one, a space at the cuts named in `parted` and the slashes of a scheme
+    /// Vision lost at a cut put back: what the reading matches, and where each match sits on each
+    /// line, as scalar indices into that line, or nil for a line the match does not reach. The
+    /// characters put back belong to no line, so a match that spans them still reaches a character
+    /// of the line on either side.
     private static func reading(_ lines: [[Unicode.Scalar]], parted: Int) -> [(match: RuleMatch, places: [Range<Int>?])] {
         let space: Unicode.Scalar = " "
         var joined: [Unicode.Scalar] = []
         var starts: [Int] = []
         for (i, line) in lines.enumerated() {
-            if i > 0, (parted & (1 << (i - 1))) != 0 { joined.append(space) }
+            if i > 0 {
+                if (parted & (1 << (i - 1))) != 0 { joined.append(space) }
+                joined += Self.mend(from: lines[i - 1], to: line)
+            }
             starts.append(joined.count)
             joined += line
         }
@@ -377,20 +447,43 @@ enum TextRuleMatcher {
         }
     }
 
+    /// The slashes to put back where a line ends in the scheme of an address and the line under
+    /// it begins without them: "https:/" over "fict.ly/…" and "https:" over "fict.ly". Where the
+    /// line under it starts with a slash the scheme is whole already.
+    private static func mend(from upper: [Unicode.Scalar], to lower: [Unicode.Scalar]) -> [Unicode.Scalar] {
+        let slash: Unicode.Scalar = "/"
+        let tail = String(String.UnicodeScalarView(upper.filter { !$0.properties.isWhitespace })).lowercased()
+        let missing: Int
+        if tail.hasSuffix("https:/") || tail.hasSuffix("http:/") { missing = 1 }
+        else if tail.hasSuffix("https:") || tail.hasSuffix("http:") { missing = 2 }
+        else { return [] }
+        guard let first = lower.first, first != slash else { return [] }
+        return Array(repeating: slash, count: missing)
+    }
+
     /// Whether a match that crosses a cut read without a space is not a value the wrap cut, but
     /// what stands next to a value glued onto it. A wrap has a shape: the value runs to the end of
-    /// the line it is cut from, and the last line of a number carries no other digits, as the row
-    /// under a phone does. What a line carries whole is not lengthened by a word either: a label
-    /// over an address, a sentence under one, a word in lower case before a number.
+    /// the line it is cut from, and the last line of a number that was whole already carries no
+    /// other digits, as the row under a phone does. What a line carries whole is not lengthened by
+    /// a word either: a label over an address, a sentence under one, a word in lower case before a
+    /// number, and a whole value over a line that starts with a letter.
     private static func glued(_ m: JunctionMatch, parted: Int, lines: [[Unicode.Scalar]],
                               readings: [Int: [(match: RuleMatch, places: [Range<Int>?])]]) -> Bool {
         let reached = m.ranges.indices.filter { m.ranges[$0] != nil }
         guard let first = reached.first, let last = reached.last, let head = m.ranges[first], let tail = m.ranges[last] else { return true }
         let rest = { (line: Int, from: Int) in lines[line].dropFirst(from) }
+        func text(_ line: Int, _ range: Range<Int>) -> String { String(String.UnicodeScalarView(lines[line][range])) }
         // The value runs to the end of the line it is cut from, a mark aside.
         if rest(first, head.upperBound).contains(where: { !$0.properties.isWhitespace && !isMark($0) }) { return true }
-        // The last line of a number holds no other digits: the digits under a whole number are a row of their own.
+        // The last line of a number that was whole already holds no other digits: the digits under a
+        // whole number are a row of their own. A piece that is no whole number by its shape, "5820193"
+        // or "6228 4800", is the start of one, whatever stands under it on the last line. The piece
+        // on the last line is the end of the value; where digits run on from it through a mark, "2026"
+        // of "2026-11-23", it is the head of a number of its own, for a code keeps its marks out, and
+        // the digits under the line are a row of their own as well.
         if m.rule == .phone || m.rule == .idNumber || m.rule == .bankCard || m.rule == .reference,
+           reached.count >= 2, let above = m.ranges[reached[reached.count - 2]],
+           wholeByShape(text(reached[reached.count - 2], above)) || runsOn(lines[last][tail]),
            rest(last, tail.upperBound).contains(where: { isDigit($0) }) { return true }
         for j in 0..<(lines.count - 1) where (parted & (1 << j)) == 0 {
             guard let upper = m.ranges[j], let lower = m.ranges[j + 1] else { continue }
@@ -404,12 +497,36 @@ enum TextRuleMatcher {
                }) == true {
                 return true
             }
+            // A whole value over a line that starts with a letter was not cut: the value ends where
+            // it is, and what is under it is a sentence, "1ZFICT8A0304821762" over "DELIVERY LINK…".
+            // Only where the value starts: the middle line of an address over three lines is whole
+            // by itself too, "example.com/path" under "https://", and is no end of the address.
+            if j == first, whole(String(String.UnicodeScalarView(above))), let b = below.first, isLetter(b) { return true }
             // A word before a number or a code is the end of a sentence, not the start of a code,
             // whose start, SE or SF, is in capitals. Growing may have named the whole after the
             // number, a phone with "ok" before it, so the rule does not tell them apart: both go.
             if m.rule != .email, m.rule != .url, above.allSatisfy({ isLetter($0) }), !above.allSatisfy({ $0.value < 97 }) { return true }
             // A sentence under an address starts in capitals where the address ended in small letters.
             if let a = above.last, let b = below.first, isLetter(a), a.value >= 97, isLetter(b), b.value < 97 { return true }
+        }
+        return false
+    }
+
+    /// Whether the piece a value leaves on its last line is the head of a number that goes on past
+    /// it: "2026" of "2026-11-23", digits that run on through a mark. The end of a value stops where
+    /// the value stops, and a code has no mark in it.
+    private static func runsOn(_ piece: ArraySlice<Unicode.Scalar>) -> Bool {
+        var digits = false, mark = false
+        for s in piece {
+            if isDigit(s) {
+                if mark, digits { return true }
+                digits = true
+                mark = false
+            } else if digits, isMark(s), !s.properties.isWhitespace {
+                mark = true
+            } else {
+                return false
+            }
         }
         return false
     }
@@ -433,6 +550,8 @@ enum TextRuleMatcher {
     }
 
     private static let placeholder = Unicode.Scalar(0xE000)!
+    /// The marks a sentence closes with, which an address before them does not carry.
+    private static let closingMarks: Set<Unicode.Scalar> = [".", ",", ";", ":", "!", "?"]
     private static let separators: Set<Unicode.Scalar> = [
         " ", "\u{00A0}", "-", "\u{2010}", "\u{2011}", "\u{2012}", "\u{2013}", "\u{2212}",
     ]
@@ -452,7 +571,7 @@ enum TextRuleMatcher {
     }
 
     private static func views(for line: String) -> Views {
-        let normalized = line.precomposedStringWithCompatibilityMapping
+        let normalized = reading(of: line).text
         let scalars = Array(normalized.unicodeScalars)
         var folded: [Unicode.Scalar] = []
         var digits: [Unicode.Scalar] = []
