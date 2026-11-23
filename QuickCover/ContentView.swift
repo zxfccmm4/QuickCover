@@ -2,6 +2,10 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var tapCount = 0
+    #if SELF_CHECK
+    /// The hidden way into the self-check page: hold the title picture for two seconds.
+    @State private var showSelfCheck = false
+    #endif
 
     var body: some View {
         // String literals in Text/Button/Label are localization keys resolved
@@ -14,6 +18,9 @@ struct ContentView: View {
                     .font(.system(size: 52))
                     .foregroundStyle(.tint)
                     .accessibilityHidden(true)
+                    #if SELF_CHECK
+                    .onLongPressGesture(minimumDuration: 2) { showSelfCheck = true }
+                    #endif
 
                 Text("Airbuild is ready")
                     .font(.title.bold())
@@ -30,6 +37,9 @@ struct ContentView: View {
             }
             .padding()
             .navigationTitle("Starter")
+            #if SELF_CHECK
+            .sheet(isPresented: $showSelfCheck) { SelfCheckView() }
+            #endif
         }
     }
 }
