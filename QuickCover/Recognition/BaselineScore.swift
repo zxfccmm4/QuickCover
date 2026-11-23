@@ -81,6 +81,12 @@ enum BaselineScore {
         gt.contains { area(box.intersection($0)) >= 0.5 * max(area($0), 1) }
     }
 
+    /// How much of `box` a finding hides, each of its boxes apart: the span between the two
+    /// pieces of a wrapped value is not the finding's.
+    static func overlap(_ finding: Finding, of box: CGRect) -> CGFloat {
+        finding.boxes.reduce(0) { $0 + area($1.intersection(box)) }
+    }
+
     /// The share of `target` covered by the union of `boxes`, 0 to 1.
     static func unionCover(_ target: CGRect, _ boxes: [CGRect]) -> Double {
         guard area(target) > 0 else { return 0 }
@@ -149,7 +155,9 @@ enum BaselineScore {
             let fixture = s.fixture
             let id = fixture.id
             let hits = s.result.findings.filter { $0.kind == .text }
-            let textBoxes = hits.map(\.box)
+            // Every box of every hit apart: a wrapped value is two boxes, and what lies between
+            // them is neither covered by it nor a false positive of its own.
+            let textBoxes = hits.flatMap(\.boxes)
             let faceBoxes = s.result.findings.filter { $0.kind == .face }.map(\.box)
             let codeBoxes = s.result.findings.filter { $0.kind == .code }.map(\.box)
             let gtBoxes = fixture.text.flatMap(\.rects)
@@ -159,7 +167,7 @@ enum BaselineScore {
                 for box in item.rects {
                     textRecall.total += 1
                     cat.text.total += 1
-                    let pieces = hits.filter { Self.area($0.box.intersection(box)) >= 0.15 * max(Self.area(box), 1) }
+                    let pieces = hits.filter { Self.overlap($0, of: box) >= 0.15 * max(Self.area(box), 1) }
                     // All the text masks together must cover the whole box; how much of it they do cover is written down.
                     let cover = Self.unionCover(box, textBoxes)
                     let covered = cover >= Self.coveredShare
@@ -169,19 +177,19 @@ enum BaselineScore {
                     if Self.covers(box, by: textBoxes, share: Self.laxShare) { textLaxHit += 1 }
                     // Every hit apart, with the rule that hid it: a number called one thing in the truth
                     // may be hidden under another rule's name. That is the rule of the mask covering most of it.
-                    let hider = hits.max { Self.area($0.box.intersection(box)) < Self.area($1.box.intersection(box)) }?.rule?.rawValue ?? "-"
+                    let hider = hits.max { Self.overlap($0, of: box) < Self.overlap($1, of: box) }?.rule?.rawValue ?? "-"
                     items.append(["id": id, "rule": item.rule ?? "?", "text": item.text ?? "", "hit": covered,
                                   "cover": Self.rounded(cover), "by": hider])
                     // Caught only in pieces: digits may show between them.
                     if pieces.count >= 2 {
                         split.append(["id": id, "rule": item.rule ?? "?", "text": item.text ?? "", "pieces": pieces.count,
                                       "read": pieces.map(\.evidence).joined(separator: " | "),
-                                      "covered": Self.rounded(Self.unionCover(box, pieces.map(\.box))), "by_one": byOne])
+                                      "covered": Self.rounded(Self.unionCover(box, pieces.flatMap(\.boxes))), "by_one": byOne])
                     }
                     if let rule = item.rule {
                         var t = perRule[rule] ?? Tally()
                         t.total += 1
-                        let sameRule = hits.filter { $0.rule?.rawValue == rule }.map(\.box)
+                        let sameRule = hits.filter { $0.rule?.rawValue == rule }.flatMap(\.boxes)
                         if Self.unionCover(box, sameRule) >= Self.coveredShare { t.hit += 1 }
                         perRule[rule] = t
                     }
@@ -204,11 +212,16 @@ enum BaselineScore {
                 }
             }
             for finding in hits {
-                if Self.isTruePositive(finding.box, gt: gtBoxes) { textTrue += 1; cat.tp += 1 }
+                if finding.boxes.contains(where: { Self.isTruePositive($0, gt: gtBoxes) }) { textTrue += 1; cat.tp += 1 }
                 else {
                     textFalse += 1
                     cat.fp += 1
-                    falsePositives.append(["id": id, "rule": finding.rule?.rawValue ?? "?", "text": finding.evidence, "tolerant": finding.tolerant, "box": [finding.box.minX, finding.box.minY, finding.box.width, finding.box.height]])
+                    var entry: [String: Any] = ["id": id, "rule": finding.rule?.rawValue ?? "?", "text": finding.evidence, "tolerant": finding.tolerant, "box": [finding.box.minX, finding.box.minY, finding.box.width, finding.box.height]]
+                    // A wrapped value: where each of its boxes is, since its `box` spans both lines.
+                    if !finding.parts.isEmpty {
+                        entry["boxes"] = finding.boxes.map { [$0.minX, $0.minY, $0.width, $0.height] }
+                    }
+                    falsePositives.append(entry)
                 }
             }
             // 「所有文字都遮」 hides every line that was read, so that is what covers a name or an address.
