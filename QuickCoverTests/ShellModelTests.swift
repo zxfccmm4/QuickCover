@@ -96,6 +96,38 @@ struct ShellModelTests {
         #expect(shell.editor == nil)
     }
 
+    /// 这次自己选的样式（design.md §7.5.2）：换了样式记下来；只拨位置开关不算；换一张图从头算。
+    @Test
+    @MainActor
+    func theStylePickedForAPictureIsRemembered() async throws {
+        let shell = shell()
+        shell.open(try picture())
+        let editor = try #require(shell.editor)
+        defer { editor.cancelRecognition() }
+        #expect(shell.stylePickedThisTime == nil, "刚打开，还没有自己选过")
+
+        editor.setStyle(.blur)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(shell.stylePickedThisTime == .blur)
+
+        editor.setStripMetadata(!editor.preferences.stripMetadata)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(shell.stylePickedThisTime == .blur, "偏好设置变了但样式没变，不算选过")
+        editor.setStripMetadata(!editor.preferences.stripMetadata)
+
+        editor.setStyle(.solid)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(shell.stylePickedThisTime == .solid, "以最后一次为准")
+
+        shell.open(try picture())
+        #expect(shell.stylePickedThisTime == nil, "新的一张从头算")
+        editor.setStyle(.blur)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(shell.stylePickedThisTime == nil, "旧编辑页再变，不算到新的一张上")
+        shell.editor?.setStyle(.default)
+        shell.editor?.cancelRecognition()
+    }
+
     @Test
     @MainActor
     func thePlainTextButtonShowsThePicker() async {

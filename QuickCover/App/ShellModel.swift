@@ -30,6 +30,12 @@ final class ShellModel {
     /// The pages on the navigation stack (design.md §5). Bound to the stack's path, which is
     /// why anyone may write it; a later screen pushes here.
     var path: [Route] = []
+    /// 这张图开着的时候自己选过的样式（design.md §7.5.2）。开一张新图时是 nil：那上面还是上次留下的样式。
+    /// 导出页靠它分「上次留下的模糊」和「这次自己选的」。
+    private(set) var stylePickedThisTime: MaskStyle?
+    /// 正在盯着样式的编辑页，和盯上那一刻它的样式。
+    @ObservationIgnored private var watchedEditor: EditorModel?
+    @ObservationIgnored private var watchedStyle: MaskStyle?
     /// The picture being worked on; nil until one is opened. Each new picture is a new model, so
     /// the editor starts from design.md §7.3.1 every time.
     private(set) var editor: EditorModel?
@@ -113,10 +119,33 @@ final class ShellModel {
     /// (design.md §7.1.1, §7.3.1).
     func open(_ picture: PictureSource) {
         let model = EditorModel(picture: picture)
+        stylePickedThisTime = nil
+        watchedStyle = nil
         editor = model
         path = []
         page = .editor
         model.startRecognition()
+        watchStyle(of: model)
+    }
+
+    /// 盯着 `model` 的样式：换成别的样式了，那就是这次自己选的。`withObservationTracking` 只在
+    /// 改之前响一次，所以新值等改完再读，读完再盯上下一次。改到偏好设置但样式没变（导出页上
+    /// 拨位置开关）不算选过。
+    private func watchStyle(of model: EditorModel) {
+        watchedEditor = model
+        watchedStyle = model.preferences.style
+        withObservationTracking {
+            _ = model.preferences.style
+        } onChange: {
+            Task { @MainActor in
+                guard self.watchedEditor === model else { return }
+                if model.preferences.style != self.watchedStyle {
+                    self.watchedStyle = model.preferences.style
+                    self.stylePickedThisTime = model.preferences.style
+                }
+                self.watchStyle(of: model)
+            }
+        }
     }
 
     /// The app went to the background:「看原圖」, the drawing tool and Review Each Item go off
