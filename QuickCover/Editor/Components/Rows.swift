@@ -75,8 +75,12 @@ struct PickerRow: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Theme.tertiary)
             }
+            // 整行可点（design.md §7.1.1）：不加这一句，只有字、图标块、箭头本身接得到点。
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // 自己的 `PressStyle`，不用 `.plain`：`.plain` 会把停用的按钮再压暗一次，变灰的那一行就不止是第三级色了
+        // （design.md §7.1.3 要的是字、箭头、图标都是 `#6C6C70`）。`PressStyle` 不动颜色，按下去也没变化，和原来一样。
+        .buttonStyle(PressStyle())
         .disabled(!isEnabled)
     }
 }
