@@ -4,7 +4,7 @@ import SwiftUI
 struct QuickCover: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
         }
     }
 }
