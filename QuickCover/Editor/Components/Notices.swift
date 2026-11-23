@@ -2,7 +2,9 @@ import SwiftUI
 
 /// A notice bar (design.md §4「提醒条」): corner 12, 12 left, 8 right, 8 above and below, a 20 pt
 /// symbol, a `.footnote` in the body colour, and a small or a text button at the right end when
-/// there is one. The blur notice (4.7.5) and the save-failed notice (6.4.2) are both this.
+/// there is one. The blur notice is this twice: in Review Each Item as 4.7.5 with nothing at the end
+/// (`trailing: { EmptyView() }`), on the export page as 6.3.1 with the small button 6.3.2「改用純色」
+/// (design.md §7.4.4, §7.5). The save-failed notice (6.4.2) is it too.
 struct NoticeBar<Trailing: View>: View {
     let systemImage: String
     let tint: Color
