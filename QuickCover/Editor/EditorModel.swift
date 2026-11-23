@@ -90,6 +90,12 @@ final class EditorModel {
     private(set) var preferences: Preferences
     /// While true the picture is shown without its covers (hold to see the original).
     var showsOriginal = false
+    /// Whether Review Each Item is up (design.md §7.4). It goes off by itself when the sheet
+    /// closes, when the editor is left and when the app goes to the background.
+    var reviewShown = false
+    /// Whether the drawing tool is selected (design.md §7.3.7): the next drag on the picture draws a
+    /// box. Selecting it again, opening Review Each Item or leaving the editor switches it off.
+    var drawToolOn = false
     /// The item the picture should scroll to, set by "locate", cleared by the picture once there.
     var locateRequest: Int?
     private var nextID = 1
@@ -123,6 +129,28 @@ final class EditorModel {
     func cancelRecognition() {
         recognitionTask?.cancel()
         recognitionTask = nil
+    }
+
+    /// 「再試一次」after recognition failed (design.md §7.3.5): a fresh look at the picture, from the
+    /// beginning, with nothing left of the previous one.
+    func retryRecognition() {
+        cancelRecognition()
+        items = []
+        undoStack = []
+        redoStack = []
+        locateRequest = nil
+        showsOriginal = false
+        drawToolOn = false
+        recognition = .running
+        startRecognition()
+    }
+
+    /// What has to go off by itself when the editor is left, the export page or the picker opens,
+    /// or the app goes to the background (copy.md 7.3, design.md §7.3.7).
+    func resetTransientState() {
+        showsOriginal = false
+        drawToolOn = false
+        reviewShown = false
     }
 
     private func recognize() async {
