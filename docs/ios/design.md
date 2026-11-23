@@ -613,9 +613,10 @@ Image("IconArtwork")
 | 4 | 英文和辅助功能档字号下的排布（样机没有 SF 字体，也没画 AX 档） | 模拟器切 English 和 AX 档各截一轮 |
 | 5 | 系统的照片选择器、文件选择器、分享面板、警告在深色下是什么样 | 模拟器实拍 |
 | 6 | 马赛克够不够遮（§7.3.2：从 48 px 宽的缩图取色） | 导出原尺寸的图，在原图大小下看 |
-| 7 | 只给一张 1024 的 PNG 当 App 图标，Xcode 26 收不收、要不要改成 `.icon` | Pluso 建工程时 |
-| 8 | 触感（§8） | 真机 |
-| 9 | 读屏的念法（§9）：一行念成「手機號碼，已遮」，自定义动作「在圖上看」 | 真机 VoiceOver |
+| 7 | 触感（§8） | 真机 |
+| 8 | 读屏的念法（§9）：一行念成「手機號碼，已遮」，自定义动作「在圖上看」 | 真机 VoiceOver |
+
+图标那条不在这里了：苹果的文档写明，Xcode 会拿一张 1024×1024 的图生成全部尺寸，这是新建图标集的默认做法；分层的 `.icon` 是另一种做法，不是必须的（「Configuring your app icon using an asset catalog」，developer.apple.com/documentation/xcode/configuring-your-app-icon）。`docs/ios/icon/AppIcon.appiconset/Contents.json` 就是这个单尺寸的写法，我核过格式；没在 Xcode 26 里真的拖进工程编一次（这一步 Pluso 建工程时顺手就做了）。
 | 10 | 系统警告、系统弹窗的用字（§7.1.4、§7.2.2） | 模拟器实拍，和 copy.md 对 |
 
 ## 13. 参考和来源
