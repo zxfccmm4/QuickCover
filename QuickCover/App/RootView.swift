@@ -41,7 +41,10 @@ struct RootView: View {
         case .picker:
             PickerScreen()
         case .editor:
+            // 标题给推上来的选图页、导出页当返回键的名字（「‹ 編輯」，design.md §5、§7.1）；编辑页自己的导航栏不显示。
             EditorScreen().id(shell.editor.map { ObjectIdentifier($0) })
+                .navigationTitle("4.1.1")
+                .toolbar(.hidden, for: .navigationBar)
         case nil:
             Theme.page
         }
