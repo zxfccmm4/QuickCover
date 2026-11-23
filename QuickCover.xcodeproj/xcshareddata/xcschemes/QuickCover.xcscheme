@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "2E69B1330A3161295C9DCB01"
-               BuildableName = "RedactApp.app"
-               BlueprintName = "RedactApp"
-               ReferencedContainer = "container:RedactApp.xcodeproj">
+               BuildableName = "QuickCover.app"
+               BlueprintName = "QuickCover"
+               ReferencedContainer = "container:QuickCover.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "2E69B1330A3161295C9DCB01"
-            BuildableName = "RedactApp.app"
-            BlueprintName = "RedactApp"
-            ReferencedContainer = "container:RedactApp.xcodeproj">
+            BuildableName = "QuickCover.app"
+            BlueprintName = "QuickCover"
+            ReferencedContainer = "container:QuickCover.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -43,9 +43,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A1B2C3D40000000000000004"
-               BuildableName = "RedactAppTests.xctest"
-               BlueprintName = "RedactAppTests"
-               ReferencedContainer = "container:RedactApp.xcodeproj">
+               BuildableName = "QuickCoverTests.xctest"
+               BlueprintName = "QuickCoverTests"
+               ReferencedContainer = "container:QuickCover.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -65,9 +65,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "2E69B1330A3161295C9DCB01"
-            BuildableName = "RedactApp.app"
-            BlueprintName = "RedactApp"
-            ReferencedContainer = "container:RedactApp.xcodeproj">
+            BuildableName = "QuickCover.app"
+            BlueprintName = "QuickCover"
+            ReferencedContainer = "container:QuickCover.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -84,9 +84,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "2E69B1330A3161295C9DCB01"
-            BuildableName = "RedactApp.app"
-            BlueprintName = "RedactApp"
-            ReferencedContainer = "container:RedactApp.xcodeproj">
+            BuildableName = "QuickCover.app"
+            BlueprintName = "QuickCover"
+            ReferencedContainer = "container:QuickCover.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
