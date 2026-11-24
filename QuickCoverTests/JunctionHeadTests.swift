@@ -94,4 +94,27 @@ import Testing
         // A price with its full stop over a sum.
         #expect(junction(["共 19.", "20 元整，多退少补"]).isEmpty)
     }
+
+    // MARK: A scheme read with one slash too few
+
+    @Test func schemeReadWithOneSlashTooFew() {
+        // "https:/1" over a host reads "https://host": the "1" stands for the slash Vision read as
+        // another character, and the head of the address goes with the rest of it.
+        #expect(junction(["详情见 https:/1", "demo.example.org/a/b", "88990011 之前"])
+            == [JunctionMatch(rule: .url, text: "https://demo.example.org/a/b88990011", ranges: [4..<12, 0..<20, 0..<8])])
+        #expect(junction(["http:/|", "example.org"])
+            == [JunctionMatch(rule: .url, text: "http://example.org", ranges: [0..<7, 0..<11])])
+        #expect(junction(["见 https:/l", "shop.example.net/cart"])
+            == [JunctionMatch(rule: .url, text: "https://shop.example.net/cart", ranges: [2..<10, 0..<21])])
+        #expect(junction(["见 https:/I", "docs.example.com/a"])
+            == [JunctionMatch(rule: .url, text: "https://docs.example.com/a", ranges: [2..<10, 0..<18])])
+    }
+
+    @Test func whatIsNotASlash() {
+        // A character that passes for no slash is read as itself, and nothing matches.
+        #expect(junction(["见 https:/x", "demo.example.org"]).isEmpty)
+        // The line under it begins no address: there is nothing to tell the character by.
+        #expect(junction(["详情见 https:/1", "明天三点开会"]).isEmpty)
+        #expect(junction(["详情见 https:/1", "88990011 之前"]).isEmpty)
+    }
 }

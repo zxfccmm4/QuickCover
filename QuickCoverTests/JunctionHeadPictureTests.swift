@@ -156,6 +156,28 @@ import UIKit
         #expect(upper.allSatisfy { $0.minX >= picture.ink(ofHead: before.count, onLine: 0).maxX })
     }
 
+    // MARK: A scheme read with one slash too few
+
+    @Test(arguments: [
+        (["详情见 https:/1", "demo.example.org/a/b"], "https://demo.example.org/a/b", "https:/1", "详情见"),
+        (["http:/|", "example.org"], "http://example.org", "http:/|", ""),
+    ])
+    func schemeReadWithOneSlashTooFew(lines: [String], evidence: String, head: String, before: String) async throws {
+        let picture = Picture(lines)
+        let hits = try await textFindings(in: picture)
+        #expect(hits.map(\.rule) == [.url])
+        #expect(hits.map(\.evidence) == [evidence])
+        #expect(hits.first?.boxes.count == 2)
+        let upper = boxes(onLine: 0, in: picture, of: hits), lower = boxes(onLine: 1, in: picture, of: hits)
+        #expect(upper.count == 1 && lower.count == 1)
+        #expect(hides(upper, picture.ink(ofTail: head.count, onLine: 0)))
+        #expect(hides(lower, picture.ink(ofHead: lines[1].count, onLine: 1)))
+        if !before.isEmpty {
+            // The words before the scheme stay showing.
+            #expect(upper.allSatisfy { $0.minX >= picture.ink(ofHead: before.count, onLine: 0).maxX })
+        }
+    }
+
     // MARK: What only looks like such a piece
 
     @Test func aLabelOverAnAddressStaysShowing() async throws {

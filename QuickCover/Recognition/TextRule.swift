@@ -464,15 +464,19 @@ enum TextRuleMatcher {
     /// Vision lost at a cut put back: what the reading matches, and where each match sits on each
     /// line, as scalar indices into that line, or nil for a line the match does not reach. The
     /// characters put back belong to no line, so a match that spans them still reaches a character
-    /// of the line on either side.
+    /// of the line on either side. A slash read as another character is put back in its place, one
+    /// character for one, so the lines keep their length and a match reaches on that line what it
+    /// reads there, the misread character included.
     private static func reading(_ lines: [[Unicode.Scalar]], parted: Int) -> [(match: RuleMatch, places: [Range<Int>?])] {
         let space: Unicode.Scalar = " "
+        // The slash Vision misread at the end of a line, read as one again before the lines are joined.
+        let read = lines.indices.map { i in i + 1 < lines.count ? slashed(lines[i], before: lines[i + 1]) : lines[i] }
         var joined: [Unicode.Scalar] = []
         var starts: [Int] = []
-        for (i, line) in lines.enumerated() {
+        for (i, line) in read.enumerated() {
             if i > 0 {
                 if (parted & (1 << (i - 1))) != 0 { joined.append(space) }
-                joined += Self.mend(from: lines[i - 1], to: line)
+                joined += Self.mend(from: read[i - 1], to: line)
             }
             starts.append(joined.count)
             joined += line
@@ -501,6 +505,23 @@ enum TextRuleMatcher {
         return Array(repeating: slash, count: missing)
     }
 
+    /// The characters a second slash is read as when it cuts the end of a line: a bar read as a
+    /// 1, an l, a capital i, a bar, an exclamation mark, a small i or a backslash.
+    private static let passesForASlash: Set<Unicode.Scalar> = ["1", "l", "I", "|", "!", "i", "\\"]
+
+    /// The slash Vision misread at the end of a line, read as one again where the line under it starts
+    /// the rest of the address: "https:/1" over "demo.example.org" is "https://" and the host, the
+    /// second slash read as a 1, an l, a bar or the like. Only there: with nothing under it that
+    /// starts a host there is nothing to tell the character by, and it is read as itself, "https:/x"
+    /// and "https:/1" over a sentence the same. The character is traded in place, one for one, so the
+    /// line keeps its length and a match reaches it on the line it stands on.
+    private static func slashed(_ upper: [Unicode.Scalar], before lower: [Unicode.Scalar]) -> [Unicode.Scalar] {
+        guard let last = upper.last, passesForASlash.contains(last), startsAHost(lower) else { return upper }
+        let tail = String(String.UnicodeScalarView(upper.dropLast().filter { !$0.properties.isWhitespace })).lowercased()
+        guard tail.hasSuffix("https:/") || tail.hasSuffix("http:/") else { return upper }
+        return Array(upper.dropLast()) + ["/"]
+    }
+
     /// Whether the piece over the cut is the start of a scheme the line under it finishes, the scheme
     /// cut inside its name: "htt" over "ps://…" is "https://…", "ht" over "tps://…" and "HTTP" over
     /// "S://…" too. A label sits before an address, and glued to the start of the line under it it
@@ -512,6 +533,15 @@ enum TextRuleMatcher {
         return ["http", "https"].contains { scheme in
             scheme.hasPrefix(head) && head.count < scheme.count && (head + next).hasPrefix(scheme + "://")
         }
+    }
+
+    /// Whether a line starts the host of an address: a name, or an address of the IP kind.
+    private static func startsAHost(_ line: [Unicode.Scalar]) -> Bool {
+        guard let first = line.first else { return false }
+        if isLetter(first) { return true }
+        var i = 0
+        while i < line.count, isDigit(line[i]) { i += 1 }
+        return i > 0 && i < line.count && line[i] == "."
     }
 
     /// Whether a match that crosses a cut read without a space is not a value the wrap cut, but
