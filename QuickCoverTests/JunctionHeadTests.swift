@@ -1,0 +1,35 @@
+import Testing
+
+@testable import QuickCover
+
+/// Fix 5: the small piece a wrap leaves at the end of the line above, which no rule knows for what
+/// it is on its own: a scheme cut inside its name, a country code, the first number of an address,
+/// a scheme read with one slash too few. Read as one with the line under it, the piece is the head
+/// of a whole value, and it goes with it. What only looks like such a piece stays as it was.
+@Suite struct JunctionHeadTests {
+
+    private func junction(_ lines: [String]) -> [JunctionMatch] {
+        TextRuleMatcher.junctionMatches(lines: lines)
+    }
+
+    // MARK: The first number of an address
+
+    @Test func addressCutAfterItsFirstNumber() {
+        // "192." over "168.0.1" is one address: the full stop that ends the line is the one after
+        // the first number, not the end of a sentence.
+        #expect(junction(["网关地址是 192.", "168.0.1，别改"])
+            == [JunctionMatch(rule: .ipv4, text: "192.168.0.1", ranges: [6..<10, 0..<7])])
+        #expect(junction(["服务器 10.", "0.0.1 端口 8080"])
+            == [JunctionMatch(rule: .ipv4, text: "10.0.0.1", ranges: [4..<7, 0..<5])])
+        // Cut twice.
+        #expect(junction(["网关 192.", "168.0.", "1，别改"])
+            == [JunctionMatch(rule: .ipv4, text: "192.168.0.1", ranges: [3..<7, 0..<6, 0..<1])])
+    }
+
+    @Test func whatIsNotTheFirstNumberOfAnAddress() {
+        // The number of a list over three numbers that make no address: one of them is over 255.
+        #expect(junction(["事项 3.", "168.0.999，别改"]).isEmpty)
+        // A price with its full stop over a sum.
+        #expect(junction(["共 19.", "20 元整，多退少补"]).isEmpty)
+    }
+}
