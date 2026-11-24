@@ -104,8 +104,8 @@ jobs:
 
           - 版本：$VERSION ($BUILD)
           - 代码：[\`${GITHUB_SHA::7}\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)，main
-          - 工具：$xcode，$SDK，$RUNNER_ARCH 的编译机
-          - 文件：\`$IPA_NAME\`（$SIZE）
+          - 工具：${xcode}，${SDK}，${RUNNER_ARCH} 的编译机
+          - 文件：\`$IPA_NAME\`（${SIZE}）
           - SHA-256：\`$SHA256\`
           - 这次构建：[#$GITHUB_RUN_NUMBER]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
 

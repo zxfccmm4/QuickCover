@@ -20,7 +20,10 @@ struct IconTile: View {
 /// What a list row is made of (design.md §4「行」): the tile, then the text (`.body`, two lines at
 /// most) with a `.footnote` 2 under it when it has one, then whatever closes the row on the right.
 /// At least 52 high, 9 above and below, 16 on each side. A row with a footnote keeps to the top.
+/// Under the accessibility sizes nothing is cut (design.md §9.5): the title and the footnote take
+/// every line they need and the row grows.
 struct RowContent<Trailing: View>: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     let systemImage: String
     let title: Text
     var footnote: Text? = nil
@@ -40,12 +43,12 @@ struct RowContent<Trailing: View>: View {
                 title
                     .font(.body)
                     .foregroundStyle(isDimmed ? Theme.tertiary : Theme.body)
-                    .lineLimit(2)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                 if let footnote {
                     footnote
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryLabel)
-                        .lineLimit(3)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

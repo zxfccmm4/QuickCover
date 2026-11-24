@@ -45,20 +45,22 @@ struct ChecklistRow: View {
 /// The row「遮住所有文字」(design.md §7.4.3): 4.6.1 with 4.6.2 under it and a switch. No tile, as
 /// the mockup has none. Read as one element: 4.6.1, 4.6.2, then the state.
 struct CoverAllTextRow: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     let isOn: Bool
     let setOn: @MainActor (Bool) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
+                // Under the accessibility sizes both take every line they need (design.md §9.5).
                 Text("4.6.1")
                     .font(.body)
                     .foregroundStyle(Theme.body)
-                    .lineLimit(2)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                 Text("4.6.2")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryLabel)
-                    .lineLimit(3)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             // A closure, not the method itself: a main-actor function reference as Binding's
