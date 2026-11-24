@@ -173,7 +173,7 @@ struct Recognizer: Sendable {
         for code in codes {
             findings.append(Self.codeFinding(code, in: workingSize, scale: scale))
         }
-        findings.append(contentsOf: Self.textFindings(text, in: workingSize, scale: scale))
+        findings.append(contentsOf: Self.textFindings(text, in: workingSize, scale: scale, readOn: working))
         findings = BlockMerger.merge(findings, options: .init(maxGapEm: options.mergeGapEm))
         let lines = text.map { line in
             let corners = [line.topLeft, line.topRight, line.bottomRight, line.bottomLeft]
@@ -306,8 +306,17 @@ struct Recognizer: Sendable {
     /// Where the box of a line above ends above the box of the piece's own line — a gap between the
     /// two boxes — the padding stops at that box, and the same below: the margin is taken in the
     /// gap and only up to the neighbour, never over its glyphs; where the two boxes overlap by a
-    /// hair, the margin stops at the piece's own box. A wrapped value's piece on a line is boxed
-    /// just as a hit on that line alone would be.
+    /// hair, the margin keeps a twentieth of the line over the piece's own box. A wrapped value's
+    /// piece on a line is boxed just as a hit on that line alone would be.
+    ///
+    /// A box is not its glyphs, though: Vision runs a line's box under its last glyph by a couple
+    /// of pixels in one rendering and by half a line in another — a line with a full-width comma or
+    /// Chinese characters in a browser's type gets a box a tenth to a fifth of its height under its
+    /// glyphs — and nothing in the box tells the two apart. Given the picture (`inkBottom`), the
+    /// margin above goes on up to the line's ink itself under the piece's columns, and never over
+    /// one row of it: a line as laid out starts about a fifth of a box above its own capitals, and
+    /// the frozen truth boxes are laid-out lines, so that space has to be covered where the line
+    /// over it ends well above it. Without the picture, the box stands for the ink.
     ///
     /// Only on a line whose box takes in most of its row, the distance from its top to the top of
     /// the line over or under it: such a box has the space above the capitals in it already, and
@@ -319,16 +328,19 @@ struct Recognizer: Sendable {
     /// the line under it has a box no taller than its own row, its top is where this line's glyphs
     /// end, and the piece's box ends there too — unless the piece has a letter that hangs under
     /// the baseline, which would be cut with the box.
-    private static func clearOfNeighbours(_ padded: [CGPoint], on line: Int, glyphs: String, in read: [ReadLine]) -> [CGPoint] {
+    private static func clearOfNeighbours(_ padded: [CGPoint], on line: Int, glyphs: String, in read: [ReadLine],
+                                          inkBottom: @escaping (CGRect) -> CGFloat?) -> [CGPoint] {
         let box = Geometry.bounds(of: padded)
-        let kept = clearOfNeighbours(box, own: read[line].box, glyphs: glyphs, lines: read.map(\.box))
+        let kept = clearOfNeighbours(box, own: read[line].box, glyphs: glyphs, lines: read.map(\.box), inkBottom: inkBottom)
         guard kept != box else { return padded }
         return padded.map { CGPoint(x: $0.x, y: min(max($0.y, kept.minY), kept.maxY)) }
     }
 
     /// The same on boxes: `padded`, grown from the box `own` of its line, among the boxes of all
-    /// the lines of the picture.
-    static func clearOfNeighbours(_ padded: CGRect, own: CGRect, glyphs: String, lines: [CGRect]) -> CGRect {
+    /// the lines of the picture. `inkBottom` gives, for a band of the picture, the bottom edge of
+    /// the lowest row of ink in it; without it the box of the line above stands for its ink.
+    static func clearOfNeighbours(_ padded: CGRect, own: CGRect, glyphs: String, lines: [CGRect],
+                                  inkBottom: ((CGRect) -> CGFloat?)? = nil) -> CGRect {
         let around = lines.filter { $0 != own && $0.maxX > padded.minX && $0.minX < padded.maxX }
         // The row of the line: from the top of its box to the top of the nearest line over or under
         // it. A line beside it on the same row is neither.
@@ -338,8 +350,19 @@ struct Recognizer: Sendable {
         var top = padded.minY
         var bottom = padded.maxY
         for b in around {
-            if b.maxY <= own.minY + hair { top = max(top, min(b.maxY, own.minY)) }
             if b.minY >= own.maxY - hair { bottom = min(bottom, max(b.minY, own.maxY)) }
+            guard b.maxY <= own.minY + hair else { continue }
+            var stop = min(b.maxY, own.minY)
+            // The part of the line's box over the piece's columns and over our own box: where its
+            // ink ends there, the margin may reach up to it.
+            let band = CGRect(x: max(b.minX, padded.minX), y: b.minY,
+                              width: min(b.maxX, padded.maxX) - max(b.minX, padded.minX),
+                              height: stop - b.minY)
+            if band.width >= 1, band.height >= 1, let inkBottom, let ink = inkBottom(band) { stop = min(max(ink, b.minY), stop) }
+            // The line's box running into ours does not take the ascenders' space away: a twentieth of
+            // the line stays over the piece's own box, the bottom edge of a hanging letter at most.
+            if b.maxY > own.minY { stop = min(stop, own.minY - own.height * ascendersKeep) }
+            top = max(top, stop)
         }
         if own.height > row, !glyphs.contains(where: { hangs.contains($0) }),
            let under = around.filter({ $0.minY > own.minY && $0.minY < own.maxY - hair }).min(by: { $0.minY < $1.minY }) {
@@ -354,6 +377,9 @@ struct Recognizer: Sendable {
 
     /// A box that takes in most of its row, as a share of the row.
     private static let mostOfRow: CGFloat = 0.85
+
+    /// The margin a line keeps over its own box top when the box of the line above runs into it.
+    private static let ascendersKeep: CGFloat = 0.05
 
     /// Letters that hang under the baseline of a line.
     private static let hangs: Set<Character> = ["g", "j", "p", "q", "y", "@", "Q", "J", "_", "(", ")", "[", "]", "{", "}", ";", ","]
@@ -378,8 +404,11 @@ struct Recognizer: Sendable {
                        evidence: code.payloadString ?? "")
     }
 
-    private static func textFindings(_ lines: [RecognizedTextObservation], in size: CGSize, scale: CGSize) -> [Finding] {
+    private static func textFindings(_ lines: [RecognizedTextObservation], in size: CGSize, scale: CGSize,
+                                    readOn picture: CGImage) -> [Finding] {
         let read = lines.map { Self.readLine($0, in: size) }
+        // Where the ink of a line ends under a piece's columns, read off the picture the lines were read on.
+        let inkBottom: (CGRect) -> CGFloat? = { Ink.bottom(in: $0, of: picture) }
 
         // One line's share of a value: the characters it covers on that line, and the box that
         // hides them, in upright pixels, padded.
@@ -396,7 +425,7 @@ struct Recognizer: Sendable {
             let p = l.padding(for: rule)
             let glyphs = String(String.UnicodeScalarView(l.scalars[range]))
             let padded = Self.padded(l.quad(from: range.lowerBound, to: range.upperBound), top: p.top, bottom: p.bottom, side: p.side)
-            let quad = Self.clearOfNeighbours(padded, on: line, glyphs: glyphs, in: read).map { Self.scaled($0, scale) }
+            let quad = Self.clearOfNeighbours(padded, on: line, glyphs: glyphs, in: read, inkBottom: inkBottom).map { Self.scaled($0, scale) }
             return Piece(line: line, range: range, rule: rule, quad: quad,
                          evidence: evidence ?? glyphs, tolerant: tolerant)
         }
