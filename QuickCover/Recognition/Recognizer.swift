@@ -24,6 +24,13 @@ struct Finding: Equatable, Sendable {
     let evidence: String
     /// The rule matched only after OCR confusions were fixed.
     let tolerant: Bool
+    /// For text the recognizer read, a rule's hit or a line under「cover all text」: the height of
+    /// Vision's box for the tallest piece of the item, before any padding or widening, in pixels of
+    /// the upright picture. The mosaic's cells and the blur's grains over the box are sized by it
+    /// (`MaskRenderer.grid`). Nil for faces, codes and boxes drawn by hand.
+    let textHeight: CGFloat?
+    /// A box drawn by hand: nothing was read under it.
+    let drawnByHand: Bool
 
     /// Every box of the item, `quad` first.
     var quads: [[CGPoint]] { [quad] + parts }
@@ -38,29 +45,36 @@ struct Finding: Equatable, Sendable {
 
     /// The same box under another rule: a number cut across two lines is named by its whole length.
     func labelled(_ rule: TextRule) -> Finding {
-        Finding(kind: kind, rule: rule, pieces: quads, evidence: evidence, tolerant: tolerant)
+        Finding(kind: kind, rule: rule, pieces: quads, evidence: evidence, tolerant: tolerant,
+                textHeight: textHeight, drawnByHand: drawnByHand)
     }
 
     /// The same thing in a picture scaled by `scale`.
     func scaled(by scale: CGSize) -> Finding {
         Finding(kind: kind, rule: rule,
                 pieces: quads.map { $0.map { CGPoint(x: $0.x * scale.width, y: $0.y * scale.height) } },
-                evidence: evidence, tolerant: tolerant)
+                evidence: evidence, tolerant: tolerant, textHeight: textHeight.map { $0 * scale.height },
+                drawnByHand: drawnByHand)
     }
 
     /// One box.
-    init(kind: Kind, rule: TextRule? = nil, quad: [CGPoint], evidence: String = "", tolerant: Bool = false) {
-        self.init(kind: kind, rule: rule, pieces: [quad], evidence: evidence, tolerant: tolerant)
+    init(kind: Kind, rule: TextRule? = nil, quad: [CGPoint], evidence: String = "", tolerant: Bool = false,
+         textHeight: CGFloat? = nil, drawnByHand: Bool = false) {
+        self.init(kind: kind, rule: rule, pieces: [quad], evidence: evidence, tolerant: tolerant,
+                  textHeight: textHeight, drawnByHand: drawnByHand)
     }
 
     /// The boxes of one item, at least one: the first is `quad`, the others are `parts`.
-    init(kind: Kind, rule: TextRule? = nil, pieces: [[CGPoint]], evidence: String = "", tolerant: Bool = false) {
+    init(kind: Kind, rule: TextRule? = nil, pieces: [[CGPoint]], evidence: String = "", tolerant: Bool = false,
+         textHeight: CGFloat? = nil, drawnByHand: Bool = false) {
         self.kind = kind
         self.rule = rule
         self.quad = pieces.first ?? []
         self.parts = Array(pieces.dropFirst())
         self.evidence = evidence
         self.tolerant = tolerant
+        self.textHeight = textHeight
+        self.drawnByHand = drawnByHand
         self.box = Geometry.bounds(of: pieces.flatMap { $0 })
     }
 }
@@ -80,8 +94,18 @@ enum Geometry {
 
 /// One line of text as the recognizer read it, whether or not a rule matched.
 struct TextLine: Equatable, Sendable {
+    /// The line's box, padded a little.
     let quad: [CGPoint]
     let text: String
+    /// The height of the box Vision gave, before the padding, in pixels of the picture: what the
+    /// mosaic's cells are sized by once the line is covered (`Finding.textHeight`).
+    let lineHeight: CGFloat?
+
+    init(quad: [CGPoint], text: String, lineHeight: CGFloat? = nil) {
+        self.quad = quad
+        self.text = text
+        self.lineHeight = lineHeight
+    }
 }
 
 struct RecognitionResult: Equatable, Sendable {
@@ -98,8 +122,10 @@ struct RecognitionResult: Equatable, Sendable {
         RecognitionResult(
             size: CGSize(width: size.width * scale.width, height: size.height * scale.height),
             findings: findings.map { $0.scaled(by: scale) },
-            textLines: textLines.map { TextLine(quad: $0.quad.map { CGPoint(x: $0.x * scale.width, y: $0.y * scale.height) }, text: $0.text) }
-        )
+            textLines: textLines.map {
+                TextLine(quad: $0.quad.map { CGPoint(x: $0.x * scale.width, y: $0.y * scale.height) }, text: $0.text,
+                         lineHeight: $0.lineHeight.map { $0 * scale.height })
+            })
     }
 }
 
@@ -182,7 +208,7 @@ struct Recognizer: Sendable {
             let p = Self.textPadding(for: nil, lineHeight: bounds.height)
             let grown = Self.padded(corners, top: p.top, bottom: p.bottom, side: p.side)
             return TextLine(quad: grown.map { Self.scaled($0, scale) },
-                            text: line.transcript)
+                            text: line.transcript, lineHeight: bounds.height * scale.height)
         }
         return RecognitionResult(size: CGSize(width: upright.width, height: upright.height), findings: findings, textLines: lines)
     }
@@ -470,6 +496,9 @@ struct Recognizer: Sendable {
             let range: Range<Int>
             let rule: TextRule
             let quad: [CGPoint]
+            /// The height of the piece's box before the padding, Vision's box for these characters
+            /// on their line, in pixels of the picture (`Finding.textHeight`).
+            let lineHeight: CGFloat
             let evidence: String
             let tolerant: Bool
         }
@@ -483,6 +512,7 @@ struct Recognizer: Sendable {
             let beside = l.scalars.indices.contains { !range.contains($0) && !l.scalars[$0].properties.isWhitespace }
             let quad = Self.clearOfInk(cleared, range: own, beside: beside, line: l.box, inkColumns: inkColumns).map { Self.scaled($0, scale) }
             return Piece(line: line, range: range, rule: rule, quad: quad,
+                         lineHeight: Geometry.bounds(of: own).height * scale.height,
                          evidence: evidence ?? glyphs, tolerant: tolerant)
         }
         // Whether `q` is `p` over again: the same characters of the same line, or more around
@@ -574,12 +604,13 @@ struct Recognizer: Sendable {
             told[n] = true
             let v = values[n]
             out.append(Finding(kind: .text, rule: v.pieces[0].rule, pieces: v.pieces.map(\.quad), evidence: v.evidence,
-                               tolerant: v.pieces.contains { $0.tolerant }))
+                               tolerant: v.pieces.contains { $0.tolerant }, textHeight: v.pieces.map(\.lineHeight).max()))
         }
         for i in read.indices {
             for s in singles where s.line == i {
                 if let n = values.firstIndex(where: { v in v.pieces.contains { taken(s, by: $0) } }) { tell(n) }
-                else { out.append(Finding(kind: .text, rule: s.rule, quad: s.quad, evidence: s.evidence, tolerant: s.tolerant)) }
+                else { out.append(Finding(kind: .text, rule: s.rule, quad: s.quad, evidence: s.evidence, tolerant: s.tolerant,
+                                           textHeight: s.lineHeight)) }
             }
             for n in values.indices where !told[n] && values[n].pieces.first?.line == i { tell(n) }
         }

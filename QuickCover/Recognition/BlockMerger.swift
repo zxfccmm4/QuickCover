@@ -91,6 +91,9 @@ enum BlockMerger {
                        rule: a.rule == b.rule ? a.rule : nil,
                        pieces: [[left.quad[0], right.quad[1], right.quad[2], left.quad[3]]] + a.parts + b.parts,
                        evidence: left.evidence + " " + right.evidence,
-                       tolerant: a.tolerant || b.tolerant)
+                       tolerant: a.tolerant || b.tolerant,
+                       // The block is cut by the tallest letters any of its hits read.
+                       textHeight: [a.textHeight, b.textHeight].compactMap { $0 }.max(),
+                       drawnByHand: a.drawnByHand || b.drawnByHand)
     }
 }
