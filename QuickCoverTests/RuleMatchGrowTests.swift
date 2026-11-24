@@ -55,6 +55,35 @@ import Testing
         #expect(grown("流水R2026112300045678元") == ["R2026112300045678"])
     }
 
+    //
+    // Small letters that pass for digits are another matter: a digit Vision read as a letter is
+    // worse left showing than a letter hidden. A run of small letters glued to the value that reads
+    // as digits through and through goes with it; one letter of it that reads as no digit makes the
+    // whole run a word.
+    //
+
+    @Test func aLetterThatPassesForADigitStaysWithTheValue() {
+        // 16 digits as read and an o after them: the o may be a 0, the card's seventeenth digit.
+        #expect(grown("卡号6228 4800 5510 3927o下次") == ["6228 4800 5510 3927o"])
+        // Two such letters after a phone: they may be a 0 and a 2.
+        #expect(grown("转13800138000oz元") == ["13800138000oz"])
+        // Before the value as well.
+        #expect(grown("转o13800138000元") == ["o13800138000"])
+    }
+
+    @Test func aCardWithTwoSuchLettersWasCoveredAlready() {
+        // "3927oz" reads as 18 digits, 02 for oz, and the ID number rule comes before the card's:
+        // the whole of it was hidden before the rule above, by that reading.
+        #expect(grown("卡号6228 4800 5510 3927oz下次") == ["6228 4800 5510 3927oz"])
+    }
+
+    @Test func oneLetterThatReadsAsNoDigitMakesTheRunAWord() {
+        #expect(grown("卡号6228 4800 5510 3927on下次") == ["6228 4800 5510 3927"])
+        #expect(grown("卡号6228 4800 5510 3927ok下次") == ["6228 4800 5510 3927"])
+        // A label that ends in a sign is a word still.
+        #expect(grown("id:420261123000045678") == ["420261123000045678"])
+    }
+
     @Test func anAddressTooStopsAtASmallLetter() {
         #expect(grown("地址10.36.88.152in") == ["10.36.88.152"])
         #expect(grown("地址10.36.88.152IN") == ["10.36.88.152IN"])

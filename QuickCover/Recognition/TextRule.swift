@@ -79,10 +79,25 @@ extension RuleMatch {
     /// A rule can match part of one number, code or address: 16 digits of "R2026112300045678".
     /// Each match is grown to the whole run of characters it sits in, and runs that touch are
     /// joined: what is left showing still identifies, so all of it is hidden. A phone, an ID number,
-    /// a card and an IP address are digits through and through (an ID number's X aside), and there
-    /// a word in small letters glued to the value is a word of its own, "5510 3927on", and stays
-    /// showing; a capital glued to one makes a code of them, "R2026112300045678", and goes with it.
+    /// a card and an IP address are digits through and through (an ID number's X aside), and the
+    /// small letters glued to such a value are of two kinds. A run of them that reads as digits
+    /// through and through, "5510 3927oz", may be digits Vision read as letters: a digit left
+    /// showing is worse than a letter hidden, so the run goes with the value. Any other run, "5510
+    /// 3927on" after it or "tel" before it, is a word of its own and stays showing whole, sign and
+    /// all. A capital glued to the value makes a code of them, "R2026112300045678", and goes with it.
     static func grow(_ matches: [RuleMatch], in scalars: [Unicode.Scalar]) -> [RuleMatch] {
+        /// The small letters a reader takes for digits: the small keys of the matcher's `confusions`.
+        let passesForADigit: Set<Unicode.Scalar> = ["o", "l", "s", "z"]
+        /// Whether the small letters that open `scalars[from..<to]` are a word: one of them reads as no
+        /// digit. A capital ends them; what stands after them is neither asked about nor cut.
+        func isWord(from: Int, to: Int) -> Bool {
+            var i = from
+            while i < to, isSmallLetter(scalars[i]) {
+                if !passesForADigit.contains(scalars[i]) { return true }
+                i += 1
+            }
+            return false
+        }
         func text(_ from: Int, _ to: Int) -> String { String(String.UnicodeScalarView(scalars[from..<to])) }
         var joined: [RuleMatch] = []
         for m in matches.sorted(by: { $0.start < $1.start }) {
@@ -91,8 +106,8 @@ extension RuleMatch {
             while start > 0, isRunCharacter(scalars[start - 1]) { start -= 1 }
             while end < scalars.count, isRunCharacter(scalars[end]) { end += 1 }
             if m.rule.isDigitsOnly {
-                if start < m.start, isSmallLetter(scalars[start]) { start = m.start }
-                if end > m.end, isSmallLetter(scalars[m.end]) { end = m.end }
+                if start < m.start, isWord(from: start, to: m.start) { start = m.start }
+                if end > m.end, isWord(from: m.end, to: end) { end = m.end }
             }
             if let last = joined.last, start <= last.end {
                 joined[joined.count - 1] = RuleMatch(rule: last.rule, text: text(last.start, max(end, last.end)),
