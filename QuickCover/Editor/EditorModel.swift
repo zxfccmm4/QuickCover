@@ -30,7 +30,13 @@ struct MaskItem: Identifiable, Equatable, Sendable {
     /// What was read there. For the checklist's accessibility label and for tests.
     var evidence: String
 
-    init(id: Int, group: Group, origin: Origin, rule: TextRule?, quads: [[CGPoint]], isOn: Bool, evidence: String) {
+    /// For text the recognizer read, a suggestion or a text line: the height of Vision's box before
+    /// any padding, in pixels of the picture, which the mosaic's cells and the blur's grains are
+    /// sized by (`Finding.textHeight`). Nil for faces, codes and boxes drawn by hand.
+    var textHeight: CGFloat?
+
+    init(id: Int, group: Group, origin: Origin, rule: TextRule?, quads: [[CGPoint]], isOn: Bool, evidence: String,
+         textHeight: CGFloat? = nil) {
         precondition(!quads.isEmpty, "an item is at least one box")
         self.id = id
         self.group = group
@@ -39,11 +45,14 @@ struct MaskItem: Identifiable, Equatable, Sendable {
         self.quads = quads
         self.isOn = isOn
         self.evidence = evidence
+        self.textHeight = textHeight
     }
 
     /// An item of one box.
-    init(id: Int, group: Group, origin: Origin, rule: TextRule?, quad: [CGPoint], isOn: Bool, evidence: String) {
-        self.init(id: id, group: group, origin: origin, rule: rule, quads: [quad], isOn: isOn, evidence: evidence)
+    init(id: Int, group: Group, origin: Origin, rule: TextRule?, quad: [CGPoint], isOn: Bool, evidence: String,
+         textHeight: CGFloat? = nil) {
+        self.init(id: id, group: group, origin: origin, rule: rule, quads: [quad], isOn: isOn, evidence: evidence,
+                  textHeight: textHeight)
     }
 
     /// The first box: what an item was before it could hold several. New code reads `quads`.
@@ -62,9 +71,13 @@ struct MaskItem: Identifiable, Equatable, Sendable {
     var finding: Finding { findings[0] }
 
     /// One finding per box, in the order of `quads`: what the export fills in. The boxes of an item
-    /// go together, so one switch covers or uncovers them all.
+    /// go together, so one switch covers or uncovers them all. A box drawn by hand says so: with
+    /// nothing read under it, the mosaic is cut by the box's own height.
     var findings: [Finding] {
-        quads.map { Finding(kind: Kind.of(group), rule: rule, quad: $0, evidence: evidence) }
+        quads.map {
+            Finding(kind: Kind.of(group), rule: rule, quad: $0, evidence: evidence,
+                    textHeight: textHeight, drawnByHand: origin == .manual)
+        }
     }
 
     private enum Kind {
@@ -218,13 +231,13 @@ final class EditorModel {
         for finding in result.findings {
             let scaled = finding.scaled(by: scale)
             new.append(MaskItem(id: nextID, group: group(of: finding), origin: .suggestion, rule: finding.rule,
-                                quads: scaled.quads, isOn: true, evidence: finding.evidence))
+                                quads: scaled.quads, isOn: true, evidence: finding.evidence, textHeight: scaled.textHeight))
             nextID += 1
         }
         for line in result.textLines {
             new.append(MaskItem(id: nextID, group: .text, origin: .textLine, rule: nil,
                                 quads: [line.quad.map { CGPoint(x: $0.x * scale.width, y: $0.y * scale.height) }],
-                                isOn: false, evidence: line.text))
+                                isOn: false, evidence: line.text, textHeight: line.lineHeight.map { $0 * scale.height }))
             nextID += 1
         }
         items = new

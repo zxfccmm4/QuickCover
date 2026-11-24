@@ -26,19 +26,38 @@ enum MaskRenderer {
         var blurGrain: BlurGrain = .default
     }
 
-    /// How coarse the blur is: a hidden thing `height` pixels tall gets one blurred grain to every
-    /// `divisor`th of its height, but never one under `floor` pixels.
+    /// How coarse the blur is over a face: a face `height` pixels tall gets one blurred grain to
+    /// every `divisor`th of its height, but never one under `floor` pixels. Everything else is cut
+    /// by a base or, drawn by hand, by its own height, its blur the same way as its mosaic (`grid`).
     struct BlurGrain: Equatable, Sendable {
         var divisor: CGFloat
         var floor: CGFloat
 
         func cell(forHeight height: CGFloat) -> CGFloat { max(floor, height / divisor) }
 
-        /// The mosaic's numbers. Measured on the fixtures (`RenderProbeTests`): with a tenth and a
-        /// floor of 10, Vision still read runs of 3–5 characters of card and ID numbers through the
-        /// blur; with these, no more than one character in a row.
+        /// The numbers a mosaic over a face is cut by. Measured on the fixtures
+        /// (`RenderProbeTests`) while text was still cut this way: with a tenth and a floor of 10,
+        /// Vision still read runs of 3–5 characters of card and ID numbers through the blur; with
+        /// these, no more than one character in a row.
         static let `default` = BlurGrain(divisor: 6, floor: 12)
     }
+
+    /// The grains one covered box is cut into: the mosaic's cells, or, for the blur, the pixels the
+    /// part of the picture under it is squeezed through. `columns` across and `rows` down, they
+    /// share the box exactly between them (`grain(in:)`), so a cover never reaches past its box.
+    struct Grid: Equatable, Sendable {
+        let columns: Int
+        let rows: Int
+
+        /// One grain over `bounds`.
+        func grain(in bounds: CGRect) -> CGSize {
+            CGSize(width: bounds.width / CGFloat(columns), height: bounds.height / CGFloat(rows))
+        }
+    }
+
+    /// The smallest base, in pixels of the picture: no cell is under it but a single one over a
+    /// box narrower than it.
+    static let mosaicFloor: CGFloat = 12
 
     enum Failure: Error {
         case cannotDecode
@@ -93,11 +112,77 @@ enum MaskRenderer {
                     context.addPath(path)
                     context.fillPath()
                 case .mosaic, .blur:
-                    cover(from: image, rect: Geometry.bounds(of: quad), path: path, into: context, style: style, blurGrain: blurGrain)
+                    cover(from: image, rect: Geometry.bounds(of: quad), path: path, finding: finding,
+                          into: context, style: style, blurGrain: blurGrain)
                 }
             }
         }
         return context.makeImage() ?? image
+    }
+
+    /// How `bounds`, the cover over `finding`, is cut under `style` (`Grid`). Solid has no grains.
+    ///
+    /// Everything but a face is cut by a base, and the blur over it through the same grains as its
+    /// mosaic, so that it is as coarse. The box is one or two cells high, never more (`rows`), and
+    /// as many cells across as whole ones the base wide fit (`columns`); the cells share the box
+    /// exactly, so nothing is pasted over what was not to be hidden.
+    ///
+    /// Text the recognizer read has its base in the height of its letters. Ato looked at the
+    /// exported pictures pixel by pixel (2026-11-24, message 1930), when every text box was cut
+    /// into six rows whatever the size of its letters: no digit could be read, but each left its
+    /// own pattern of light and dark cells, the two 1s of a card number as two thin bright bars
+    /// one cell wide, the three 6s as one picture. So a cell is never smaller than a letter is
+    /// tall. The measure is the height of Vision's box for the tallest piece of the text, taken
+    /// before the padding and the widening (`Finding.textHeight`): a little more than the glyphs,
+    /// so the cell is a little more than the letter. The base is never less than half the box's
+    /// height either, so a block of three lines or more gets wider cells, nor under
+    /// `mosaicFloor`. When the height is missing, which nothing in the app produces, half the
+    /// box's height stands in for it.
+    ///
+    /// Codes have no letters to go by: their base is half the box's height, never under
+    /// `mosaicFloor`.
+    ///
+    /// A box drawn by hand gets one row of cells, each the box's height wide and tall. Nobody
+    /// knows what is under it: most likely a line of text the recognizer did not read, or a small
+    /// thing. Such a cover comes without the notice that a mosaic leaves traces (copy 6.3.3), so
+    /// it must not give more away than the covers over text that was read. Cut by half the box's
+    /// height, a box drawn round one line of text would get cells half a letter tall; in one row
+    /// a cell covers several letters, as coarse as the mosaic over read text or coarser (Ato,
+    /// message 1951).
+    ///
+    /// A face is cut by the height of what is hidden, as it always was: the mosaic in cells a
+    /// sixth of it, never under `mosaicFloor`; the blur in `blurGrain`.
+    static func grid(over bounds: CGRect, hiding finding: Finding, style: MaskStyle,
+                     blurGrain: BlurGrain = .default) -> Grid {
+        guard style != .solid else { return Grid(columns: 1, rows: 1) }
+        if finding.kind == .face {
+            let cell = style == .mosaic ? max(mosaicFloor, bounds.height / 6) : blurGrain.cell(forHeight: bounds.height)
+            return Grid(columns: max(1, Int((bounds.width / cell).rounded(.up))),
+                        rows: max(1, Int((bounds.height / cell).rounded(.up))))
+        }
+        if finding.drawnByHand {
+            return Grid(columns: max(1, whole(bounds.width / max(bounds.height, mosaicFloor))), rows: 1)
+        }
+        return grid(over: bounds, base: base(over: bounds, textHeight: finding.textHeight))
+    }
+
+    /// The base text that was read and codes are cut by: the height of the tallest piece of text
+    /// read under the box (`textHeight`), half the box's height and `mosaicFloor`, whichever is
+    /// largest.
+    static func base(over bounds: CGRect, textHeight: CGFloat?) -> CGFloat {
+        max(mosaicFloor, bounds.height / 2, textHeight ?? 0)
+    }
+
+    /// `grid` for a box cut by `base`: whole ones across, one row or two down.
+    static func grid(over bounds: CGRect, base: CGFloat) -> Grid {
+        Grid(columns: max(1, whole(bounds.width / base)),
+             rows: max(1, min(2, whole(bounds.height / base))))
+    }
+
+    /// `value` rounded down, a rounding error's hair under a whole number counted as that whole
+    /// number: the quotient of a box and half its height is two, not one and a hair short of it.
+    private static func whole(_ value: CGFloat) -> Int {
+        value.isFinite ? max(0, Int((value + 1e-9).rounded(.down))) : 0
     }
 
     /// Redraws `rect` of the picture through a much smaller copy, clipped to `path`.
@@ -109,26 +194,17 @@ enum MaskRenderer {
     /// centre read 1.6 px off, the last one's 4.3) and takes the picture's outermost pixel for all
     /// that lies beyond its edge (55 % of a cell flush with the edge), which left such a cell with a
     /// light or a dark rim.
-    private static func cover(from image: CGImage, rect: CGRect, path: CGPath, into context: CGContext,
+    private static func cover(from image: CGImage, rect: CGRect, path: CGPath, finding: Finding, into context: CGContext,
                               style: MaskStyle, blurGrain: BlurGrain) {
         let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
         guard bounds.width >= 2, bounds.height >= 2 else { return }
-        // Mosaic cells and blur grain follow the height of the thing hidden: a text line gets
-        // cells a fraction of its height, never below the floor that keeps digits unreadable.
-        // The blur's grain is `BlurGrain.default`, a sixth of the height and never under 12.
-        let cell: CGFloat
-        switch style {
-        case .mosaic: cell = max(12, bounds.height / 6)
-        case .blur: cell = blurGrain.cell(forHeight: bounds.height)
-        case .solid: cell = 1
-        }
-        let columns = max(1, Int((bounds.width / cell).rounded(.up)))
-        let rows = max(1, Int((bounds.height / cell).rounded(.up)))
-        guard let small = CGImage.rgbaContext(width: columns, height: rows), let grains = small.data,
+        // Mosaic cells and blur grain follow what is hidden and how tall it is (`grid`).
+        let cut = grid(over: bounds, hiding: finding, style: style, blurGrain: blurGrain)
+        guard let small = CGImage.rgbaContext(width: cut.columns, height: cut.rows), let grains = small.data,
               let picture = context.data else { return }
         fillGrains(grains.assumingMemoryBound(to: UInt8.self), grainStride: small.bytesPerRow,
                    from: picture.assumingMemoryBound(to: UInt8.self), stride: context.bytesPerRow,
-                   bounds: bounds, columns: columns, rows: rows)
+                   bounds: bounds, columns: cut.columns, rows: cut.rows)
         guard let grainImage = small.makeImage() else { return }
 
         context.saveGState()
@@ -169,9 +245,9 @@ enum MaskRenderer {
                         pixel += 4
                     }
                 }
-                // Every cell holds pixels: at least half a `cell` across (5 pixels at least, the
-                // smallest `cell` being 10), or, when it is the only one, the whole `bounds`, 2 at least.
-                // `max` only keeps the division safe.
+                // Every cell holds pixels: at least half of what it is cut by across (6 pixels at least,
+                // the smallest measure being `mosaicFloor`), or, when it is the only one, the whole
+                // `bounds`, 2 at least. `max` only keeps the division safe.
                 let count = max(1, (under - from) * (past - first))
                 let grain = grains + row * grainStride + column * 4
                 for (component, sum) in [red, green, blue, alpha].enumerated() {
