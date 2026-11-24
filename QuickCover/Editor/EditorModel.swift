@@ -217,8 +217,6 @@ final class EditorModel {
         var new: [MaskItem] = []
         for finding in result.findings {
             let scaled = finding.scaled(by: scale)
-            // TEMP(fix-merge): `quads` is the temporary extension in Components/Finding+Quads.swift until
-            // the recognizer's findings carry their boxes themselves.
             new.append(MaskItem(id: nextID, group: group(of: finding), origin: .suggestion, rule: finding.rule,
                                 quads: scaled.quads, isOn: true, evidence: finding.evidence))
             nextID += 1
