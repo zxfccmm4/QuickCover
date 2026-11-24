@@ -29,6 +29,9 @@ struct MaskItem: Identifiable, Equatable, Sendable {
     var isOn: Bool
     /// What was read there. For the checklist's accessibility label and for tests.
     var evidence: String
+    /// Text the recognizer read, a rule's hit or a text line: what a mosaic leaves the traces of
+    /// that copy 6.3.3 is about. Not a box drawn by hand.
+    var isTextRead: Bool { group == .text && origin != .manual }
 
     /// For text the recognizer read, a suggestion or a text line: the height of Vision's box before
     /// any padding, in pixels of the picture, which the mosaic's cells and the blur's grains are
@@ -256,6 +259,10 @@ final class EditorModel {
     // MARK: - What is covered
 
     var enabledItems: [MaskItem] { items.filter(\.isOn) }
+
+    /// 导出的图里有没有文字类的遮罩：开着的、从文字识别出来的那些（规则认出来的，和「文字」那些行，含「遮住所有文字」
+    /// 盖上的）。自己框的不算，人脸、二维码、条形码也不算。导出页马赛克下那条提醒说的是字，看的是它（copy.md 6.3.3）。
+    var coversText: Bool { enabledItems.contains { $0.isTextRead } }
 
     var checklist: [MaskItem] { items.filter(\.isListed) }
 

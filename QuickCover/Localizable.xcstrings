@@ -338,7 +338,7 @@
       }
     },
     "4.1.1" : {
-      "comment" : "copy.md §4.1 标题与入口 · 4.1.1 · 编辑页没有导航栏。这两个字用在选图页和导出页左上角的返回键上：从编辑页去了这两页，返回键就是「编辑」",
+      "comment" : "copy.md §4.1 标题与入口 · 4.1.1 · 编辑页没有导航栏，页面上不写这两个字。它们是编辑页的名字：从编辑页去了选图页或导出页，左上角是系统的圆箭头、不带字，读屏点在返回键上时把它念出来（规格 1.4）",
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -1778,7 +1778,7 @@
       }
     },
     "6.2.4" : {
-      "comment" : "copy.md §6.2 位置信息 · 6.2.4 · 样式是马赛克或纯色时显示。模糊时不显示：模糊后的像素就是遮住的内容，和旁边的 6.3.1 放在一起两句打架（Ato 定，2026-11-23）。简报验收第 3 条过了才留这句",
+      "comment" : "copy.md §6.2 位置信息 · 6.2.4 · 只在样式是纯色时显示（Ato 定，2026-11-24：他按原像素看了导出的图，马赛克下数字认不出，但深浅的痕迹还在，这句在马赛克下还不成立；马赛克下换成 6.3.3）。模糊时也不显示：模糊后的像素就是遮住的内容，和旁边的 6.3.1 放在一起两句打架（Ato 定，2026-11-23）。简报验收第 3 条过了才留这句",
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -1802,7 +1802,7 @@
       }
     },
     "6.3.1" : {
-      "comment" : "copy.md §6.3 模糊提醒 · 6.3.1 · 导出页那条提醒里、按钮 6.3.2 左边的一句。右边被按钮占了地方，原来那整句会折成两行、第二行只剩「色。」，所以只说风险，做法让按钮说。繁体 8 个字，英文一行",
+      "comment" : "copy.md §6.3 模糊、马赛克的提醒 · 6.3.1 · 导出页那条提醒里、按钮 6.3.2 左边的一句。右边被按钮占了地方，原来那整句会折成两行、第二行只剩「色。」，所以只说风险，做法让按钮说。繁体 8 个字，英文一行。2026-11-24 复核：模糊要变粗，这句说的是风险，和模糊粗细没关系，不用改",
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -1826,7 +1826,7 @@
       }
     },
     "6.3.2" : {
-      "comment" : "copy.md §6.3 模糊提醒 · 6.3.2 · 按钮。导出页的模糊提醒里用，点了整张图换成纯色",
+      "comment" : "copy.md §6.3 模糊、马赛克的提醒 · 6.3.2 · 按钮。导出页的模糊提醒里用，点了整张图换成纯色；马赛克提醒里是同一个按钮",
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
@@ -1845,6 +1845,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Switch to Solid Color"
+          }
+        }
+      }
+    },
+    "6.3.3" : {
+      "comment" : "copy.md §6.3 模糊、马赛克的提醒 · 6.3.3 · 导出页在马赛克下的那句实话，旁边是按钮 6.3.2，做法让按钮说（和 6.3.1 同一个规矩）。说的是字，不是数字：Ato 量的只有文字（这轮盲看加验中文字，姓名或地址），人脸没量过。用法 Ato 定了（2026-11-24）：就按这句配按钮 6.3.2，和模糊那条一个样子，Colo 排下来放不下才换 6.3.4。等马赛克的格子放大到不小于一个字高、Ato 再量一遍并找人盲看过了，这句才跟着进包。繁体 28 个字，按钮旁边两行；英文也是两行（按字宽估的，以真机为准）",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "马赛克下，放大也看不出原来的字，但新图里留着深浅的痕迹。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "馬賽克下，放大也看不出原來的字，但新圖裡留著深淺的痕跡。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With mosaic, text can't be read, even zoomed in, but leaves traces."
+          }
+        }
+      }
+    },
+    "6.3.4" : {
+      "comment" : "copy.md §6.3 模糊、马赛克的提醒 · 6.3.4 · 和 6.3.3 开头是同一句，三件事说全，给旁边放不下按钮的时候用。Ato 定（2026-11-24）：先用 6.3.3 配按钮 6.3.2；Colo 排下来放不下按钮，才换成这句。两句只用一句。繁体 43 个字，独占一行时两行；英文两行（按字宽估的，以真机为准）",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "马赛克下，放大也看不出原来的字，但新图里留着深浅的痕迹。要一点痕迹都不留，请改用纯色。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "馬賽克下，放大也看不出原來的字，但新圖裡留著深淺的痕跡。要一點痕跡都不留，請改用純色。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With mosaic, text can't be read, even zoomed in, but leaves traces. Solid Color leaves none."
           }
         }
       }

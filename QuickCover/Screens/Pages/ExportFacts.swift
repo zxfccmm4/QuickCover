@@ -7,15 +7,22 @@ struct ExportFacts: Equatable {
     let stripMetadata: Bool
     /// 这张图开着的时候自己选过模糊（design.md §7.5.2）。上面还是上次留下的模糊、这次没碰过时是 false。
     let blurPickedThisTime: Bool
+    /// 导出的图里有没有文字类的遮罩（`EditorModel.coversText`）。
+    let coversText: Bool
 
     /// 上次留下的模糊才提醒，这次自己选的不吵（§7.5.2）。
     var showsBlurNotice: Bool { style == .blur && !blurPickedThisTime }
-    /// 模糊时没有 6.2.4 那一行（design.md 1.1）。
-    var showsCoveredLine: Bool { style != .blur }
+    /// 马赛克下都提醒，这次自己选的也一样（和模糊那条不一样）：格子里的深浅还留着字的痕迹（copy.md 6.3.3）。
+    /// 那句说的是字，所以只在图里有文字类的遮罩时出：只有人脸的合照、只有码或自己框的图什么都不显示（Ato 定，2026-11-24）。
+    var showsMosaicNotice: Bool { style == .mosaic && coversText }
+    /// 卡片下面有没有提醒条：模糊那条或马赛克那条。
+    var showsNotice: Bool { showsBlurNotice || showsMosaicNotice }
+    /// 打勾那一行（6.2.4）只在纯色下有（copy.md 6.2.4 的说明：Ato 定，2026-11-24）。
+    var showsCoveredLine: Bool { style == .solid }
     /// 开着时念 6.2.2，关掉后念 6.2.3。
     var footnote: LocalizedStringKey { stripMetadata ? "6.2.2" : "6.2.3" }
-    /// 图最高 380；有模糊提醒时给提醒让地方，最高 285（§7.5.2）。
-    var pictureMaxHeight: CGFloat { showsBlurNotice ? 285 : 380 }
+    /// 图最高 380；有提醒条时给提醒让地方，最高 285（§7.5.2）。
+    var pictureMaxHeight: CGFloat { showsNotice ? 285 : 380 }
 
     /// 图在页面上占的大小：按原图比例，宽最多 `maxWidth`（最多 300），高最多 `pictureMaxHeight`。
     func pictureSize(aspect: CGFloat, maxWidth: CGFloat = 300) -> CGSize {

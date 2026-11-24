@@ -2,7 +2,9 @@ import SwiftUI
 
 /// 导出页（design.md §7.5，copy.md §6.1–§6.4）：「匯出」推过来，系统导航栏，标题 6.1.1、「‹ 編輯」。
 /// 页面从上到下能滚：导出样子的图（`CoveredPicture`）、6.1.2、位置信息开关那一行（6.2.1，`EditorModel.setStripMetadata`）、
-/// 6.2.4（模糊时没有）。上次留下的模糊时，卡片下面是 6.3.1 加小按钮 6.3.2「改用純色」，图最高 285。
+/// 6.2.4（只在纯色下有）。上次留下的模糊时，卡片下面是 6.3.1 加小按钮 6.3.2「改用純色」，字和按钮并排；样式是马赛克、
+/// 图里有文字类的遮罩时（这次自己选的也一样）是 6.3.3 加同一个小按钮，字两行占满宽、按钮在字下面 6（规格 1.6）。
+/// 两条一个位置、一个颜色。只有人脸、只有码或自己框的图在马赛克下两条都没有。有提醒条时图最高 285。
 /// 钉在底部的是主按钮 6.1.3 和并排的次按钮 6.1.4、6.1.5，上面一层 20 的渐变；存失败时按钮上面出 6.4.2 加 6.4.3；
 /// 存好、拷贝好，导航栏下面出 toast（6.4.1 / 6.4.4），人还在这一页。
 struct ExportScreen: View {
@@ -20,7 +22,8 @@ struct ExportScreen: View {
     private var facts: ExportFacts {
         ExportFacts(style: model.preferences.style,
                     stripMetadata: model.preferences.stripMetadata,
-                    blurPickedThisTime: shell.stylePickedThisTime == .blur)
+                    blurPickedThisTime: shell.stylePickedThisTime == .blur,
+                    coversText: model.coversText)
     }
 
     private var stripMetadata: Binding<Bool> {
@@ -84,9 +87,12 @@ struct ExportScreen: View {
                 .padding(.horizontal, 32)
                 .padding(.top, 10)
         }
-        if facts.showsBlurNotice {
+        // 两条提醒一个位置、一个样子，按钮都是 6.3.2，只有那句不同（copy.md §6.3）。6.3.3 一行放不下，
+        // 提醒条自己改成上下排（`NoticeBar.stacksWhenTooWide`）。
+        if facts.showsNotice {
             NoticeBar(systemImage: "exclamationmark.triangle", tint: Theme.blurNoticeIcon,
-                      ground: Theme.blurNotice, text: "6.3.1") {
+                      ground: Theme.blurNotice, text: facts.showsMosaicNotice ? "6.3.3" : "6.3.1",
+                      stacksWhenTooWide: true) {
                 SmallButton(title: "6.3.2") { switchToSolid() }
             }
             .padding(.horizontal, 16)

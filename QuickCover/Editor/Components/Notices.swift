@@ -4,7 +4,15 @@ import SwiftUI
 /// symbol, a `.footnote` in the body colour, and a small or a text button at the right end when
 /// there is one. The blur notice is this twice: in Review Each Item as 4.7.5 with nothing at the end
 /// (`trailing: { EmptyView() }`), on the export page as 6.3.1 with the small button 6.3.2「改用純色」
-/// (design.md §7.4.4, §7.5). The save-failed notice (6.4.2) is it too.
+/// and, when the style is mosaic, as 6.3.3 with the same button (design.md §7.4.4, §7.5). The
+/// save-failed notice (6.4.2) is it too.
+///
+/// With `stacksWhenTooWide` (spec 1.6, the export page's notice about the style) the words share a
+/// line with the button only when they fit whole beside it (6.3.1 in every language: 52 high);
+/// otherwise the words go over the full width and the button stands 6 under them, its left edge on
+/// theirs (6.3.3 in every language: two lines, 94 high). `ViewThatFits` measures it, so it follows
+/// the language and the size of the type, and the words are never cut. Without it the words wrap
+/// beside the button, up to three lines.
 /// From AX1 on the words are too wide to share a line with a button: the button goes under the
 /// text, 12 below and to the left (design.md §9.5, nothing cut to an ellipsis).
 struct NoticeBar<Trailing: View>: View {
@@ -12,6 +20,9 @@ struct NoticeBar<Trailing: View>: View {
     let tint: Color
     let ground: Color
     let text: LocalizedStringKey
+    /// The words and the button stand one under the other whenever the words do not fit whole
+    /// beside the button; see the type.
+    var stacksWhenTooWide = false
     @ViewBuilder let trailing: () -> Trailing
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -24,6 +35,30 @@ struct NoticeBar<Trailing: View>: View {
                         words
                     }
                     trailing()
+                }
+            } else if stacksWhenTooWide {
+                // The first that fits the width: the words on one line beside the button, or over
+                // the full width with the button under them.
+                ViewThatFits(in: .horizontal) {
+                    // The spacer, at least the spacing, keeps the words left and the button at the
+                    // right end and makes the option as wide as the bar; it fits when the least is enough.
+                    HStack(spacing: 8) {
+                        symbol
+                        words.fixedSize(horizontal: true, vertical: false)
+                        Spacer(minLength: 0)
+                        trailing()
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            symbol
+                            words
+                        }
+                        // The invisible symbol keeps the button's left edge on the words'.
+                        HStack(spacing: 8) {
+                            symbol.hidden()
+                            trailing()
+                        }
+                    }
                 }
             } else {
                 HStack(spacing: 8) {
@@ -50,9 +85,9 @@ struct NoticeBar<Trailing: View>: View {
         Text(text)
             .font(.footnote)
             .foregroundStyle(Theme.body)
-            // Under the accessibility sizes the text wraps instead of the button, up to its three lines;
-            // from AX1 on the button is under it, so the text takes every line it needs.
-            .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
+            // Beside the button the text wraps instead of it, up to its three lines; from AX1 on,
+            // and wherever it has the full width (`stacksWhenTooWide`), it takes every line it needs.
+            .lineLimit(typeSize.isAccessibilitySize || stacksWhenTooWide ? nil : 3)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
