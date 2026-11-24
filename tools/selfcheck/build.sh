@@ -3,6 +3,7 @@
 # pictures in the bundle, as an IPA for the owner's own phone. It is not an App Store build.
 #
 #   tools/selfcheck/build.sh            (run from anywhere, on the builder)
+#   XCODEBUILD=xcodebuild tools/selfcheck/build.sh    (anywhere else, e.g. GitHub Actions)
 #
 # The page is reached by holding the title on the first screen for two seconds.
 set -e -o pipefail
@@ -14,7 +15,7 @@ rm -rf -- "$out"
 mkdir -p "$out"
 
 # A device build, Release: left to itself the archive comes out for the simulator, in Debug.
-airbuild-xcode archive \
+"${XCODEBUILD:-airbuild-xcode}" archive \
   -project QuickCover.xcodeproj \
   -scheme QuickCover \
   -configuration Release \

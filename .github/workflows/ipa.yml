@@ -1,0 +1,107 @@
+# Every push to main builds the self-check package, the same IPA tools/selfcheck/build.sh makes on
+# the builder, and hangs it on a Release tagged v<version>-<build>. A push that does not change the
+# version number replaces the files of the release that already has that tag.
+name: 出 IPA 挂到 Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ipa-release
+  cancel-in-progress: true
+
+jobs:
+  ipa:
+    name: 自检包
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v7
+
+      - name: 编译并打成 IPA
+        run: |
+          log="$RUNNER_TEMP/build.log"
+          status=0
+          XCODEBUILD=xcodebuild tools/selfcheck/build.sh >"$log" 2>&1 || status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "--- 报错 ---"
+            grep -n -E '(^|[^A-Za-z])(error|fatal error):' "$log" | cut -c1-400 | tail -n 60 || true
+            echo "--- 日志最后 60 行 ---"
+            tail -n 60 "$log"
+            exit "$status"
+          fi
+          tail -n 14 "$log"
+
+      - name: 留下编译日志
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-log
+          path: ${{ runner.temp }}/build.log
+          if-no-files-found: ignore
+
+      - name: 读版本号，给 IPA 换个带版本的名字
+        id: v
+        run: |
+          root=.airbuild/artifacts/selfcheck
+          app="$root/QuickCoverSelfCheck.xcarchive/Products/Applications/QuickCover.app"
+          pb() { /usr/libexec/PlistBuddy -c "Print :$1" "$app/Info.plist"; }
+          version=$(pb CFBundleShortVersionString)
+          build=$(pb CFBundleVersion)
+          name="QuickCover-$version-$build-selfcheck.ipa"
+          cp "$root/QuickCoverSelfCheck.ipa" "$RUNNER_TEMP/$name"
+          {
+            echo "version=$version"
+            echo "build=$build"
+            echo "sdk=$(pb DTSDKName)"
+            echo "name=$name"
+            echo "path=$RUNNER_TEMP/$name"
+            echo "sha256=$(shasum -a 256 "$RUNNER_TEMP/$name" | cut -d ' ' -f 1)"
+            echo "size=$(du -h "$RUNNER_TEMP/$name" | cut -f 1 | tr -d ' ')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 挂到 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+          BUILD: ${{ steps.v.outputs.build }}
+          SDK: ${{ steps.v.outputs.sdk }}
+          IPA_NAME: ${{ steps.v.outputs.name }}
+          IPA_PATH: ${{ steps.v.outputs.path }}
+          SHA256: ${{ steps.v.outputs.sha256 }}
+          SIZE: ${{ steps.v.outputs.size }}
+        run: |
+          tag="v$VERSION-$BUILD"
+          title="秒遮 QuickCover $VERSION ($BUILD)"
+          xcode=$(xcodebuild -version | sed -n '1p')
+          notes="$RUNNER_TEMP/notes.md"
+          cat > "$notes" <<EOF
+          每次 main 有新代码，GitHub 会重新出一个这样的包。版本号没变时，这个 Release 里的文件会被换成最新的。
+
+          - 版本：$VERSION ($BUILD)
+          - 代码：[\`${GITHUB_SHA::7}\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)，main
+          - 工具：$xcode，$SDK
+          - 文件：\`$IPA_NAME\`（$SIZE）
+          - SHA-256：\`$SHA256\`
+          - 这次构建：[#$GITHUB_RUN_NUMBER]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
+
+          这是自检包：带自检页（首页标题按住两秒）和 30 张测试图，和之前发的包同一种。不是 App Store 包。
+
+          安装：IPA 不带签名，先用自签工具签名再装；系统要 iOS 26 或更新。
+          EOF
+          repo="$GITHUB_REPOSITORY"
+          if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
+            git tag -f "$tag" "$GITHUB_SHA"
+            git push --force origin "refs/tags/$tag"
+            gh release edit "$tag" --repo "$repo" --title "$title" --notes-file "$notes" --latest
+            gh release upload "$tag" "$IPA_PATH" --repo "$repo" --clobber
+          else
+            gh release create "$tag" "$IPA_PATH" --repo "$repo" --title "$title" --notes-file "$notes" --target "$GITHUB_SHA" --latest
+          fi
+          gh release view "$tag" --repo "$repo" --json url,assets --jq '"release: " + .url, (.assets[] | .name + "  " + (.size | tostring) + " bytes")'
