@@ -91,6 +91,28 @@ import UIKit
         return hits.flatMap(\.boxes).filter { $0.midY >= top && $0.midY < top + picture.lineHeight }
     }
 
+    // MARK: A scheme cut inside its name
+
+    @Test(arguments: [
+        (["详情见 htt", "ps://demo.example.org 明天前"], "https://demo.example.org", "htt", "ps://demo.example.org", "详情见"),
+        (["文档 ht", "tps://drive.fictionbox.net/s/x9"], "https://drive.fictionbox.net/s/x9", "ht", "tps://drive.fictionbox.net/s/x9", "文档"),
+    ])
+    func schemeCutInsideItsName(lines: [String], evidence: String, head: String, rest: String, before: String) async throws {
+        let picture = Picture(lines)
+        let hits = try await textFindings(in: picture)
+        #expect(hits.map(\.rule) == [.url])
+        #expect(hits.map(\.evidence) == [evidence])
+        // One item of two boxes: the head on the line it was left on, the address on its own.
+        #expect(hits.first?.boxes.count == 2)
+        let upper = boxes(onLine: 0, in: picture, of: hits), lower = boxes(onLine: 1, in: picture, of: hits)
+        #expect(upper.count == 1 && lower.count == 1)
+        #expect(hides(upper, picture.ink(ofTail: head.count, onLine: 0)))
+        #expect(hides(lower, picture.ink(ofHead: rest.count, onLine: 1)))
+        // The words before the head stay showing. A cover starts at the first empty column after
+        // the ink it leaves alone, touching the box of that ink and covering none of its columns.
+        #expect(upper.allSatisfy { $0.minX >= picture.ink(ofHead: before.count, onLine: 0).maxX })
+    }
+
     // MARK: The first number of an address
 
     @Test(arguments: [

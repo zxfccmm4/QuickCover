@@ -501,6 +501,19 @@ enum TextRuleMatcher {
         return Array(repeating: slash, count: missing)
     }
 
+    /// Whether the piece over the cut is the start of a scheme the line under it finishes, the scheme
+    /// cut inside its name: "htt" over "ps://…" is "https://…", "ht" over "tps://…" and "HTTP" over
+    /// "S://…" too. A label sits before an address, and glued to the start of the line under it it
+    /// makes no scheme: "link" and "fict.io/…" read "linkfict.io/…", "http" over "example.com" reads
+    /// a host of its own.
+    private static func schemeCut(_ above: [Unicode.Scalar], _ below: [Unicode.Scalar]) -> Bool {
+        let head = String(String.UnicodeScalarView(above)).lowercased()
+        let next = String(String.UnicodeScalarView(below.prefix(8))).lowercased()
+        return ["http", "https"].contains { scheme in
+            scheme.hasPrefix(head) && head.count < scheme.count && (head + next).hasPrefix(scheme + "://")
+        }
+    }
+
     /// Whether a match that crosses a cut read without a space is not a value the wrap cut, but
     /// what stands next to a value glued onto it. A wrap has a shape: the value runs to the end of
     /// the line it is cut from, and the last line of a number that was whole already carries no
@@ -530,8 +543,10 @@ enum TextRuleMatcher {
             let above = Array(lines[j][upper]), below = Array(lines[j + 1][lower])
             // A word over an address that the line under it carries whole is a label. A piece that
             // starts with a mark was cut where it was: "zhang" over ".wei@example.com" is one address.
+            // A scheme cut inside its name is no label either: "htt" over "ps://…" reads "https://…".
             if m.rule == .email || m.rule == .url, above.allSatisfy({ isLetter($0) }),
                below.first.map({ isLetter($0) || isDigit($0) }) ?? false,
+               !schemeCut(above, below),
                readings[parted | (1 << j)]?.contains(where: { item in
                    item.places[j + 1].map { $0.lowerBound <= lower.lowerBound && lower.upperBound <= $0.upperBound } ?? false
                }) == true {

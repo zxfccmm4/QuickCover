@@ -12,6 +12,37 @@ import Testing
         TextRuleMatcher.junctionMatches(lines: lines)
     }
 
+    // MARK: A scheme cut inside its name
+
+    @Test func schemeCutInsideItsName() {
+        // "htt" over "ps://…" reads "https://…". The head is a letter run and the line under it
+        // carries an address whole, where "link" over "example.com" is a label over an address:
+        // what tells them apart is that the head is the start of the scheme the line under it
+        // finishes, and a label sits before a scheme that is whole or before a bare host.
+        #expect(junction(["详情见 htt", "ps://demo.example.org 明天前"])
+            == [JunctionMatch(rule: .url, text: "https://demo.example.org", ranges: [4..<7, 0..<21])])
+        #expect(junction(["文档 ht", "tps://drive.fictionbox.net/s/x9"])
+            == [JunctionMatch(rule: .url, text: "https://drive.fictionbox.net/s/x9", ranges: [3..<5, 0..<31])])
+        #expect(junction(["见 HTTP", "S://EXAMPLE.ORG/A"])
+            == [JunctionMatch(rule: .url, text: "HTTPS://EXAMPLE.ORG/A", ranges: [2..<6, 0..<17])])
+    }
+
+    @Test func schemeCutInsideItsNameOverThreeLines() {
+        #expect(junction(["见 ht", "tps://demo.example.o", "rg/x"])
+            == [JunctionMatch(rule: .url, text: "https://demo.example.org/x", ranges: [2..<4, 0..<20, 0..<4])])
+    }
+
+    @Test func whatIsNotASchemeHead() {
+        // A word over an address is a label, as before. (The suffix is one the URL rule knows, so
+        // that the address under the label is a URL; "link" over "fict.io/…" is the case to tell from
+        // "htt" over "ps://…".)
+        #expect(junction(["链接见 link", "fict.io/coupon 今天"]).isEmpty)
+        #expect(junction(["见 http", "www.example.org/a"]).isEmpty)
+        #expect(junction(["见 http", "example.com 今天"]).isEmpty)
+        // The head glued to a letter on its line is no head of a scheme: "xhtt" is a word.
+        #expect(junction(["见xhtt", "ps://demo.example.org"]).isEmpty)
+    }
+
     // MARK: The first number of an address
 
     @Test func addressCutAfterItsFirstNumber() {
