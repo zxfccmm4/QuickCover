@@ -73,10 +73,12 @@ struct CalloutCard<Action: View>: View {
 
 /// 「已存到照片」and「已拷貝」on the export page (design.md §7.5.4, §4): a capsule of glass, 40 high,
 /// corner 20, a 20 pt checkmark in `#6FE0A0`, white `.subheadline`, 12 left and 16 right. It fades
-/// in and out in 0.25 s; where it stands and how long it stays is the page's business.
+/// in 0.25 s and out 0.3 s (design.md §8); where it stands and how long it stays is the page's business.
 struct Toast: View {
     let text: LocalizedStringKey
     let isShown: Bool
+    var fadeIn: Double = 0.25
+    var fadeOut: Double = 0.3
 
     var body: some View {
         HStack(spacing: 8) {
@@ -94,7 +96,7 @@ struct Toast: View {
         .glassEffect(.regular, in: .capsule)
         .opacity(isShown ? 1 : 0)
         .offset(y: isShown ? 0 : 8)
-        .animation(.easeInOut(duration: 0.25), value: isShown)
+        .animation(.easeInOut(duration: isShown ? fadeIn : fadeOut), value: isShown)
         .allowsHitTesting(false)
     }
 }

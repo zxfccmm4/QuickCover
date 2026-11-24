@@ -34,9 +34,11 @@ enum PictureFit {
     }
 }
 
-/// 「已存到照片」「已拷貝」小条的时间（design.md §7.5）：淡入、停、淡出。
+/// 「已存到照片」「已拷貝」小条的时间（design.md §8、§7.5.4）：淡入 0.25 秒、停 1.6 秒、淡出 0.3 秒。
 enum ExportToastTiming {
+    static let fadeIn: Double = 0.25
+    static let fadeOut: Double = 0.3
     static let shows: Duration = .seconds(1.6)
-    /// `Toast` 自己淡出 0.25 秒，等它走完再把小条从页面上拿掉。
-    static let clears: Duration = .seconds(0.35)
+    /// 淡出走完 0.1 秒后把小条从页面上拿掉。
+    static let clears: Duration = .seconds(fadeOut + 0.1)
 }

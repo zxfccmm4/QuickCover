@@ -64,7 +64,8 @@ struct ExportScreen: View {
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
             if let toastText {
                 // toast 本身不进读屏的顺序（design.md §9.4），念的那一句在 `showToast` 里发。
-                Toast(text: LocalizedStringKey(toastText), isShown: toastShown)
+                Toast(text: LocalizedStringKey(toastText), isShown: toastShown,
+                      fadeIn: ExportToastTiming.fadeIn, fadeOut: ExportToastTiming.fadeOut)
                     .accessibilityHidden(true)
                     .padding(.top, 11)
             }
