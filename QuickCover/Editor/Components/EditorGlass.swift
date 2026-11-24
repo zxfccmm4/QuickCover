@@ -52,13 +52,14 @@ struct EditorTopButtons: View {
             if hidesTitlesWhenTheyDoNotFit {
                 // The two capsules at their natural width, never seen or read.
                 GeometryReader { proxy in
+                    let available = proxy.size.width
                     pair(titles: ("3.1.8", "4.4.1"))
                         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { titledWidth = $0 }
                         .background {
                             pair(titles: ("", ""))
                                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { untitledWidth = $0 }
                         }
-                        .onGeometryChange(for: CGFloat.self) { _ in proxy.size.width } action: { availableWidth = $0 }
+                        .onGeometryChange(for: CGFloat.self) { _ in available } action: { availableWidth = $0 }
                         .allowsHitTesting(false)
                         .hidden()
                         .accessibilityHidden(true)
