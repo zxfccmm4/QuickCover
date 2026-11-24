@@ -5,8 +5,12 @@ import SwiftUI
 /// 和纯文字按钮 3.2.4「先選一張圖」(`ShellModel.showPicker()`)。导航栏是空的。
 struct PrimerScreen: View {
     @Environment(ShellModel.self) private var shell
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
+        // design.md §9.5: from AX1 on the text is taller than the screen, so the buttons stand at
+        // the end of it and scroll with it, and the text keeps the whole screen.
+        let buttonsScroll = typeSize.isAccessibilitySize
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 0) {
@@ -26,23 +30,34 @@ struct PrimerScreen: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryLabel)
                         .multilineTextAlignment(.center)
+                    if buttonsScroll {
+                        buttons
+                            .padding(.top, 24)
+                    }
                 }
                 .padding(.horizontal, 32)
                 .padding(.top, 28)
-                .padding(.bottom, 16)
+                .padding(.bottom, buttonsScroll ? 0 : 16)
                 .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
-            VStack(spacing: 2) {
-                PrimaryButton(title: "3.2.3") { Task { await shell.allowAccess() } }
-                PlainTextButton(title: "3.2.4") { shell.showPicker() }
-                    .frame(maxWidth: .infinity)
+            if !buttonsScroll {
+                buttons
+                    .padding(.horizontal, 32)
             }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 24)
         }
         .background(Theme.page.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// 主按钮 3.2.3 和文字按钮 3.2.4，离底部安全区 24（design.md §7.2.1 第 5 条）。
+    private var buttons: some View {
+        VStack(spacing: 2) {
+            PrimaryButton(title: "3.2.3") { Task { await shell.allowAccess() } }
+            PlainTextButton(title: "3.2.4") { shell.showPicker() }
+                .frame(maxWidth: .infinity)
+        }
+        .padding(.bottom, 24)
     }
 
     /// 那张画（design.md §10.2）：就是 App 图标，132，自己裁 29.5 的圆角，沿边 1 pt 白 14%，不投影。

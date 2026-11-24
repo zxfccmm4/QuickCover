@@ -8,6 +8,7 @@ import SwiftUI
 struct ExportScreen: View {
     @Environment(ShellModel.self) private var shell
     @Environment(EditorModel.self) private var model
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     @State private var toastText: String?
     @State private var toastShown = false
@@ -27,41 +28,23 @@ struct ExportScreen: View {
     }
 
     var body: some View {
+        // design.md §9.5: from AX1 on the text is taller than the screen, so the buttons stand at
+        // the end of it and scroll with it, and the text keeps the whole screen.
+        let buttonsScroll = typeSize.isAccessibilitySize
         let facts = facts
         ZStack(alignment: .top) {
             ScrollView {
                 VStack(spacing: 0) {
-                    CoveredPicture(editor: model,
-                                   size: facts.pictureSize(aspect: Self.aspect(of: model.preview)))
-                        .padding(.top, 12)
-                    Text("6.1.2")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.secondaryLabel)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                        .padding(.top, 10)
-                        .padding(.bottom, 22)
-                    ExportToggleRow(title: "6.2.1", footnote: facts.footnote, isOn: stripMetadata)
-                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
-                        .padding(.horizontal, 16)
-                    if facts.showsCoveredLine {
-                        coveredLine
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 32)
-                            .padding(.top, 10)
-                    }
-                    if facts.showsBlurNotice {
-                        NoticeBar(systemImage: "exclamationmark.triangle", tint: Theme.blurNoticeIcon,
-                                  ground: Theme.blurNotice, text: "6.3.1") {
-                            SmallButton(title: "6.3.2") { switchToSolid() }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
+                    page(facts)
+                    if buttonsScroll {
+                        buttons
                     }
                 }
                 .padding(.bottom, 16)
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if !buttonsScroll { bottomBar }
+            }
             if let toastText {
                 // toast 本身不进读屏的顺序（design.md §9.4），念的那一句在 `showToast` 里发。
                 Toast(text: LocalizedStringKey(toastText), isShown: toastShown,
@@ -76,6 +59,38 @@ struct ExportScreen: View {
         .sheet(item: $shareFile) { ShareSheet(file: $0) }
         .onChange(of: saveFailed) { _, failed in
             if failed { AccessibilityNotification.Announcement(L10n.text("6.4.2")).post() }
+        }
+    }
+
+    /// 从图到提醒条（design.md §7.5.1 第 1–4 条、§7.5.2）：按钮以外能滚的全部。
+    @ViewBuilder
+    private func page(_ facts: ExportFacts) -> some View {
+        CoveredPicture(editor: model,
+                       size: facts.pictureSize(aspect: Self.aspect(of: model.preview)))
+            .padding(.top, 12)
+        Text("6.1.2")
+            .font(.footnote)
+            .foregroundStyle(Theme.secondaryLabel)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 32)
+            .padding(.top, 10)
+            .padding(.bottom, 22)
+        ExportToggleRow(title: "6.2.1", footnote: facts.footnote, isOn: stripMetadata)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
+            .padding(.horizontal, 16)
+        if facts.showsCoveredLine {
+            coveredLine
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 32)
+                .padding(.top, 10)
+        }
+        if facts.showsBlurNotice {
+            NoticeBar(systemImage: "exclamationmark.triangle", tint: Theme.blurNoticeIcon,
+                      ground: Theme.blurNotice, text: "6.3.1") {
+                SmallButton(title: "6.3.2") { switchToSolid() }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
         }
     }
 
@@ -99,34 +114,40 @@ struct ExportScreen: View {
         }
     }
 
-    /// 钉在底部的按钮区（design.md §7.5.1 第 5 条）：上面 20 的渐变，再是左右 16、上 12、下 12 加离底部安全区 8。
-    /// 存失败时主按钮上面 12 先出提醒条（§7.5.3）。
+    /// 钉在底部的按钮区（design.md §7.5.1 第 5 条）：上面 20 的渐变，再是按钮。辅助功能档下按钮滚进
+    /// 内容里（§9.5），渐变就不要了。
     private var bottomBar: some View {
         VStack(spacing: 0) {
             LinearGradient(colors: [.clear, Theme.page], startPoint: .top, endPoint: .bottom)
                 .frame(height: 20)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
-            VStack(spacing: 12) {
-                if saveFailed {
-                    NoticeBar(systemImage: "exclamationmark.circle", tint: Theme.errorIcon,
-                              ground: Theme.fillTwo, text: "6.4.2") {
-                        TextButton(title: "6.4.3") { save() }
-                    }
-                }
-                VStack(spacing: 10) {
-                    PrimaryButton(title: "6.1.3") { save() }
-                    HStack(spacing: 10) {
-                        SecondaryButton(title: "6.1.4") { share() }
-                        SecondaryButton(title: "6.1.5") { copy() }
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 20)
+            buttons
         }
         .background(Theme.page.ignoresSafeArea(edges: .bottom))
+    }
+
+    /// 主按钮 6.1.3，下面 10 是并排的 6.1.4、6.1.5；左右 16、上 12、下 12 加离底部安全区 8。
+    /// 存失败时主按钮上面 12 先出提醒条（§7.5.3）。
+    private var buttons: some View {
+        VStack(spacing: 12) {
+            if saveFailed {
+                NoticeBar(systemImage: "exclamationmark.circle", tint: Theme.errorIcon,
+                          ground: Theme.fillTwo, text: "6.4.2") {
+                    TextButton(title: "6.4.3") { save() }
+                }
+            }
+            VStack(spacing: 10) {
+                PrimaryButton(title: "6.1.3") { save() }
+                HStack(spacing: 10) {
+                    SecondaryButton(title: "6.1.4") { share() }
+                    SecondaryButton(title: "6.1.5") { copy() }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 20)
     }
 
     // MARK: - Doing it
