@@ -15,8 +15,56 @@ struct PressStyle: ButtonStyle {
     }
 }
 
+/// The text of the buttons below (design.md §3, §9.5, §11.2). Below the accessibility sizes it is
+/// one line that shrinks to 0.85 and never wraps; from AX1 on it may take two lines at full size,
+/// nothing cut to an ellipsis, and the button grows with it (`ButtonGround`).
+private struct ButtonTextLayout: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    func body(content: Content) -> some View {
+        if typeSize.isAccessibilitySize {
+            content
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            content
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+    }
+}
+
+/// The ground of a button: `height` below the accessibility sizes; from AX1 on at least `height`,
+/// with `inset` above and below the text, so a second line has the same room as the first.
+private struct ButtonGround: ViewModifier {
+    let height: CGFloat
+    let inset: CGFloat
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    func body(content: Content) -> some View {
+        if typeSize.isAccessibilitySize {
+            content
+                .padding(.vertical, inset)
+                .frame(minHeight: height)
+        } else {
+            content
+                .frame(height: height)
+        }
+    }
+}
+
+private extension View {
+    func buttonTextLayout() -> some View { modifier(ButtonTextLayout()) }
+
+    func buttonGround(height: CGFloat, inset: CGFloat) -> some View {
+        modifier(ButtonGround(height: height, inset: inset))
+    }
+}
+
 /// The primary button (design.md §6): the whole width, 50 high, corner 14, `Theme.accentButton`, white 17
-/// semibold on one line, 0.8 opacity while pressed.
+/// semibold on one line, 0.8 opacity while pressed. From AX1 the text may take two lines and the button
+/// grows (§9.5); the same goes for the buttons below.
 struct PrimaryButton: View {
     let title: LocalizedStringKey
     var isEnabled = true
@@ -27,11 +75,10 @@ struct PrimaryButton: View {
             Text(title)
                 .font(.buttonText)
                 .foregroundStyle(Theme.body)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .buttonTextLayout()
                 .padding(.horizontal, 16)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .buttonGround(height: 50, inset: 14)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.accentButton))
         }
         .buttonStyle(PressStyle(opacity: 0.8))
@@ -52,11 +99,10 @@ struct SecondaryButton: View {
             Text(title)
                 .font(.buttonText)
                 .foregroundStyle(Theme.body)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .buttonTextLayout()
                 .padding(.horizontal, 16)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .buttonGround(height: 50, inset: 14)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.fillTwo))
         }
         .buttonStyle(PressStyle(opacity: 0.8))
@@ -76,10 +122,9 @@ struct PlainTextButton: View {
             Text(title)
                 .font(.body)
                 .foregroundStyle(Theme.accent)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .buttonTextLayout()
                 .padding(.horizontal, 8)
-                .frame(minHeight: Metrics.minimumTarget)
+                .buttonGround(height: Metrics.minimumTarget, inset: 0)
         }
         .buttonStyle(PressStyle(opacity: 0.8))
     }
@@ -97,10 +142,9 @@ struct SmallButton: View {
             Text(title)
                 .font(.smallButtonText)
                 .foregroundStyle(Theme.accent)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .buttonTextLayout()
                 .padding(.horizontal, 14)
-                .frame(height: 36)
+                .buttonGround(height: 36, inset: 8)
                 .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.fillTwo))
                 .padding(.vertical, 4)
                 .contentShape(Rectangle())
@@ -121,10 +165,9 @@ struct TextButton: View {
             Text(title)
                 .font(.smallButtonText)
                 .foregroundStyle(Theme.accent)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .buttonTextLayout()
                 .padding(.horizontal, 8)
-                .frame(height: 36)
+                .buttonGround(height: 36, inset: 8)
                 .padding(.vertical, 4)
                 .contentShape(Rectangle())
         }
