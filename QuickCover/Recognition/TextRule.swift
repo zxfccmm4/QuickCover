@@ -500,8 +500,11 @@ enum TextRuleMatcher {
             // A whole value over a line that starts with a letter was not cut: the value ends where
             // it is, and what is under it is a sentence, "1ZFICT8A0304821762" over "DELIVERY LINK…".
             // Only where the value starts: the middle line of an address over three lines is whole
-            // by itself too, "example.com/path" under "https://", and is no end of the address.
-            if j == first, whole(String(String.UnicodeScalarView(above))), let b = below.first, isLetter(b) { return true }
+            // by itself too, "example.com/path" under "https://", and is no end of the address. And
+            // not where the line under it carries a value whole, "onbox.net/shared/fol" under
+            // "https://drive.ficti": a sentence does not read as a value, and a cut address does.
+            if j == first, whole(String(String.UnicodeScalarView(above))), let b = below.first, isLetter(b),
+               !whole(String(String.UnicodeScalarView(below))) { return true }
             // A word before a number or a code is the end of a sentence, not the start of a code,
             // whose start, SE or SF, is in capitals. Growing may have named the whole after the
             // number, a phone with "ok" before it, so the rule does not tell them apart: both go.

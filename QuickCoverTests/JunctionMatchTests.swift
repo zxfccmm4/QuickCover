@@ -32,6 +32,20 @@ import Testing
         #expect(out.first?.text == "https://example.com/pathmore")
     }
 
+    @Test func urlCutInsideItsHostOverThreeLines() {
+        // The address of the first line is whole for the rule, "https://drive.ficti", and the line
+        // under it starts with a letter and carries an address whole as well: the address cut
+        // twice, not a sentence under a whole address. One match, over the three lines.
+        #expect(junction(["文档 https://drive.ficti", "onbox.net/shared/fol", "ders/x/9CT4kQ2mVp"])
+            == [JunctionMatch(rule: .url, text: "https://drive.fictionbox.net/shared/folders/x/9CT4kQ2mVp", ranges: [3..<22, 0..<20, 0..<17])])
+        // The same lines two at a time read as the address cut once: the whole address over the line
+        // under it, which carries an address whole, is the address still going on.
+        #expect(junction(["文档 https://drive.ficti", "onbox.net/shared/fol"])
+            == [JunctionMatch(rule: .url, text: "https://drive.fictionbox.net/shared/fol", ranges: [3..<22, 0..<20])])
+        // A whole address over a word that is no value is not cut either.
+        #expect(junction(["文档 https://drive.ficti", "and more"]).isEmpty)
+    }
+
     @Test func phoneOverThreeLines() {
         let out = junction(["电话 150", "9122", "3047"])
         #expect(out.count == 1)

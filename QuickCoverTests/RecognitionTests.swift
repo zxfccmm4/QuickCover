@@ -333,6 +333,38 @@ struct RecognizerTests {
     }
 
     @Test
+    func valueColumnWrapThatReachesUnderTheValueGoesBackToTheMargin() async throws {
+        // As above, with the rest of the number long enough to reach under the value column: the
+        // two lines overlap sideways, and the lower one is still the line the wrap went to.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 900, height: 400), format: format).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 900, height: 400))
+            let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 40, weight: .semibold), .foregroundColor: UIColor.black]
+            ("ID NO" as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: attributes)
+            ("： 44030119870" as NSString).draw(at: CGPoint(x: 160, y: 76), withAttributes: attributes)
+            ("3124916" as NSString).draw(at: CGPoint(x: 20, y: 132), withAttributes: attributes)
+        }.cgImage!
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.idNumber])
+        #expect(hits.map(\.evidence) == ["440301198703124916"])
+    }
+
+    @Test
+    func urlCutTwiceIsOneItemOfThreeBoxes() async throws {
+        // The address is whole for the rule on its first line, and the middle line carries an address
+        // whole as well: one item over the three lines, not two of two lines each.
+        let image = Sample.lines(["文档 https://drive.ficti", "onbox.net/shared/fol", "ders/x/9CT4kQ2mVp"],
+                                 at: CGPoint(x: 20, y: 20), lineHeight: 56)
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.url])
+        #expect(hits.map(\.evidence) == ["https://drive.fictionbox.net/shared/folders/x/9CT4kQ2mVp"])
+        try #require(hits.count == 1 && hits[0].boxes.count == 3)
+    }
+
+    @Test
     func lineBelowAWholeNumberStaysOutWhenItStartsWithWords() async throws {
         let image = Sample.lines(["电话 13812345678", "明天下午三点在会议室见"], at: CGPoint(x: 20, y: 20), lineHeight: 56)
         let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }

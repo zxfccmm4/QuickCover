@@ -418,7 +418,12 @@ struct Recognizer: Sendable {
 
         // 4. One value, one item. A wrapped value takes in the pieces that hid its parts on their
         // own lines and goes in place of the first of them; the others are not told a second time.
-        let values = continued + joined
+        // A value cut over three lines is told in the three lines it takes; the two-line pieces of
+        // it, the first two and the last two, are readings of the same pieces and are not told.
+        let all = continued + joined
+        let values = all.filter { v in
+            !all.contains { w in w.pieces.count > v.pieces.count && v.pieces.allSatisfy { p in w.pieces.contains { taken(p, by: $0) } } }
+        }
         var out: [Finding] = []
         var told = Array(repeating: false, count: values.count)
         func tell(_ n: Int) {
@@ -542,11 +547,13 @@ struct Recognizer: Sendable {
     /// starts. A paragraph's first line may be indented, so the line below may start further left.
     /// A line that starts with the colon of a label stands in the value column, right of the label;
     /// the rest of its value goes back to the margin the label stands on, where other lines of the
-    /// page start too.
+    /// page start too. The rest may be long enough to reach under the value column.
     private static func lineBelow(_ i: Int, in read: [ReadLine]) -> Int? {
         let line = read[i]
         let em = max(line.box.height, 1)
-        let inValueColumn = line.scalars.drop(while: { $0.properties.isWhitespace }).first.map { $0 == ":" } ?? false
+        // The colon of a label, half width or full.
+        let inValueColumn = line.scalars.drop(while: { $0.properties.isWhitespace }).first
+            .map { $0 == ":" || $0.value == 0xFF1A } ?? false
         var best: (index: Int, gap: CGFloat)?
         for (j, other) in read.enumerated() where j != i {
             guard other.box.minY >= line.box.midY else { continue }
@@ -560,7 +567,7 @@ struct Recognizer: Sendable {
             }
             if under, indent >= -2.5 * em, indent <= 0.75 * em {
                 // The paragraph's own left edge, a little indented or outdented.
-            } else if inValueColumn, indent < -2.5 * em, !under, onTheMargin {
+            } else if inValueColumn, indent < -2.5 * em, onTheMargin {
                 // Back to the margin the label stands on.
             } else {
                 continue
