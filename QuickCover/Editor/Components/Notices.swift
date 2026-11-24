@@ -5,32 +5,59 @@ import SwiftUI
 /// there is one. The blur notice is this twice: in Review Each Item as 4.7.5 with nothing at the end
 /// (`trailing: { EmptyView() }`), on the export page as 6.3.1 with the small button 6.3.2「改用純色」
 /// (design.md §7.4.4, §7.5). The save-failed notice (6.4.2) is it too.
+/// From AX1 on the words are too wide to share a line with a button: the button goes under the
+/// text, 12 below and to the left (design.md §9.5, nothing cut to an ellipsis).
 struct NoticeBar<Trailing: View>: View {
     let systemImage: String
     let tint: Color
     let ground: Color
     let text: LocalizedStringKey
     @ViewBuilder let trailing: () -> Trailing
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.noticeIcon)
-                .foregroundStyle(tint)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(.footnote)
-                .foregroundStyle(Theme.body)
-                .lineLimit(3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            // The button keeps its whole name; the text wraps instead, up to its three lines.
-            trailing()
-                .layoutPriority(1)
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        symbol
+                        words
+                    }
+                    trailing()
+                }
+            } else {
+                HStack(spacing: 8) {
+                    symbol
+                    words
+                    // The button keeps its whole name; the text wraps instead, up to its three lines.
+                    trailing()
+                        .layoutPriority(1)
+                }
+            }
         }
-        .padding(.leading, 12)
-        .padding(.trailing, 8)
-        .padding(.vertical, 8)
+        .padding(insets)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(ground))
+    }
+
+    private var symbol: some View {
+        Image(systemName: systemImage)
+            .font(.noticeIcon)
+            .foregroundStyle(tint)
+            .accessibilityHidden(true)
+    }
+
+    private var words: some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(Theme.body)
+            // Under the accessibility sizes the text wraps instead of the button, up to its three lines;
+            // from AX1 on the button is under it, so the text takes every line it needs.
+            .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var insets: EdgeInsets {
+        EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 8)
     }
 }
 
