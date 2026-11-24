@@ -292,6 +292,24 @@ struct CoverPainterTests {
     }
 }
 
+/// The sheet's height is measured against what was asked (`SheetGeometry.addition`).
+struct SheetGeometryTests {
+
+    @Test
+    func theAdditionIsTheSystemsOwn() {
+        // First time: asked to end 300 under the top, the edge comes out at 284: 16 added.
+        #expect(SheetGeometry.addition(sheetTop: 300, extraBefore: 0, top: 284) == 16)
+        // Next time the 16 is already off the height, so the edge comes out at 300: still 16.
+        #expect(SheetGeometry.addition(sheetTop: 300, extraBefore: 16, top: 300) == 16)
+    }
+
+    @Test
+    func nothingAddedStaysNothing() {
+        #expect(SheetGeometry.addition(sheetTop: 300, extraBefore: 0, top: 300) == 0)
+        #expect(SheetGeometry.addition(sheetTop: 300, extraBefore: 0, top: 320) == 0)
+    }
+}
+
 /// The hint 4.8.4 comes once per phone (design.md §7.3.3).
 struct HoldHintTests {
 

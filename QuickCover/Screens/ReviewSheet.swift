@@ -43,7 +43,7 @@ struct ReviewSheet: View {
             geometry.top = top
             if !measuredExtra {
                 measuredExtra = true
-                geometry.extra = max(0, EditorLayout.sheetTop - top)
+                geometry.extra = SheetGeometry.addition(sheetTop: EditorLayout.sheetTop, extraBefore: geometry.extra, top: top)
             }
         }
         .onDisappear { measuredExtra = false }

@@ -170,6 +170,14 @@ final class SheetGeometry {
     var top: CGFloat = EditorLayout.sheetTop
     /// How much lower the sheet has to be asked for so that its edge comes to `EditorLayout.sheetTop`.
     var extra: CGFloat = 0
+
+    /// What the system added on top of the height that was asked for, from where the sheet's edge
+    /// came out. That height already had `extraBefore` off, so it goes back on first: on a later
+    /// presentation the edge is measured on a sheet that is already lowered, and the difference
+    /// alone would read as nothing added and let the sheet come up high again.
+    nonisolated static func addition(sheetTop: CGFloat, extraBefore: CGFloat, top: CGFloat) -> CGFloat {
+        max(0, sheetTop + extraBefore - top)
+    }
 }
 
 /// What is above the sheet of Review Each Item (§7.4.1): black at 32%, and a tap on it closes the
