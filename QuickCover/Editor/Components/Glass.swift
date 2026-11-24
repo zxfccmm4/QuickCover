@@ -72,7 +72,8 @@ struct GlassLabelButton: View {
         .buttonStyle(PressStyle(scale: 0.94))
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : Theme.disabledOpacity)
-        .accessibilityElement(children: .ignore)
+        // The name is the title alone, whatever the symbol is called; the button keeps its own
+        // button trait, which `.accessibilityElement(children: .ignore)` on it took away.
         .accessibilityLabel(Text(title))
     }
 }
