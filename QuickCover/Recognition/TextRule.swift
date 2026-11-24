@@ -11,6 +11,16 @@ enum TextRule: String, CaseIterable, Sendable, Codable {
     case ipv4
     case reference = "ref"
     case plate
+
+    /// Whether the rule matches digits through and through (an ID number's X aside): a phone, an ID
+    /// number, a card, an address of the IP kind. A word glued to such a value is not part of it
+    /// unless in capitals, which make a code of them.
+    var isDigitsOnly: Bool {
+        switch self {
+        case .phone, .idNumber, .bankCard, .ipv4: true
+        default: false
+        }
+    }
 }
 
 /// One place in a recognized line where a rule matches.
@@ -68,7 +78,10 @@ extension RuleMatch {
 
     /// A rule can match part of one number, code or address: 16 digits of "R2026112300045678".
     /// Each match is grown to the whole run of characters it sits in, and runs that touch are
-    /// joined: what is left showing still identifies, so all of it is hidden.
+    /// joined: what is left showing still identifies, so all of it is hidden. A phone, an ID number,
+    /// a card and an IP address are digits through and through (an ID number's X aside), and there
+    /// a word in small letters glued to the value is a word of its own, "5510 3927on", and stays
+    /// showing; a capital glued to one makes a code of them, "R2026112300045678", and goes with it.
     static func grow(_ matches: [RuleMatch], in scalars: [Unicode.Scalar]) -> [RuleMatch] {
         func text(_ from: Int, _ to: Int) -> String { String(String.UnicodeScalarView(scalars[from..<to])) }
         var joined: [RuleMatch] = []
@@ -77,6 +90,10 @@ extension RuleMatch {
             var start = m.start, end = m.end
             while start > 0, isRunCharacter(scalars[start - 1]) { start -= 1 }
             while end < scalars.count, isRunCharacter(scalars[end]) { end += 1 }
+            if m.rule.isDigitsOnly {
+                if start < m.start, isSmallLetter(scalars[start]) { start = m.start }
+                if end > m.end, isSmallLetter(scalars[m.end]) { end = m.end }
+            }
             if let last = joined.last, start <= last.end {
                 joined[joined.count - 1] = RuleMatch(rule: last.rule, text: text(last.start, max(end, last.end)),
                                                      tolerant: last.tolerant, start: last.start, end: max(end, last.end))
@@ -86,6 +103,10 @@ extension RuleMatch {
         }
         return joined
     }
+
+    /// A small Latin letter: of a word, "on", "ok", and not of a code, whose letters are printed in
+    /// capitals.
+    static func isSmallLetter(_ s: Unicode.Scalar) -> Bool { ("a"..."z").contains(s) }
 
     /// A character that belongs to a number, code, address or Latin word: a letter that is not
     /// Chinese, Japanese or Korean, a digit, a sign, and the three marks that sit inside codes
@@ -242,12 +263,16 @@ enum TextRuleMatcher {
             candidates.append(Candidate(rule: .plate, start: start, end: end, tolerant: false))
         }
 
-        // Rule order breaks ties, then overlaps are dropped so each character is claimed once.
+        // Rule order breaks ties; then, of two readings of one rule from one place, the one that
+        // matches as read comes before the one that matches only by taking a letter for a digit:
+        // "5510 3927on" is a card to its digits, not a digit longer by an o. Then the longer one.
+        // Overlaps are dropped, so each character is claimed once.
         let order = Dictionary(uniqueKeysWithValues: TextRule.allCases.enumerated().map { ($1, $0) })
         candidates.sort { lhs, rhs in
             let l = order[lhs.rule]!, r = order[rhs.rule]!
             if l != r { return l < r }
             if lhs.start != rhs.start { return lhs.start < rhs.start }
+            if lhs.tolerant != rhs.tolerant { return !lhs.tolerant }
             return lhs.end > rhs.end
         }
         var kept: [Candidate] = []

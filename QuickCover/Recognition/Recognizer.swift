@@ -336,6 +336,57 @@ struct Recognizer: Sendable {
         return padded.map { CGPoint(x: $0.x, y: min(max($0.y, kept.minY), kept.maxY)) }
     }
 
+    /// A piece's box cut short of the ink written beside it on its line. The side margins are a
+    /// quarter of the line's height, half of it for a plate, and cover whatever stands within them:
+    /// the comma after a phone number, the colon before an address, the character before a plate.
+    /// Given the picture (`inkColumns`), the margin stops a pixel short of the first column of ink
+    /// past the box of the piece's own glyphs — the first after a column without ink, so the edge
+    /// of a glyph hanging over its box is no stop — and never inside that box. Only where something
+    /// is written beside the piece on its line: a plate alone on its line, in a photo, keeps its
+    /// margin, what lies around it there being no text. Without the picture the margin stands.
+    /// The ink is read in the rows of the piece's line alone (`line`): what is written on the lines
+    /// over and under it is no neighbour.
+    static func clearOfInk(_ quad: [CGPoint], range: [CGPoint], beside: Bool, line: CGRect,
+                           inkColumns: ((CGRect) -> (origin: CGFloat, ink: [Bool])?)?) -> [CGPoint] {
+        guard beside, let inkColumns else { return quad }
+        let box = Geometry.bounds(of: quad)
+        let rows = CGRect(x: box.minX, y: max(box.minY, line.minY), width: box.width,
+                          height: min(box.maxY, line.maxY) - max(box.minY, line.minY))
+        guard rows.height >= 1, let (origin, ink) = inkColumns(rows) else { return quad }
+        let kept = clearOfInk(box, range: Geometry.bounds(of: range), origin: origin, ink: ink)
+        guard kept.minX != box.minX || kept.maxX != box.maxX else { return quad }
+        return quad.enumerated().map { i, p in
+            // Corners top left, top right, bottom right, bottom left: the two of an edge move with it.
+            CGPoint(x: i == 0 || i == 3 ? max(p.x, kept.minX) : min(p.x, kept.maxX), y: p.y)
+        }
+    }
+
+    /// The same on a box: `box` grown from the box `range` of the piece's glyphs; `ink` tells which
+    /// columns of the picture under `box` hold ink, the first of them at x `origin`.
+    static func clearOfInk(_ box: CGRect, range: CGRect, origin: CGFloat, ink: [Bool]) -> CGRect {
+        var left = box.minX, right = box.maxX
+        func column(_ x: CGFloat) -> Int { Int((x - origin).rounded(.down)) }
+        // Looking right from the column the glyphs end in, and left from the one they start in.
+        var blank = false
+        let after = column(range.maxX)
+        if after >= 0 && after < ink.count {
+            for k in after..<ink.count {
+                if !ink[k] { blank = true }
+                else if blank { right = min(right, max(range.maxX, origin + CGFloat(k) - 1)); break }
+            }
+        }
+        blank = false
+        let before = column(range.minX)
+        if before >= 0 && before < ink.count {
+            for k in stride(from: before, through: 0, by: -1) {
+                if !ink[k] { blank = true }
+                else if blank { left = max(left, min(range.minX, origin + CGFloat(k) + 1)); break }
+            }
+        }
+        guard left != box.minX || right != box.maxX else { return box }
+        return CGRect(x: left, y: box.minY, width: right - left, height: box.height)
+    }
+
     /// The same on boxes: `padded`, grown from the box `own` of its line, among the boxes of all
     /// the lines of the picture. `inkBottom` gives, for a band of the picture, the bottom edge of
     /// the lowest row of ink in it; without it the box of the line above stands for its ink.
@@ -409,6 +460,8 @@ struct Recognizer: Sendable {
         let read = lines.map { Self.readLine($0, in: size) }
         // Where the ink of a line ends under a piece's columns, read off the picture the lines were read on.
         let inkBottom: (CGRect) -> CGFloat? = { Ink.bottom(in: $0, of: picture) }
+        // Which columns under a piece's box hold ink, for the side margins to stop at the ink beside it.
+        let inkColumns: (CGRect) -> (origin: CGFloat, ink: [Bool])? = { Ink.columns(in: $0, of: picture) }
 
         // One line's share of a value: the characters it covers on that line, and the box that
         // hides them, in upright pixels, padded.
@@ -424,8 +477,11 @@ struct Recognizer: Sendable {
             let l = read[line]
             let p = l.padding(for: rule)
             let glyphs = String(String.UnicodeScalarView(l.scalars[range]))
-            let padded = Self.padded(l.quad(from: range.lowerBound, to: range.upperBound), top: p.top, bottom: p.bottom, side: p.side)
-            let quad = Self.clearOfNeighbours(padded, on: line, glyphs: glyphs, in: read, inkBottom: inkBottom).map { Self.scaled($0, scale) }
+            let own = l.quad(from: range.lowerBound, to: range.upperBound)
+            let padded = Self.padded(own, top: p.top, bottom: p.bottom, side: p.side)
+            let cleared = Self.clearOfNeighbours(padded, on: line, glyphs: glyphs, in: read, inkBottom: inkBottom)
+            let beside = l.scalars.indices.contains { !range.contains($0) && !l.scalars[$0].properties.isWhitespace }
+            let quad = Self.clearOfInk(cleared, range: own, beside: beside, line: l.box, inkColumns: inkColumns).map { Self.scaled($0, scale) }
             return Piece(line: line, range: range, rule: rule, quad: quad,
                          evidence: evidence ?? glyphs, tolerant: tolerant)
         }

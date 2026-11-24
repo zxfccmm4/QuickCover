@@ -159,9 +159,10 @@ import Testing
         #expect(junction(["订单号5820193", "74462，周三送到，收货电话137 6240 8853。"])
             == [JunctionMatch(rule: .reference, text: "582019374462", ranges: [3..<10, 0..<5])])
         // A card in groups over a line that ends in a date. The word Vision glued to the last
-        // group is a run character, so the reading carries it, as on the line itself.
+        // group is a word in small letters, not a digit of the card taken for one: the reading
+        // stops before it, as on the line itself.
         #expect(junction(["card 6228 4800", "5510 3927on 2026-11-23."])
-            == [JunctionMatch(rule: .bankCard, text: "6228 4800 5510 3927on", ranges: [5..<14, 0..<11])])
+            == [JunctionMatch(rule: .bankCard, text: "6228 4800 5510 3927", ranges: [5..<14, 0..<9])])
         // Under a number that was whole already, the digits are a row of their own.
         #expect(junction(["卡号 6226 0211 0033 8867", "123 元"])
             == [JunctionMatch(rule: .bankCard, text: "6226 0211 0033 8867 123", ranges: [3..<22, 0..<3])])
