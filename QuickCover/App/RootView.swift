@@ -21,7 +21,7 @@ struct RootView: View {
         }
         .environment(shell)
         .environment(shell.editor)
-        .sheet(isPresented: reviewShown) { ReviewSheet() }
+        .sheet(isPresented: reviewShown) { ReviewSheet().environment(shell).environment(shell.editor) }
         .preferredColorScheme(.dark)
         .tint(Theme.accent)
         .task { await shell.start() }

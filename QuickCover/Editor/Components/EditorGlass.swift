@@ -8,19 +8,74 @@ struct EditorTopButtons: View {
     @Environment(EditorModel.self) private var model
     @Environment(ShellModel.self) private var shell
 
+    /// Measures whether the two titled capsules fit side by side and, where they don't, shows only
+    /// the symbols, the way accessibility text sizes do (§9.5): in English they stop fitting one step
+    /// above the default size on a 402 pt screen (「Choose Anot…」), in Chinese they fit up to XXXL.
+    /// Off by default: the titles stay up to the accessibility sizes whatever the width.
+    var hidesTitlesWhenTheyDoNotFit = false
+
+    @State private var titledWidth: CGFloat = 0
+    @State private var untitledWidth: CGFloat = 0
+    @State private var availableWidth: CGFloat = 0
+
     private var isReady: Bool { model.recognition != .running }
+    private var titleHidden: Bool {
+        hidesTitlesWhenTheyDoNotFit &&
+            !Self.titlesFit(titled: titledWidth, untitled: untitledWidth, available: availableWidth)
+    }
+
+    /// How far the two titles may shrink before they go instead: `GlassLabelButton` lets a title
+    /// shrink to 85% before it truncates, and a title that needs that is already too small to read.
+    private static let titleShrinkFloor: CGFloat = 0.9
+
+    /// Whether the two titled capsules fit side by side in `available` points (they are 8 apart):
+    /// `titled` is both at their natural width, `untitled` the same capsules with empty titles, so
+    /// `titled - untitled` is the text. Not measured yet (`0`) counts as fitting.
+    static func titlesFit(titled: CGFloat, untitled: CGFloat, available: CGFloat) -> Bool {
+        guard titled > 0, untitled > 0, available > 0 else { return true }
+        return untitled + titleShrinkFloor * (titled - untitled) <= available
+    }
 
     var body: some View {
         HStack {
-            GlassLabelButton(systemImage: "photo.on.rectangle", title: "3.1.8", isEnabled: isReady) {
+            GlassLabelButton(systemImage: "photo.on.rectangle", title: "3.1.8", isEnabled: isReady,
+                             titleHidden: titleHidden) {
                 shell.showPickerFromEditor()
             }
             Spacer()
-            GlassLabelButton(systemImage: "list.bullet", title: "4.4.1", isEnabled: isReady) {
+            GlassLabelButton(systemImage: "list.bullet", title: "4.4.1", isEnabled: isReady,
+                             titleHidden: titleHidden) {
                 shell.showReview()
             }
         }
+        .background {
+            if hidesTitlesWhenTheyDoNotFit {
+                // The two capsules at their natural width, never seen or read.
+                GeometryReader { proxy in
+                    let available = proxy.size.width
+                    pair(titles: ("3.1.8", "4.4.1"))
+                        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { titledWidth = $0 }
+                        .background {
+                            pair(titles: ("", ""))
+                                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { untitledWidth = $0 }
+                        }
+                        .onGeometryChange(for: CGFloat.self) { _ in available } action: { availableWidth = $0 }
+                        .allowsHitTesting(false)
+                        .hidden()
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        // Inside the padding, so that the measurement sees the row's own width.
         .padding(.horizontal, Metrics.pageInset)
+    }
+
+    private func pair(titles: (LocalizedStringKey, LocalizedStringKey)) -> some View {
+        HStack(spacing: 8) {
+            GlassLabelButton(systemImage: "photo.on.rectangle", title: titles.0) {}
+            GlassLabelButton(systemImage: "list.bullet", title: titles.1) {}
+        }
+        .fixedSize()
     }
 }
 
