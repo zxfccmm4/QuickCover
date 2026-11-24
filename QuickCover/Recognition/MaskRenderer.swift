@@ -79,7 +79,15 @@ enum MaskRenderer {
         return context.makeImage() ?? image
     }
 
-    /// Redraws `rect` of `image` through a much smaller copy, clipped to `path`.
+    /// Redraws `rect` of the picture through a much smaller copy, clipped to `path`.
+    ///
+    /// The copy is cut out of `context`, which `flatten` has just drawn the picture into: each of its
+    /// pixels is the mean of the pixels under it and of nothing else (`fillGrains`). It is not the
+    /// picture drawn into the copy, shrunk to fit `bounds`: measured, CoreGraphics' filter wanders
+    /// by several pixels over the box when it shrinks (a 100 px box into 9 cells: the first cell's
+    /// centre read 1.6 px off, the last one's 4.3) and takes the picture's outermost pixel for all
+    /// that lies beyond its edge (55 % of a cell flush with the edge), which left such a cell with a
+    /// light or a dark rim.
     private static func cover(from image: CGImage, rect: CGRect, path: CGPath, into context: CGContext, style: MaskStyle) {
         let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
         guard bounds.width >= 2, bounds.height >= 2 else { return }
@@ -93,19 +101,61 @@ enum MaskRenderer {
         }
         let columns = max(1, Int((bounds.width / cell).rounded(.up)))
         let rows = max(1, Int((bounds.height / cell).rounded(.up)))
-        guard let small = CGImage.rgbaContext(width: columns, height: rows) else { return }
-        small.interpolationQuality = .high
-        // `image` is drawn in its own bottom-left coordinates; shift so `bounds` fills the small canvas.
-        small.draw(image, in: CGRect(x: -bounds.minX, y: -(CGFloat(image.height) - bounds.maxY),
-                                     width: CGFloat(image.width), height: CGFloat(image.height)))
-        guard let grains = small.makeImage() else { return }
+        guard let small = CGImage.rgbaContext(width: columns, height: rows), let grains = small.data,
+              let picture = context.data else { return }
+        fillGrains(grains.assumingMemoryBound(to: UInt8.self), grainStride: small.bytesPerRow,
+                   from: picture.assumingMemoryBound(to: UInt8.self), stride: context.bytesPerRow,
+                   bounds: bounds, columns: columns, rows: rows)
+        guard let grainImage = small.makeImage() else { return }
 
         context.saveGState()
         context.addPath(path)
         context.clip()
         context.interpolationQuality = style == .mosaic ? .none : .high
-        context.draw(grains, in: bounds)
+        // The context is flipped to top-left coordinates, and an image drawn into a flipped context
+        // comes out upside down. Turn this one back over the top edge of `bounds`, so every cell
+        // lands over the piece of the picture it was made from.
+        context.translateBy(x: bounds.minX, y: bounds.maxY)
+        context.scaleBy(x: 1, y: -1)
+        context.draw(grainImage, in: CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height))
         context.restoreGState()
+    }
+
+    /// The mean colour of the pixels under each cell of `bounds`, written into `grains` as
+    /// `columns × rows` pixels of RGBA8, four bytes a pixel, `stride` a row: the layout of
+    /// `rgbaContext`, whose first row is the top one whatever coordinate system the context was
+    /// flipped to. `bounds` is top-left like Vision's boxes, and lies inside the picture; a pixel
+    /// belongs to the cell its centre lies in, so a cover flush with the picture's edge is filled
+    /// with picture and nothing outside it. Both bitmaps are premultiplied, and so is their mean.
+    private static func fillGrains(_ grains: UnsafeMutablePointer<UInt8>, grainStride: Int,
+                                   from picture: UnsafePointer<UInt8>, stride: Int,
+                                   bounds: CGRect, columns: Int, rows: Int) {
+        let across = bounds.width / CGFloat(columns), up = bounds.height / CGFloat(rows)
+        for row in 0..<rows {
+            // The rows of pixels whose centres (y + 0.5) lie in [top, bottom), and likewise across.
+            let top = bounds.minY + CGFloat(row) * up
+            let from = Int((top - 0.5).rounded(.up)), under = Int((top + up - 0.5).rounded(.up))
+            for column in 0..<columns {
+                let left = bounds.minX + CGFloat(column) * across
+                let first = Int((left - 0.5).rounded(.up)), past = Int((left + across - 0.5).rounded(.up))
+                var red = 0, green = 0, blue = 0, alpha = 0
+                for y in from..<under {
+                    var pixel = picture + y * stride + first * 4
+                    for _ in first..<past {
+                        red += Int(pixel[0]); green += Int(pixel[1]); blue += Int(pixel[2]); alpha += Int(pixel[3])
+                        pixel += 4
+                    }
+                }
+                // Every cell holds pixels: at least half a `cell` across (5 pixels at least, the
+                // smallest `cell` being 10), or, when it is the only one, the whole `bounds`, 2 at least.
+                // `max` only keeps the division safe.
+                let count = max(1, (under - from) * (past - first))
+                let grain = grains + row * grainStride + column * 4
+                for (component, sum) in [red, green, blue, alpha].enumerated() {
+                    grain[component] = UInt8((sum + count / 2) / count)
+                }
+            }
+        }
     }
 
     static func quadPath(_ quad: [CGPoint]) -> CGPath {
