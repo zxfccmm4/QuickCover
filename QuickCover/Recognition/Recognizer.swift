@@ -12,33 +12,56 @@ struct Finding: Equatable, Sendable {
     let kind: Kind
     /// For text, the rule that matched. Nil for faces and codes.
     let rule: TextRule?
-    /// The smallest rectangle around `quad`.
+    /// The smallest rectangle around `quad` and every box in `parts`.
     let box: CGRect
-    /// The area to fill, padded already: top-left, top-right, bottom-right, bottom-left.
+    /// The area to fill, padded already: top-left, top-right, bottom-right, bottom-left. The
+    /// item's first box, and its only one but for a value a line wrap cut in two.
     let quad: [CGPoint]
+    /// The item's other boxes, padded already, in any order: the second line of a wrapped value.
+    /// Empty for one box.
+    let parts: [[CGPoint]]
     /// What was recognized: the matched text, or the code payload. Empty for faces.
     let evidence: String
     /// The rule matched only after OCR confusions were fixed.
     let tolerant: Bool
 
+    /// Every box of the item, `quad` first.
+    var quads: [[CGPoint]] { [quad] + parts }
+
+    /// The smallest rectangle around each box apart: the item hides what these hide and, for a
+    /// wrapped value, not what lies between them.
+    var boxes: [CGRect] { quads.map(Geometry.bounds(of:)) }
+
+    /// The rectangle around `quad` alone: the line the item stands on. Two hits are on one line
+    /// when these overlap sideways, whatever `box` spans.
+    var lineBox: CGRect { Geometry.bounds(of: quad) }
+
     /// The same box under another rule: a number cut across two lines is named by its whole length.
     func labelled(_ rule: TextRule) -> Finding {
-        Finding(kind: kind, rule: rule, quad: quad, evidence: evidence, tolerant: tolerant)
+        Finding(kind: kind, rule: rule, pieces: quads, evidence: evidence, tolerant: tolerant)
     }
 
     /// The same thing in a picture scaled by `scale`.
     func scaled(by scale: CGSize) -> Finding {
-        Finding(kind: kind, rule: rule, quad: quad.map { CGPoint(x: $0.x * scale.width, y: $0.y * scale.height) },
+        Finding(kind: kind, rule: rule,
+                pieces: quads.map { $0.map { CGPoint(x: $0.x * scale.width, y: $0.y * scale.height) } },
                 evidence: evidence, tolerant: tolerant)
     }
 
+    /// One box.
     init(kind: Kind, rule: TextRule? = nil, quad: [CGPoint], evidence: String = "", tolerant: Bool = false) {
+        self.init(kind: kind, rule: rule, pieces: [quad], evidence: evidence, tolerant: tolerant)
+    }
+
+    /// The boxes of one item, at least one: the first is `quad`, the others are `parts`.
+    init(kind: Kind, rule: TextRule? = nil, pieces: [[CGPoint]], evidence: String = "", tolerant: Bool = false) {
         self.kind = kind
         self.rule = rule
-        self.quad = quad
+        self.quad = pieces.first ?? []
+        self.parts = Array(pieces.dropFirst())
         self.evidence = evidence
         self.tolerant = tolerant
-        self.box = Geometry.bounds(of: quad)
+        self.box = Geometry.bounds(of: pieces.flatMap { $0 })
     }
 }
 
@@ -150,7 +173,7 @@ struct Recognizer: Sendable {
         for code in codes {
             findings.append(Self.codeFinding(code, in: workingSize, scale: scale))
         }
-        findings.append(contentsOf: Self.textFindings(text, in: workingSize, scale: scale))
+        findings.append(contentsOf: Self.textFindings(text, in: workingSize, scale: scale, readOn: working))
         findings = BlockMerger.merge(findings, options: .init(maxGapEm: options.mergeGapEm))
         let lines = text.map { line in
             let corners = [line.topLeft, line.topRight, line.bottomRight, line.bottomLeft]
@@ -278,6 +301,140 @@ struct Recognizer: Sendable {
         return (max(2, lineHeight * p.top) + 1, max(2, lineHeight * p.bottom) + 1, max(2, lineHeight * p.side) + 1)
     }
 
+    /// A piece's padded box, kept clear of the lines around it.
+    ///
+    /// Where the box of a line above ends above the box of the piece's own line — a gap between the
+    /// two boxes — the padding stops at that box, and the same below: the margin is taken in the
+    /// gap and only up to the neighbour, never over its glyphs; where the two boxes overlap by a
+    /// hair, the margin keeps a twentieth of the line over the piece's own box. A wrapped value's
+    /// piece on a line is boxed just as a hit on that line alone would be.
+    ///
+    /// A box is not its glyphs, though: Vision runs a line's box under its last glyph by a couple
+    /// of pixels in one rendering and by half a line in another — a line with a full-width comma or
+    /// Chinese characters in a browser's type gets a box a tenth to a fifth of its height under its
+    /// glyphs — and nothing in the box tells the two apart. Given the picture (`inkBottom`), the
+    /// margin above goes on up to the line's ink itself under the piece's columns, and never over
+    /// one row of it: a line as laid out starts about a fifth of a box above its own capitals, and
+    /// the frozen truth boxes are laid-out lines, so that space has to be covered where the line
+    /// over it ends well above it. Without the picture, the box stands for the ink.
+    ///
+    /// Only on a line whose box takes in most of its row, the distance from its top to the top of
+    /// the line over or under it: such a box has the space above the capitals in it already, and
+    /// the margin above it has nothing left to cover. A bare number's box, which is just its
+    /// digits, keeps its whole margin, ascenders and all.
+    ///
+    /// One swollen box is cut, a box taller than its row. A line ending in a full-width comma gets
+    /// from Vision a box that runs half a line under its baseline, into the row under it. Where
+    /// the line under it has a box no taller than its own row, its top is where this line's glyphs
+    /// end, and the piece's box ends there too — unless the piece has a letter that hangs under
+    /// the baseline, which would be cut with the box.
+    private static func clearOfNeighbours(_ padded: [CGPoint], on line: Int, glyphs: String, in read: [ReadLine],
+                                          inkBottom: @escaping (CGRect) -> CGFloat?) -> [CGPoint] {
+        let box = Geometry.bounds(of: padded)
+        let kept = clearOfNeighbours(box, own: read[line].box, glyphs: glyphs, lines: read.map(\.box), inkBottom: inkBottom)
+        guard kept != box else { return padded }
+        return padded.map { CGPoint(x: $0.x, y: min(max($0.y, kept.minY), kept.maxY)) }
+    }
+
+    /// A piece's box cut short of the ink written beside it on its line. The side margins are a
+    /// quarter of the line's height, half of it for a plate, and cover whatever stands within them:
+    /// the comma after a phone number, the colon before an address, the character before a plate.
+    /// Given the picture (`inkColumns`), the margin stops a pixel short of the first column of ink
+    /// past the box of the piece's own glyphs — the first after a column without ink, so the edge
+    /// of a glyph hanging over its box is no stop — and never inside that box. Only where something
+    /// is written beside the piece on its line: a plate alone on its line, in a photo, keeps its
+    /// margin, what lies around it there being no text. Without the picture the margin stands.
+    /// The ink is read in the rows of the piece's line alone (`line`): what is written on the lines
+    /// over and under it is no neighbour.
+    static func clearOfInk(_ quad: [CGPoint], range: [CGPoint], beside: Bool, line: CGRect,
+                           inkColumns: ((CGRect) -> (origin: CGFloat, ink: [Bool])?)?) -> [CGPoint] {
+        guard beside, let inkColumns else { return quad }
+        let box = Geometry.bounds(of: quad)
+        let rows = CGRect(x: box.minX, y: max(box.minY, line.minY), width: box.width,
+                          height: min(box.maxY, line.maxY) - max(box.minY, line.minY))
+        guard rows.height >= 1, let (origin, ink) = inkColumns(rows) else { return quad }
+        let kept = clearOfInk(box, range: Geometry.bounds(of: range), origin: origin, ink: ink)
+        guard kept.minX != box.minX || kept.maxX != box.maxX else { return quad }
+        return quad.enumerated().map { i, p in
+            // Corners top left, top right, bottom right, bottom left: the two of an edge move with it.
+            CGPoint(x: i == 0 || i == 3 ? max(p.x, kept.minX) : min(p.x, kept.maxX), y: p.y)
+        }
+    }
+
+    /// The same on a box: `box` grown from the box `range` of the piece's glyphs; `ink` tells which
+    /// columns of the picture under `box` hold ink, the first of them at x `origin`.
+    static func clearOfInk(_ box: CGRect, range: CGRect, origin: CGFloat, ink: [Bool]) -> CGRect {
+        var left = box.minX, right = box.maxX
+        func column(_ x: CGFloat) -> Int { Int((x - origin).rounded(.down)) }
+        // Looking right from the column the glyphs end in, and left from the one they start in.
+        var blank = false
+        let after = column(range.maxX)
+        if after >= 0 && after < ink.count {
+            for k in after..<ink.count {
+                if !ink[k] { blank = true }
+                else if blank { right = min(right, max(range.maxX, origin + CGFloat(k) - 1)); break }
+            }
+        }
+        blank = false
+        let before = column(range.minX)
+        if before >= 0 && before < ink.count {
+            for k in stride(from: before, through: 0, by: -1) {
+                if !ink[k] { blank = true }
+                else if blank { left = max(left, min(range.minX, origin + CGFloat(k) + 1)); break }
+            }
+        }
+        guard left != box.minX || right != box.maxX else { return box }
+        return CGRect(x: left, y: box.minY, width: right - left, height: box.height)
+    }
+
+    /// The same on boxes: `padded`, grown from the box `own` of its line, among the boxes of all
+    /// the lines of the picture. `inkBottom` gives, for a band of the picture, the bottom edge of
+    /// the lowest row of ink in it; without it the box of the line above stands for its ink.
+    static func clearOfNeighbours(_ padded: CGRect, own: CGRect, glyphs: String, lines: [CGRect],
+                                  inkBottom: ((CGRect) -> CGFloat?)? = nil) -> CGRect {
+        let around = lines.filter { $0 != own && $0.maxX > padded.minX && $0.minX < padded.maxX }
+        // The row of the line: from the top of its box to the top of the nearest line over or under
+        // it. A line beside it on the same row is neither.
+        guard let row = around.map({ abs($0.minY - own.minY) }).filter({ $0 > own.height / 4 }).min(),
+              own.height >= row * mostOfRow else { return padded }
+        let hair = own.height / 10
+        var top = padded.minY
+        var bottom = padded.maxY
+        for b in around {
+            if b.minY >= own.maxY - hair { bottom = min(bottom, max(b.minY, own.maxY)) }
+            guard b.maxY <= own.minY + hair else { continue }
+            var stop = min(b.maxY, own.minY)
+            // The part of the line's box over the piece's columns and over our own box: where its
+            // ink ends there, the margin may reach up to it.
+            let band = CGRect(x: max(b.minX, padded.minX), y: b.minY,
+                              width: min(b.maxX, padded.maxX) - max(b.minX, padded.minX),
+                              height: stop - b.minY)
+            if band.width >= 1, band.height >= 1, let inkBottom, let ink = inkBottom(band) { stop = min(max(ink, b.minY), stop) }
+            // The line's box running into ours does not take the ascenders' space away: a twentieth of
+            // the line stays over the piece's own box, the bottom edge of a hanging letter at most.
+            if b.maxY > own.minY { stop = min(stop, own.minY - own.height * ascendersKeep) }
+            top = max(top, stop)
+        }
+        if own.height > row, !glyphs.contains(where: { hangs.contains($0) }),
+           let under = around.filter({ $0.minY > own.minY && $0.minY < own.maxY - hair }).min(by: { $0.minY < $1.minY }) {
+            // The row of the line under ours: up to the line under that, or, it being the last, as
+            // tall as its distance from ours.
+            let after = around.filter { $0.minY > under.minY && $0.maxX > under.minX && $0.minX < under.maxX }.map(\.minY).min() ?? (2 * under.minY - own.minY)
+            if under.height <= after - under.minY { bottom = min(bottom, under.minY) }
+        }
+        guard top != padded.minY || bottom != padded.maxY else { return padded }
+        return CGRect(x: padded.minX, y: top, width: padded.width, height: max(0, bottom - top))
+    }
+
+    /// A box that takes in most of its row, as a share of the row.
+    private static let mostOfRow: CGFloat = 0.85
+
+    /// The margin a line keeps over its own box top when the box of the line above runs into it.
+    private static let ascendersKeep: CGFloat = 0.05
+
+    /// Letters that hang under the baseline of a line.
+    private static let hangs: Set<Character> = ["g", "j", "p", "q", "y", "@", "Q", "J", "_", "(", ")", "[", "]", "{", "}", ";", ","]
+
     private static func faceFinding(_ face: FaceObservation, in size: CGSize, scale: CGSize) -> Finding {
         let r = face.boundingBox.toImageCoordinates(size, origin: .upperLeft)
         // The box Vision gives ends at the eyebrows and the cheeks. Hair, ears and the chin below
@@ -298,57 +455,170 @@ struct Recognizer: Sendable {
                        evidence: code.payloadString ?? "")
     }
 
-    private static func textFindings(_ lines: [RecognizedTextObservation], in size: CGSize, scale: CGSize) -> [Finding] {
+    private static func textFindings(_ lines: [RecognizedTextObservation], in size: CGSize, scale: CGSize,
+                                    readOn picture: CGImage) -> [Finding] {
         let read = lines.map { Self.readLine($0, in: size) }
-        var byLine: [[Finding]] = read.map { line in
-            line.runs.map { m in
-                let p = line.padding(for: m.rule)
-                let grown = Self.padded(line.quad(from: m.start, to: m.end), top: p.top, bottom: p.bottom, side: p.side)
-                return Finding(kind: .text, rule: m.rule,
-                               quad: grown.map { Self.scaled($0, scale) },
-                               evidence: m.text, tolerant: m.tolerant)
+        // Where the ink of a line ends under a piece's columns, read off the picture the lines were read on.
+        let inkBottom: (CGRect) -> CGFloat? = { Ink.bottom(in: $0, of: picture) }
+        // Which columns under a piece's box hold ink, for the side margins to stop at the ink beside it.
+        let inkColumns: (CGRect) -> (origin: CGFloat, ink: [Bool])? = { Ink.columns(in: $0, of: picture) }
+
+        // One line's share of a value: the characters it covers on that line, and the box that
+        // hides them, in upright pixels, padded.
+        struct Piece {
+            let line: Int
+            let range: Range<Int>
+            let rule: TextRule
+            let quad: [CGPoint]
+            let evidence: String
+            let tolerant: Bool
+        }
+        func piece(_ line: Int, _ range: Range<Int>, _ rule: TextRule, evidence: String? = nil, tolerant: Bool = false) -> Piece {
+            let l = read[line]
+            let p = l.padding(for: rule)
+            let glyphs = String(String.UnicodeScalarView(l.scalars[range]))
+            let own = l.quad(from: range.lowerBound, to: range.upperBound)
+            let padded = Self.padded(own, top: p.top, bottom: p.bottom, side: p.side)
+            let cleared = Self.clearOfNeighbours(padded, on: line, glyphs: glyphs, in: read, inkBottom: inkBottom)
+            let beside = l.scalars.indices.contains { !range.contains($0) && !l.scalars[$0].properties.isWhitespace }
+            let quad = Self.clearOfInk(cleared, range: own, beside: beside, line: l.box, inkColumns: inkColumns).map { Self.scaled($0, scale) }
+            return Piece(line: line, range: range, rule: rule, quad: quad,
+                         evidence: evidence ?? glyphs, tolerant: tolerant)
+        }
+        // Whether `q` is `p` over again: the same characters of the same line, or more around
+        // them, or a box cut from the line a second time that holds p a pixel aside on every side.
+        func taken(_ p: Piece, by q: Piece) -> Bool {
+            guard p.line == q.line else { return false }
+            if q.range.lowerBound <= p.range.lowerBound, p.range.upperBound <= q.range.upperBound { return true }
+            let a = Geometry.bounds(of: p.quad), b = Geometry.bounds(of: q.quad), slack = WrapGeometry.takenSlack
+            return a.minX >= b.minX - slack && a.maxX <= b.maxX + slack && a.minY >= b.minY - slack && a.maxY <= b.maxY + slack
+        }
+        // A value a wrap cut in two or three: its pieces in the order of its lines, and what it reads.
+        struct Value {
+            let pieces: [Piece]
+            let evidence: String
+        }
+
+        // 1. What each line carries whole.
+        var singles: [Piece] = []
+        for (i, line) in read.enumerated() {
+            for m in line.runs { singles.append(piece(i, m.start..<m.end, m.rule, evidence: m.text, tolerant: m.tolerant)) }
+        }
+
+        // 2. A line that wraps carries the rest of its number or address down to the next line,
+        // where no rule can know the piece for what it is. The piece is hidden with what it
+        // continues, as one item: one box each, one switch in the checklist.
+        var continued: [Value] = []
+        for (i, line) in read.enumerated() where !line.matches.isEmpty {
+            guard let last = line.matches.last, line.scalars[last.end...].allSatisfy({ $0.properties.isWhitespace }),
+                  let below = Self.lineBelow(i, in: read), let rest = Self.continuation(read[below], of: last) else { continue }
+            let rule = rest.rule ?? last.rule
+            // The value follows another rule once its halves are counted together: sixteen digits
+            // and two more are an ID number. The box is the one its line hid already.
+            let k = singles.firstIndex { $0.line == i && $0.range.lowerBound <= last.start && last.end <= $0.range.upperBound }
+            let anchor = piece(i, k.map { singles[$0].range } ?? last.start..<last.end, rule,
+                               evidence: k.map { singles[$0].evidence } ?? last.text, tolerant: k.map { singles[$0].tolerant } ?? last.tolerant)
+            if let k { singles[k] = anchor }
+            let tail = piece(below, 0..<rest.end, rule, evidence: read[below].text(to: rest.end), tolerant: anchor.tolerant)
+            // A number printed in groups keeps a space between the groups it was cut in; a value
+            // cut inside a run reads on without one.
+            let apart = rule == .phone || rule == .bankCard
+            continued.append(Value(pieces: [anchor, tail], evidence: anchor.evidence + (apart ? " " : "") + tail.evidence))
+        }
+
+        // 3. A value the wrap cut where no rule can know either piece for what it is: read as one
+        // line, the lines match across the cut. A line and the one under it that starts at the
+        // same left edge are where a wrap is; a value may be cut twice, over three lines.
+        let lines = read.indices.sorted { (read[$0].box.minY, read[$0].box.minX) < (read[$1].box.minY, read[$1].box.minX) }
+        func wraps(_ a: Int, _ b: Int) -> Bool {
+            WrapGeometry.wraps(from: read[a].box, characters: read[a].scalars.count, to: read[b].box)
+        }
+        // The lines a wrap may run over: three where each line passes the geometry with the one
+        // under it, then two that pass it. Three first: a value cut twice is one item of three
+        // boxes, and its pairs are found again inside it and skipped.
+        var triples: [[Int]] = []
+        var pairs: [[Int]] = []
+        for (k, a) in lines.enumerated() {
+            for b in lines.dropFirst(k + 1) where wraps(a, b) {
+                for c in lines.dropFirst(k + 2) where wraps(b, c) { triples.append([a, b, c]) }
+                pairs.append([a, b])
+            }
+        }
+        var joined: [Value] = []
+        for group in triples + pairs {
+            for match in TextRuleMatcher.junctionMatches(lines: group.map { read[$0].text }) {
+                let pieces = zip(group, match.ranges).compactMap { (index: Int, range: Range<Int>?) -> Piece? in
+                    guard let range, !range.isEmpty else { return nil }
+                    return piece(index, range, match.rule, evidence: match.text)
+                }
+                // The same value told already, in one item: its pair inside its triple, or the cut
+                // its pieces were hidden by on their own lines. Every piece of it is a piece of that
+                // one value.
+                guard !(continued + joined).contains(where: { told in pieces.allSatisfy({ p in told.pieces.contains { taken(p, by: $0) } }) }) else { continue }
+                joined.append(Value(pieces: pieces, evidence: match.text))
             }
         }
 
-        // A line that wraps carries the rest of its number or address down to the next line, where
-        // no rule can know the piece for what it is. The piece is hidden with what it continues.
-        for (i, line) in read.enumerated() where !byLine[i].isEmpty {
-            guard let last = line.matches.last, line.scalars[last.end...].allSatisfy({ $0.properties.isWhitespace }),
-                  let below = Self.lineBelow(i, in: read), let piece = Self.continuation(read[below], of: last) else { continue }
-            let p = read[below].padding(for: piece.rule ?? last.rule)
-            byLine[i].append(Finding(kind: .text, rule: piece.rule ?? last.rule,
-                                     quad: Self.padded(read[below].quad(from: 0, to: piece.end), top: p.top, bottom: p.bottom, side: p.side)
-                                         .map { Self.scaled($0, scale) },
-                                     evidence: read[below].text(to: piece.end), tolerant: last.tolerant))
-            if let rule = piece.rule {
-                byLine[i][byLine[i].count - 2] = byLine[i][byLine[i].count - 2].labelled(rule)
-            }
+        // 4. One value, one item. A wrapped value takes in the pieces that hid its parts on their
+        // own lines and goes in place of the first of them; the others are not told a second time.
+        // A value cut over three lines is told in the three lines it takes; the two-line pieces of
+        // it, the first two and the last two, are readings of the same pieces and are not told.
+        let all = continued + joined
+        let values = all.filter { v in
+            !all.contains { w in w.pieces.count > v.pieces.count && v.pieces.allSatisfy { p in w.pieces.contains { taken(p, by: $0) } } }
         }
-        return byLine.flatMap { $0 }
+        var out: [Finding] = []
+        var told = Array(repeating: false, count: values.count)
+        func tell(_ n: Int) {
+            guard !told[n] else { return }
+            told[n] = true
+            let v = values[n]
+            out.append(Finding(kind: .text, rule: v.pieces[0].rule, pieces: v.pieces.map(\.quad), evidence: v.evidence,
+                               tolerant: v.pieces.contains { $0.tolerant }))
+        }
+        for i in read.indices {
+            for s in singles where s.line == i {
+                if let n = values.firstIndex(where: { v in v.pieces.contains { taken(s, by: $0) } }) { tell(n) }
+                else { out.append(Finding(kind: .text, rule: s.rule, quad: s.quad, evidence: s.evidence, tolerant: s.tolerant)) }
+            }
+            for n in values.indices where !told[n] && values[n].pieces.first?.line == i { tell(n) }
+        }
+        return out
     }
 
     /// One recognized line: where it is in working pixels, its characters, and what matched in them.
     private struct ReadLine {
         let quad: [CGPoint]
         let box: CGRect
+        /// The line as the rules read it (`TextRuleMatcher.reading(of:)`): NFKC, and without the
+        /// space Vision puts into a dotted name before the letter of an address.
         let text: String
         let scalars: [Unicode.Scalar]
+        /// Where in the NFKC line each space `text` leaves out stood, as scalar indices.
+        let dropped: [Int]
         /// How much of the line's width each character takes: a Latin character is a little over
-        /// half of a Chinese one.
+        /// half of a Chinese one. One for each character of the NFKC line, the spaces left out included.
         let widths: [CGFloat]
         let total: CGFloat
         let matches: [RuleMatch]
         /// Vision's own placing of the line's characters, when its text and the line's read the same.
         let placed: Placement?
 
+        /// Where in the NFKC line the character at `index` of the text stands.
+        func original(_ index: Int) -> Int {
+            var at = index
+            for d in dropped where d <= at { at += 1 }
+            return at
+        }
+
         /// How far a mask for `rule` reaches beyond this line's box on each side.
         func padding(for rule: TextRule?) -> (top: CGFloat, bottom: CGFloat, side: CGFloat) {
             Recognizer.textPadding(for: rule, lineHeight: box.height)
         }
 
-        /// The matches, each grown to the whole run of characters it sits in, and runs that touch
-        /// joined.
-        var runs: [RuleMatch] { RuleMatch.grow(matches, in: scalars) }
+        /// The matches, each grown to the whole run of characters it sits in, runs that touch
+        /// joined, and a long run of digits that glued two values cut into them.
+        var runs: [RuleMatch] { TextRuleMatcher.runs(in: text) }
 
         /// The characters from `start` up to `end` as a share of the line's width, from the widths
         /// of the characters before them: a Latin character a little over half a Chinese one.
@@ -363,11 +633,12 @@ struct Recognizer: Sendable {
         /// it is no narrower than a third of what the widths say, since it tells whole words and
         /// not characters, and the line's own top and bottom are kept.
         func quad(from start: Int, to end: Int) -> [CGPoint] {
-            let e0 = share(start), e1 = share(end)
+            let (from, to) = (original(start), original(end))
+            let e0 = share(from), e1 = share(to)
             let a = quad[0], b = quad[1]
             let ux = b.x - a.x, uy = b.y - a.y
             let squared = ux * ux + uy * uy
-            if let placed, squared > 0, let corners = placed.corners(from: start, to: end) {
+            if let placed, squared > 0, let corners = placed.corners(from: from, to: to) {
                 func along(_ p: CGPoint, _ q: CGPoint) -> CGFloat { ((p.x + q.x) / 2 - a.x) * ux + ((p.y + q.y) / 2 - a.y) * uy }
                 let v0 = along(corners[0], corners[3]) / squared
                 let v1 = along(corners[1], corners[2]) / squared
@@ -387,14 +658,15 @@ struct Recognizer: Sendable {
             .map { $0.toImageCoordinates(size, origin: .upperLeft) }
         // A rule usually matches part of a line; where it sits comes from Vision when it says,
         // and is estimated from the characters before it when it does not.
-        let text = line.transcript.precomposedStringWithCompatibilityMapping
+        let (text, dropped) = TextRuleMatcher.reading(of: line.transcript)
         let scalars = Array(text.unicodeScalars)
-        let widths: [CGFloat] = scalars.map { $0.isASCII ? 0.6 : 1.0 }
+        let original = Array(line.transcript.precomposedStringWithCompatibilityMapping.unicodeScalars)
+        let widths: [CGFloat] = original.map { $0.isASCII ? 0.6 : 1.0 }
         let candidate = line.topCandidates(1).first
-        let placed = candidate.flatMap { $0.string.unicodeScalars.count == scalars.count ? Placement(candidate: $0, size: size) : nil }
-        return ReadLine(quad: quad, box: Geometry.bounds(of: quad), text: text, scalars: scalars, widths: widths,
+        let placed = candidate.flatMap { $0.string.unicodeScalars.count == original.count ? Placement(candidate: $0, size: size) : nil }
+        return ReadLine(quad: quad, box: Geometry.bounds(of: quad), text: text, scalars: scalars, dropped: dropped, widths: widths,
                         total: widths.reduce(0, +),
-                        matches: TextRuleMatcher.matches(in: line.transcript).sorted { $0.start < $1.start },
+                        matches: TextRuleMatcher.matches(in: text).sorted { $0.start < $1.start },
                         placed: placed)
     }
 
@@ -416,15 +688,33 @@ struct Recognizer: Sendable {
 
     /// The next line of the same paragraph: right under line `i`, starting where a wrapped line
     /// starts. A paragraph's first line may be indented, so the line below may start further left.
+    /// A line that starts with the colon of a label stands in the value column, right of the label;
+    /// the rest of its value goes back to the margin the label stands on, where other lines of the
+    /// page start too. The rest may be long enough to reach under the value column.
     private static func lineBelow(_ i: Int, in read: [ReadLine]) -> Int? {
         let line = read[i]
         let em = max(line.box.height, 1)
+        // The colon of a label, half width or full.
+        let inValueColumn = line.scalars.drop(while: { $0.properties.isWhitespace }).first
+            .map { $0 == ":" || $0.value == 0xFF1A } ?? false
         var best: (index: Int, gap: CGFloat)?
         for (j, other) in read.enumerated() where j != i {
-            guard other.box.minY >= line.box.midY, other.box.minX < line.box.maxX, other.box.maxX > line.box.minX else { continue }
+            guard other.box.minY >= line.box.midY else { continue }
             let gap = other.box.minY - line.box.maxY
+            guard gap <= 1.2 * em else { continue }
             let indent = other.box.minX - line.box.minX
-            guard gap <= 1.2 * em, indent >= -2.5 * em, indent <= 0.75 * em else { continue }
+            let under = other.box.minX < line.box.maxX && other.box.maxX > line.box.minX
+            let margin = WrapGeometry.leftSlack * WrapGeometry.charWidth(of: other.box, characters: other.scalars.count)
+            let onTheMargin = read.indices.contains { k in
+                k != i && k != j && abs(read[k].box.minX - other.box.minX) <= margin
+            }
+            if under, indent >= -2.5 * em, indent <= 0.75 * em {
+                // The paragraph's own left edge, a little indented or outdented.
+            } else if inValueColumn, indent < -2.5 * em, onTheMargin {
+                // Back to the margin the label stands on.
+            } else {
+                continue
+            }
             if best.map({ gap < $0.gap }) ?? true { best = (j, gap) }
         }
         return best?.index
@@ -444,12 +734,15 @@ struct Recognizer: Sendable {
         case .plate:
             return nil
         }
-        // Sixteen digits and two more make eighteen: an ID cut in two, not a card.
+        // Sixteen digits and two more make eighteen: an ID cut in two, not a card. Seventeen digits
+        // and an X make one too.
         guard anchor.rule == .bankCard || anchor.rule == .reference else { return (end, nil) }
-        let digits = (anchor.text + line.text(to: end)).unicodeScalars.filter(Self.isDigit).count
-        switch digits {
-        case 18: return (end, .idNumber)
-        case 16...19: return (end, anchor.rule == .reference ? .bankCard : nil)
+        let number = Array((anchor.text + line.text(to: end)).unicodeScalars)
+        let digits = number.filter(Self.isDigit).count
+        let endsInX = number.last.map { $0.value == 88 || $0.value == 120 } ?? false
+        switch (digits, endsInX) {
+        case (18, false), (17, true): return (end, .idNumber)
+        case (16...19, false): return (end, anchor.rule == .reference ? .bankCard : nil)
         default: return (end, nil)
         }
     }
@@ -553,5 +846,41 @@ struct Recognizer: Sendable {
 
     private static func scaled(_ p: CGPoint, _ scale: CGSize) -> CGPoint {
         CGPoint(x: p.x * scale.width, y: p.y * scale.height)
+    }
+}
+
+/// Where a line wrap is, from the boxes of the recognized lines in working pixels and how many
+/// characters each carries. Pure, so it can be tried on made-up lines. Relaxed on purpose: a
+/// narrow chat bubble breaks lines at spaces, so a wrapped line need not reach the right edge of
+/// its column. The next line of the paragraph and the shared left edge are what tell a wrap from
+/// a new paragraph, a table row or the next column.
+enum WrapGeometry {
+
+    /// How far under the top of a line the top of the next line of the same text may be, in line
+    /// heights of the taller of the two: wrapped text has a pitch of about 1.1 to 1.4, and table
+    /// rows and paragraphs sit farther apart.
+    static let pitch: CGFloat = 1.6
+    /// How far the left edges of the two lines may differ, in characters of the upper line: a
+    /// box starts at the ink of the first glyph, which varies a little from glyph to glyph.
+    static let leftSlack: CGFloat = 1.9
+    /// The least share of the narrower line's width by which the two lines must overlap sideways.
+    static let overlapShare: CGFloat = 1.0 / 3.0
+    /// How far a piece may reach outside a box already on its line, in working pixels, for that
+    /// box to count as hiding the piece: a box cut the same characters out of the line a second
+    /// time falls a fraction of a pixel apart.
+    static let takenSlack: CGFloat = 1
+
+    /// How wide a character of the line is, from its box and what it carries.
+    static func charWidth(of box: CGRect, characters: Int) -> CGFloat {
+        box.width / CGFloat(max(characters, 1))
+    }
+
+    /// Whether line `b` is the line the wrap of line `a` went to.
+    static func wraps(from a: CGRect, characters aCount: Int, to b: CGRect) -> Bool {
+        let drop = b.minY - a.minY
+        guard drop > 0, drop <= pitch * max(a.height, b.height) else { return false }
+        guard abs(b.minX - a.minX) <= leftSlack * charWidth(of: a, characters: aCount) else { return false }
+        let overlap = min(a.maxX, b.maxX) - max(a.minX, b.minX)
+        return overlap >= overlapShare * min(a.width, b.width)
     }
 }

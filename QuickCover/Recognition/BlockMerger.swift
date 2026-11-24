@@ -47,7 +47,9 @@ enum BlockMerger {
         // The closest joinable pair goes first, until no pair is left.
         var blocks = text.map { [$0] }
         while true {
-            let bounds = blocks.map { block($0).box }
+            // The line each block stands on, not its whole box: a value wrapped onto two lines
+            // spans both, and is still joined with what stands beside its first piece.
+            let bounds = blocks.map { block($0).lineBox }
             var best: (Int, Int)?
             var bestGap = CGFloat.greatestFiniteMagnitude
             for i in bounds.indices {
@@ -82,10 +84,12 @@ enum BlockMerger {
     }
 
     static func joined(_ a: Finding, _ b: Finding) -> Finding {
-        let (left, right) = a.box.minX <= b.box.minX ? (a, b) : (b, a)
+        let (left, right) = a.lineBox.minX <= b.lineBox.minX ? (a, b) : (b, a)
+        // The rectangle stands for both hits. Their own boxes go with it: what either carried
+        // from another line stays, and nothing of the rectangle they were absorbed into.
         return Finding(kind: .text,
                        rule: a.rule == b.rule ? a.rule : nil,
-                       quad: [left.quad[0], right.quad[1], right.quad[2], left.quad[3]],
+                       pieces: [[left.quad[0], right.quad[1], right.quad[2], left.quad[3]]] + a.parts + b.parts,
                        evidence: left.evidence + " " + right.evidence,
                        tolerant: a.tolerant || b.tolerant)
     }

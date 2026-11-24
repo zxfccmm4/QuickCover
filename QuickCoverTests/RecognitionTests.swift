@@ -198,6 +198,11 @@ struct TextRuleMatcherTests {
     }
 }
 
+/// Whether two boxes agree to a thousandth of a pixel: the same box, to all but rounding.
+private func near(_ a: CGRect, _ b: CGRect) -> Bool {
+    abs(a.minX - b.minX) < 0.001 && abs(a.minY - b.minY) < 0.001 && abs(a.width - b.width) < 0.001 && abs(a.height - b.height) < 0.001
+}
+
 struct RecognizerTests {
 
     @Test
@@ -246,9 +251,13 @@ struct RecognizerTests {
         let image = Sample.lines(["第一行普通文字", "身份证号是 110101198807154", "417", "第三行普通文字"],
                                  at: CGPoint(x: 20, y: 20), lineHeight: 56)
         let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
-        #expect(hits.map(\.rule) == [.idNumber, .idNumber])
-        #expect(hits.map(\.evidence) == ["110101198807154", "417"])
-        try #require(hits.count == 2)
+        #expect(hits.map(\.rule) == [.idNumber])
+        #expect(hits.map(\.evidence) == ["110101198807154417"])
+        try #require(hits.count == 1)
+        // One item of two boxes: the number on its line, the stray digits on theirs.
+        #expect(hits[0].parts.count == 1)
+        let boxes = hits[0].boxes
+        #expect(boxes.count == 2)
 
         // Where the glyphs of each line are, read from the picture itself.
         let ink = (0..<4).map { Sample.inkRows(of: image, line: $0, firstTop: 20, lineHeight: 56) }
@@ -257,23 +266,23 @@ struct RecognizerTests {
             #expect(rows.lowerBound > top && rows.upperBound < top + 56)
         }
 
-        // Both pieces are hidden, each under a mask on its own line.
-        #expect(hits[0].box.minY <= ink[1].lowerBound && hits[0].box.maxY >= ink[1].upperBound)
-        #expect(hits[1].box.minY <= ink[2].lowerBound && hits[1].box.maxY >= ink[2].upperBound)
+        // Both pieces are hidden, each under a box of the one item on its own line.
+        #expect(boxes[0].minY <= ink[1].lowerBound && boxes[0].maxY >= ink[1].upperBound)
+        #expect(boxes[1].minY <= ink[2].lowerBound && boxes[1].maxY >= ink[2].upperBound)
 
         // The margins are the tuned ones and no wider, give or take three pixels. Measured on the
         // simulator: the number's mask reaches 20 pixels above its glyphs and 12.6 under them, the
         // stray digits' 18 above and 11.4 under. The two masks may meet in the space between the
         // lines, which was taken as the price of never leaving the top of a digit bare.
         let slack: CGFloat = 3
-        #expect(ink[1].lowerBound - hits[0].box.minY <= 20 + slack)
-        #expect(hits[0].box.maxY - ink[1].upperBound <= 12.6 + slack)
-        #expect(ink[2].lowerBound - hits[1].box.minY <= 18 + slack)
-        #expect(hits[1].box.maxY - ink[2].upperBound <= 11.4 + slack)
+        #expect(ink[1].lowerBound - boxes[0].minY <= 20 + slack)
+        #expect(boxes[0].maxY - ink[1].upperBound <= 12.6 + slack)
+        #expect(ink[2].lowerBound - boxes[1].minY <= 18 + slack)
+        #expect(boxes[1].maxY - ink[2].upperBound <= 11.4 + slack)
 
         // A line one row further off is never touched.
-        #expect(hits[1].box.minY > ink[0].upperBound)
-        #expect(hits[0].box.maxY < ink[3].lowerBound)
+        #expect(boxes[1].minY > ink[0].upperBound)
+        #expect(boxes[0].maxY < ink[3].lowerBound)
     }
 
     @Test
@@ -298,8 +307,66 @@ struct RecognizerTests {
     func addressWrappedToTheNextLineIsHiddenOnBoth() async throws {
         let image = Sample.lines(["攻略 https://docs.example.c", "om/hike/2026.pdf"], at: CGPoint(x: 20, y: 20), lineHeight: 56)
         let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
-        #expect(hits.map(\.rule) == [.url, .url])
-        #expect(hits.map(\.evidence) == ["https://docs.example.c", "om/hike/2026.pdf"])
+        #expect(hits.map(\.rule) == [.url])
+        #expect(hits.map(\.evidence) == ["https://docs.example.com/hike/2026.pdf"])
+        // One item of two boxes, the scheme and most of the host on the first line, the rest under it.
+        #expect(hits.count == 1 && hits[0].parts.count == 1)
+    }
+
+    @Test
+    func valueColumnWrapGoesBackToTheMargin() async throws {
+        // A label column and a value column, as on a waybill: the label on one line, the value after
+        // a colon on the next, and the rest of the value back at the left margin under it.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 900, height: 400), format: format).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 900, height: 400))
+            let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 40, weight: .semibold), .foregroundColor: UIColor.black]
+            ("ID NO" as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: attributes)
+            ("： 44030119870" as NSString).draw(at: CGPoint(x: 320, y: 76), withAttributes: attributes)
+            ("3124916" as NSString).draw(at: CGPoint(x: 20, y: 132), withAttributes: attributes)
+        }.cgImage!
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.idNumber])
+        #expect(hits.map(\.evidence) == ["440301198703124916"])
+        try #require(hits.count == 1 && hits[0].parts.count == 1)
+        // The first box stands on the value line, right of the label; the second back on the margin.
+        #expect(hits[0].lineBox.minX > 280)
+        #expect(Geometry.bounds(of: hits[0].parts[0]).minX < 120)
+    }
+
+    @Test
+    func valueColumnWrapThatReachesUnderTheValueGoesBackToTheMargin() async throws {
+        // As above, with the rest of the number long enough to reach under the value column: the
+        // two lines overlap sideways, and the lower one is still the line the wrap went to.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 900, height: 400), format: format).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 900, height: 400))
+            let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 40, weight: .semibold), .foregroundColor: UIColor.black]
+            ("ID NO" as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: attributes)
+            ("： 44030119870" as NSString).draw(at: CGPoint(x: 160, y: 76), withAttributes: attributes)
+            ("3124916" as NSString).draw(at: CGPoint(x: 20, y: 132), withAttributes: attributes)
+        }.cgImage!
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.idNumber])
+        #expect(hits.map(\.evidence) == ["440301198703124916"])
+    }
+
+    @Test
+    func urlCutTwiceIsOneItemOfThreeBoxes() async throws {
+        // The address is whole for the rule on its first line, and the middle line carries an address
+        // whole as well: one item over the three lines, not two of two lines each.
+        let image = Sample.lines(["文档 https://drive.ficti", "onbox.net/shared/fol", "ders/x/9CT4kQ2mVp"],
+                                 at: CGPoint(x: 20, y: 20), lineHeight: 56)
+        let hits = try await Recognizer().recognize(image).findings.filter { $0.kind == .text }
+        #expect(hits.map(\.rule) == [.url])
+        #expect(hits.map(\.evidence) == ["https://drive.fictionbox.net/shared/folders/x/9CT4kQ2mVp"])
+        try #require(hits.count == 1 && hits[0].boxes.count == 3)
     }
 
     @Test
@@ -329,5 +396,124 @@ struct RecognizerTests {
         let q = [CGPoint(x: 10, y: 10), CGPoint(x: 50, y: 10), CGPoint(x: 50, y: 30), CGPoint(x: 10, y: 30)]
         let grown = Geometry.bounds(of: Recognizer.padded(q, by: 5))
         #expect(grown == CGRect(x: 5, y: 5, width: 50, height: 30))
+    }
+    @Test
+    func pieceStaysClearOfTheLinesAroundIt() {
+        // A notice's line with the rest of an address, 15 point at 2x: Vision's box of the line
+        // is swollen under the baseline by its full-width comma, 49 tall for a row of 38; the
+        // label line above ends two pixels higher, the one below starts inside the swollen part.
+        let own = CGRect(x: 38, y: 502, width: 420, height: 49)
+        let above = CGRect(x: 62, y: 466, width: 583, height: 34)
+        let below = CGRect(x: 45, y: 540, width: 40, height: 32)
+        let padded = CGRect(x: 25, y: 478, width: 446, height: 84)
+        let lines = [above, own, below]
+        // The margin stops at the label line's box above and at the line below: its top is where
+        // this line's glyphs end, its own box being no taller than its row.
+        let kept = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "www.fictbank.cn/notice/482", lines: lines)
+        #expect(kept == CGRect(x: 25, y: 500, width: 446, height: 40))
+        // A letter hanging under the baseline keeps the swollen box: the cut could take its tail.
+        // The margin above is stopped all the same.
+        let tail = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "fict.ly/8Kd2Qz", lines: lines)
+        #expect(tail == CGRect(x: 25, y: 500, width: 446, height: 62))
+        // A line below with a swollen box of its own says where nothing ends: the box stays whole.
+        let fat = CGRect(x: 45, y: 540, width: 640, height: 90)
+        let whole = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "www.fictbank.cn/notice/482", lines: [above, own, fat, CGRect(x: 45, y: 612, width: 600, height: 60)])
+        #expect(whole == tail)
+        // A line that is no taller than its row is not cut, whatever stands under it.
+        let slim = CGRect(x: 38, y: 502, width: 420, height: 34)
+        let slimPadded = CGRect(x: 30, y: 484, width: 436, height: 75)
+        #expect(Recognizer.clearOfNeighbours(slimPadded, own: slim, glyphs: "6013", lines: [above, slim, below])
+            == CGRect(x: 30, y: 500, width: 436, height: 40))
+
+        // Lines of a paragraph whose boxes touch or overlap, as on the frozen pictures: the tuned
+        // margin stands whole, above and below.
+        let own2 = CGRect(x: 196, y: 497, width: 804, height: 106)
+        let over = [CGRect(x: 195, y: 423, width: 828, height: 115), own2, CGRect(x: 197, y: 569, width: 836, height: 115)]
+        let padded2 = CGRect(x: 180, y: 443, width: 836, height: 172)
+        #expect(Recognizer.clearOfNeighbours(padded2, own: own2, glyphs: "wangfang@example.com", lines: over) == padded2)
+        // A line in another column does not count.
+        let side = CGRect(x: 900, y: 466, width: 200, height: 34)
+        #expect(Recognizer.clearOfNeighbours(padded, own: own, glyphs: "6013", lines: [side, own, below])
+            == CGRect(x: 25, y: 478, width: 446, height: 62))
+        // A label line whose box runs two pixels into ours, as Vision draws them tight: without the
+        // picture, a twentieth of the line stays covered over the piece's own box, not a hair more.
+        let touching = CGRect(x: 62, y: 470, width: 583, height: 34)
+        #expect(near(Recognizer.clearOfNeighbours(padded, own: own, glyphs: "fict.ly/8Kd2Qz", lines: [touching, own, below]),
+                     CGRect(x: 25, y: 499.55, width: 446, height: 62.45)))
+
+        // A bare number's box is just its digits, a little over half of its row: the line above ends
+        // a few pixels higher still, and the margin stays whole, since the number's line reaches
+        // half a box above the digits.
+        let digits = CGRect(x: 158, y: 631, width: 475, height: 35)
+        let digitsPadded = CGRect(x: 143, y: 612, width: 505, height: 62)
+        let sentence = CGRect(x: 158, y: 573, width: 458, height: 54)
+        #expect(Recognizer.clearOfNeighbours(digitsPadded, own: digits, glyphs: "6222 0210 0110 8867123", lines: [sentence, digits])
+            == digitsPadded)
+    }
+
+    @Test
+    func inkEndsWhereItsLowestRowDoes() {
+        // A strip of paper 20 by 40 with a stroke in rows 10 to 14 of columns 2 to 6, black on white and white on black.
+        func paper(_ paper: CGFloat, _ ink: CGFloat, stroke: CGFloat = 5) -> CGImage {
+            let context = CGImage.rgbaContext(width: 20, height: 40)!
+            context.setFillColor(CGColor(red: paper, green: paper, blue: paper, alpha: 1))
+            context.fill(CGRect(x: 0, y: 0, width: 20, height: 40))
+            context.setFillColor(CGColor(red: ink, green: ink, blue: ink, alpha: 1))
+            context.fill(CGRect(x: 2, y: 40 - 15, width: stroke, height: 5))
+            return context.makeImage()!
+        }
+        for (sheet, ink) in [(CGFloat(1), CGFloat(0)), (0, 1)] {
+            let picture = paper(sheet, ink)
+            // The bottom edge of the lowest row of ink, from the top of the picture: the rows before it and
+            // after it do not matter, and the edge of the stroke is not cut.
+            #expect(Ink.bottom(in: CGRect(x: 0, y: 0, width: 20, height: 30), of: picture) == 15)
+            #expect(Ink.bottom(in: CGRect(x: 0, y: 9.6, width: 20, height: 5.2), of: picture) == 15)
+            #expect(Ink.bottom(in: CGRect(x: 0, y: 10.5, width: 6.4, height: 20), of: picture) == 15)
+            // No ink under other columns, nor in other rows; a band reaching off the paper.
+            #expect(Ink.bottom(in: CGRect(x: 8, y: 0, width: 12, height: 40), of: picture) == nil)
+            #expect(Ink.bottom(in: CGRect(x: 0, y: 15, width: 20, height: 25), of: picture) == nil)
+            #expect(Ink.bottom(in: CGRect(x: 0, y: 15, width: 20, height: 60), of: picture) == nil)
+            // A lone speck is no ink.
+            #expect(Ink.bottom(in: CGRect(x: 0, y: 0, width: 20, height: 30), of: paper(sheet, ink, stroke: 1)) == nil)
+        }
+    }
+
+    @Test
+    func marginGoesUpToTheInkOfTheLineAbove() {
+        // A group chat's line with an address on it, 16 point at 3x. Vision's box of the line over it, which
+        // ends in a full-width comma, runs half a line under the comma, to four pixels over ours; the
+        // comma itself ends twenty-one pixels higher, and the address's line as laid out starts in between.
+        let own = CGRect(x: 419, y: 528.2, width: 565, height: 61)
+        let over = CGRect(x: 199, y: 457.7, width: 700, height: 66.1)
+        let below = CGRect(x: 216, y: 610, width: 300, height: 60)
+        let padded = CGRect(x: 396.4, y: 496.4, width: 604.3, height: 85.3)
+        let lines = [over, own, below]
+        // Without the picture, the box of the line stands for its ink: the margin stops at the box.
+        let box = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "wangfang@example.com", lines: lines)
+        #expect(near(box, CGRect(x: 396.4, y: 523.8, width: 604.3, height: 57.9)))
+        #expect(Recognizer.clearOfNeighbours(padded, own: own, glyphs: "wangfang@example.com", lines: lines, inkBottom: { _ in nil }) == box)
+        // With it, the margin reaches the comma and no further. It asks about the line's box over the
+        // piece's columns and above our own box, and takes the ink for nowhere but inside that band.
+        var bands: [CGRect] = []
+        let kept = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "wangfang@example.com", lines: lines, inkBottom: { band in
+            bands.append(band)
+            return band.minY + 45.3
+        })
+        #expect(bands.count == 1 && near(bands[0], CGRect(x: 396.4, y: 457.7, width: 502.6, height: 66.1)))
+        #expect(near(kept, CGRect(x: 396.4, y: 503, width: 604.3, height: 78.7)))
+        #expect(Recognizer.clearOfNeighbours(padded, own: own, glyphs: "wangfang@example.com", lines: lines, inkBottom: { _ in 400 }) == padded)
+        #expect(Recognizer.clearOfNeighbours(padded, own: own, glyphs: "wangfang@example.com", lines: lines, inkBottom: { _ in 540 }) == box)
+        // Overlapping boxes: the ink is asked for above our box only, and the margin may still reach it.
+        let overlapping = CGRect(x: 199, y: 460, width: 700, height: 74)
+        var asked: [CGRect] = []
+        let lifted = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "wangfang@example.com", lines: [overlapping, own, below], inkBottom: { band in
+            asked.append(band)
+            return 506
+        })
+        #expect(asked.count == 1 && near(asked[0], CGRect(x: 396.4, y: 460, width: 502.6, height: 68.2)))
+        #expect(near(lifted, CGRect(x: 396.4, y: 506, width: 604.3, height: 75.7)))
+        // Where the line's ink does come down to our box, a twentieth of our line stays covered over it.
+        #expect(near(Recognizer.clearOfNeighbours(padded, own: own, glyphs: "wangfang@example.com", lines: [overlapping, own, below], inkBottom: { _ in 530 }),
+                     CGRect(x: 396.4, y: 525.15, width: 604.3, height: 56.55)))
     }
 }

@@ -67,13 +67,17 @@ enum MaskRenderer {
         context.scaleBy(x: 1, y: -1)
         context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
         for finding in findings {
-            let path = quadPath(finding.quad)
-            switch style {
-            case .solid:
-                context.addPath(path)
-                context.fillPath()
-            case .mosaic, .blur:
-                cover(from: image, rect: finding.box, path: path, into: context, style: style)
+            // Every box apart: a value wrapped onto two lines is two boxes, and what lies between
+            // them on the picture stays as it is.
+            for quad in finding.quads {
+                let path = quadPath(quad)
+                switch style {
+                case .solid:
+                    context.addPath(path)
+                    context.fillPath()
+                case .mosaic, .blur:
+                    cover(from: image, rect: Geometry.bounds(of: quad), path: path, into: context, style: style)
+                }
             }
         }
         return context.makeImage() ?? image

@@ -131,6 +131,30 @@ struct MaskRendererTests {
         let img = try #require(CGImageSourceCreateImageAtIndex(out, 0, nil))
         #expect(Sample.brightness(img, x: 100, y: 40) < 0.05)
     }
+
+    @Test
+    func twoPieceFindingCoversBothPiecesAndNotWhatIsBetween() {
+        // 「电话 150」 over 「9122 3047」: one finding of two boxes, the row between them left as it is.
+        let image = Sample.text("150 9122 3047", at: CGPoint(x: 50, y: 95))
+        let upper = CGRect(x: 50, y: 100, width: 90, height: 30), lower = CGRect(x: 50, y: 150, width: 80, height: 30)
+        let finding = Finding(kind: .text, rule: .phone, pieces: [quad(upper), quad(lower)], evidence: "150 9122 3047")
+        let between = (x: 100, y: 140)   // inside the finding's bounds, outside both boxes
+        for style in MaskStyle.allCases {
+            let flat = MaskRenderer.flatten(image, findings: [finding], style: style)
+            #expect(flat.width == image.width && flat.height == image.height)
+            if style == .solid {
+                // Under both pieces the picture is black.
+                #expect(Sample.brightness(flat, x: 100, y: 115) < 0.05, "\(style)")
+                #expect(Sample.brightness(flat, x: 125, y: 165) < 0.05, "\(style)")
+            } else {
+                // The digits under the first piece are smeared, not left as they were.
+                #expect(Sample.brightness(flat, x: 60, y: 112) != Sample.brightness(image, x: 60, y: 112), "\(style)")
+            }
+            // Between the pieces nothing is touched.
+            #expect(Sample.brightness(flat, x: between.x, y: between.y) == Sample.brightness(image, x: between.x, y: between.y), "\(style)")
+            #expect(Sample.brightness(flat, x: between.x, y: between.y) > 0.9, "\(style)")
+        }
+    }
 }
 
 struct PictureSourceTests {
