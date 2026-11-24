@@ -464,15 +464,19 @@ enum TextRuleMatcher {
     /// Vision lost at a cut put back: what the reading matches, and where each match sits on each
     /// line, as scalar indices into that line, or nil for a line the match does not reach. The
     /// characters put back belong to no line, so a match that spans them still reaches a character
-    /// of the line on either side.
+    /// of the line on either side. A slash read as another character is put back in its place, one
+    /// character for one, so the lines keep their length and a match reaches on that line what it
+    /// reads there, the misread character included.
     private static func reading(_ lines: [[Unicode.Scalar]], parted: Int) -> [(match: RuleMatch, places: [Range<Int>?])] {
         let space: Unicode.Scalar = " "
+        // The slash Vision misread at the end of a line, read as one again before the lines are joined.
+        let read = lines.indices.map { i in i + 1 < lines.count ? slashed(lines[i], before: lines[i + 1]) : lines[i] }
         var joined: [Unicode.Scalar] = []
         var starts: [Int] = []
-        for (i, line) in lines.enumerated() {
+        for (i, line) in read.enumerated() {
             if i > 0 {
                 if (parted & (1 << (i - 1))) != 0 { joined.append(space) }
-                joined += Self.mend(from: lines[i - 1], to: line)
+                joined += Self.mend(from: read[i - 1], to: line)
             }
             starts.append(joined.count)
             joined += line
@@ -499,6 +503,45 @@ enum TextRuleMatcher {
         else { return [] }
         guard let first = lower.first, first != slash else { return [] }
         return Array(repeating: slash, count: missing)
+    }
+
+    /// The characters a second slash is read as when it cuts the end of a line: a bar read as a
+    /// 1, an l, a capital i, a bar, an exclamation mark, a small i or a backslash.
+    private static let passesForASlash: Set<Unicode.Scalar> = ["1", "l", "I", "|", "!", "i", "\\"]
+
+    /// The slash Vision misread at the end of a line, read as one again where the line under it starts
+    /// the rest of the address: "https:/1" over "demo.example.org" is "https://" and the host, the
+    /// second slash read as a 1, an l, a bar or the like. Only there: with nothing under it that
+    /// starts a host there is nothing to tell the character by, and it is read as itself, "https:/x"
+    /// and "https:/1" over a sentence the same. The character is traded in place, one for one, so the
+    /// line keeps its length and a match reaches it on the line it stands on.
+    private static func slashed(_ upper: [Unicode.Scalar], before lower: [Unicode.Scalar]) -> [Unicode.Scalar] {
+        guard let last = upper.last, passesForASlash.contains(last), startsAHost(lower) else { return upper }
+        let tail = String(String.UnicodeScalarView(upper.dropLast().filter { !$0.properties.isWhitespace })).lowercased()
+        guard tail.hasSuffix("https:/") || tail.hasSuffix("http:/") else { return upper }
+        return Array(upper.dropLast()) + ["/"]
+    }
+
+    /// Whether the piece over the cut is the start of a scheme the line under it finishes, the scheme
+    /// cut inside its name: "htt" over "ps://…" is "https://…", "ht" over "tps://…" and "HTTP" over
+    /// "S://…" too. A label sits before an address, and glued to the start of the line under it it
+    /// makes no scheme: "link" and "fict.io/…" read "linkfict.io/…", "http" over "example.com" reads
+    /// a host of its own.
+    private static func schemeCut(_ above: [Unicode.Scalar], _ below: [Unicode.Scalar]) -> Bool {
+        let head = String(String.UnicodeScalarView(above)).lowercased()
+        let next = String(String.UnicodeScalarView(below.prefix(8))).lowercased()
+        return ["http", "https"].contains { scheme in
+            scheme.hasPrefix(head) && head.count < scheme.count && (head + next).hasPrefix(scheme + "://")
+        }
+    }
+
+    /// Whether a line starts the host of an address: a name, or an address of the IP kind.
+    private static func startsAHost(_ line: [Unicode.Scalar]) -> Bool {
+        guard let first = line.first else { return false }
+        if isLetter(first) { return true }
+        var i = 0
+        while i < line.count, isDigit(line[i]) { i += 1 }
+        return i > 0 && i < line.count && line[i] == "."
     }
 
     /// Whether a match that crosses a cut read without a space is not a value the wrap cut, but
@@ -530,8 +573,10 @@ enum TextRuleMatcher {
             let above = Array(lines[j][upper]), below = Array(lines[j + 1][lower])
             // A word over an address that the line under it carries whole is a label. A piece that
             // starts with a mark was cut where it was: "zhang" over ".wei@example.com" is one address.
+            // A scheme cut inside its name is no label either: "htt" over "ps://…" reads "https://…".
             if m.rule == .email || m.rule == .url, above.allSatisfy({ isLetter($0) }),
                below.first.map({ isLetter($0) || isDigit($0) }) ?? false,
+               !schemeCut(above, below),
                readings[parted | (1 << j)]?.contains(where: { item in
                    item.places[j + 1].map { $0.lowerBound <= lower.lowerBound && lower.upperBound <= $0.upperBound } ?? false
                }) == true {
@@ -651,8 +696,13 @@ enum TextRuleMatcher {
     // Folded text is ASCII (non-ASCII became U+E000) and uppercased. Each scalar is one UTF-16
     // unit there, so an NSRange location is also a scalar index.
 
+    /// A phone: eleven digits starting with 1[3-9], the country code a number is printed with
+    /// before it where it stands, a plus and one to three digits, "+86" and the number with or
+    /// without a space. The code is read in the view where the separators between digits are gone,
+    /// so a line that wraps after the code, "+86" over "139 0000 1111", and a line that carries
+    /// both read alike.
     nonisolated(unsafe) private static let phonePattern =
-        try! NSRegularExpression(pattern: #"(?<![0-9])1[3-9][0-9]{9}(?![0-9])"#)
+        try! NSRegularExpression(pattern: #"(?<![0-9])(?:\+[1-9][0-9]{0,2})?1[3-9][0-9]{9}(?![0-9])"#)
     nonisolated(unsafe) private static let idPattern =
         try! NSRegularExpression(pattern: #"(?<![0-9X])[0-9]{17}[0-9X](?![0-9X])"#)
     nonisolated(unsafe) private static let bankPattern =
