@@ -42,6 +42,9 @@ struct CalloutCard<Action: View>: View {
     var tint: Color = Theme.accent
     let title: LocalizedStringKey
     let message: LocalizedStringKey
+    /// Whether the title and the message are read as one static text (design.md §9.2, the editor's
+    /// card). Off by default: the two stay two texts.
+    var readsTogether = false
     @ViewBuilder let action: () -> Action
 
     var body: some View {
@@ -50,16 +53,12 @@ struct CalloutCard<Action: View>: View {
                 .font(.system(size: 40))
                 .foregroundStyle(tint)
                 .accessibilityHidden(true)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(Theme.body)
-                .multilineTextAlignment(.center)
-                .padding(.top, 10)
-            Text(message)
-                .font(.footnote)
-                .foregroundStyle(Theme.calloutText)
-                .multilineTextAlignment(.center)
-                .padding(.top, 4)
+            if readsTogether {
+                VStack(spacing: 0) { words }
+                    .accessibilityElement(children: .combine)
+            } else {
+                words
+            }
             action()
                 .padding(.top, 12)
         }
@@ -68,6 +67,19 @@ struct CalloutCard<Action: View>: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 14)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.card))
+    }
+
+    @ViewBuilder private var words: some View {
+        Text(title)
+            .font(.headline)
+            .foregroundStyle(Theme.body)
+            .multilineTextAlignment(.center)
+            .padding(.top, 10)
+        Text(message)
+            .font(.footnote)
+            .foregroundStyle(Theme.calloutText)
+            .multilineTextAlignment(.center)
+            .padding(.top, 4)
     }
 }
 
