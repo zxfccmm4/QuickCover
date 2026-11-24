@@ -40,11 +40,20 @@ struct GlassLabelButton: View {
     let systemImage: String
     let title: LocalizedStringKey
     var isEnabled = true
+    /// Hides the title at every text size, for a caller that has measured that the titled buttons
+    /// do not fit side by side; the name stays the accessibility label. The default keeps the title
+    /// up to the accessibility sizes, as before.
+    var titleHidden = false
     let action: () -> Void
 
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    private var showsTitle: Bool { !typeSize.isAccessibilitySize }
+    private var showsTitle: Bool { Self.showsTitle(at: typeSize, titleHidden: titleHidden) }
+
+    /// Whether a button shows its title at a text size.
+    static func showsTitle(at typeSize: DynamicTypeSize, titleHidden: Bool = false) -> Bool {
+        !titleHidden && !typeSize.isAccessibilitySize
+    }
 
     var body: some View {
         Button(action: action) {

@@ -50,7 +50,7 @@ struct EditorScreen: View {
 
                 GlassEffectContainer {
                     VStack(spacing: 0) {
-                        EditorTopButtons()
+                        EditorTopButtons(hidesTitlesWhenTheyDoNotFit: true)
                             .padding(.top, EditorLayout.topButtonsInset)
                         Spacer()
                         EditorGlassBar()
@@ -65,6 +65,8 @@ struct EditorScreen: View {
                     EditorCallout(kind: callout, draw: startDrawing, retry: model.retryRecognition)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { calloutHeight = $0 }
                         .padding(.horizontal, Metrics.pageInset)
+                        // Never over the top buttons: with a long card at accessibility sizes the text gives.
+                        .padding(.top, EditorLayout.topInset)
                         .padding(.bottom, EditorLayout.barInset + EditorLayout.barHeight + EditorLayout.calloutOverBar)
                         .frame(maxHeight: .infinity, alignment: .bottom)
                         .transition(reduceMotion ? .identity : .opacity)

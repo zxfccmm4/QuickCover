@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import QuickCover
@@ -368,5 +369,36 @@ struct ReviewSheetSectionsTests {
     func nothingGivesNoCards() {
         #expect(ReviewSheetSections.textLines(in: []).isEmpty)
         #expect(ReviewSheetSections.suggestions(in: []).isEmpty)
+    }
+}
+
+/// When a top button of the editor shows its title (design.md §9.5, and the English case where the
+/// two titled capsules don't fit side by side).
+struct EditorTopButtonsTitleTests {
+
+    @Test
+    func titlesStayUpToTheAccessibilitySizesUnlessHidden() {
+        #expect(GlassLabelButton.showsTitle(at: .large))
+        #expect(GlassLabelButton.showsTitle(at: .xxxLarge))
+        #expect(!GlassLabelButton.showsTitle(at: .accessibility1))
+        #expect(!GlassLabelButton.showsTitle(at: .large, titleHidden: true))
+        #expect(!GlassLabelButton.showsTitle(at: .accessibility1, titleHidden: true))
+    }
+
+    /// The widths measured on the simulator in English on a 402 pt screen: the titled row is 370
+    /// inside the page margins; at L the titles fit by shrinking to 91%, one step up they need 82%.
+    @Test
+    func englishTitlesFitAtTheDefaultSizeAndNotOneStepUp() {
+        let untitled: CGFloat = 126.666667
+        let available: CGFloat = 370
+        #expect(EditorTopButtons.titlesFit(titled: 394.666667, untitled: untitled, available: available))
+        #expect(!EditorTopButtons.titlesFit(titled: 424.333333, untitled: untitled, available: available))
+        #expect(!EditorTopButtons.titlesFit(titled: 479, untitled: untitled, available: available))
+    }
+
+    @Test
+    func beforeMeasuringTheTitlesStay() {
+        #expect(EditorTopButtons.titlesFit(titled: 0, untitled: 0, available: 0))
+        #expect(EditorTopButtons.titlesFit(titled: 500, untitled: 126.666667, available: 0))
     }
 }
