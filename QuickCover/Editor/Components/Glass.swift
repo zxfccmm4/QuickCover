@@ -35,7 +35,8 @@ struct GlassIconButton: View {
 
 /// The two glass capsules at the top of the editor (design.md §6): 44 high, corner 23, a 21 pt
 /// symbol and 17 semibold text in white 6 apart, 12 inside. From accessibility text sizes on only
-/// the symbol stays; the name is still what VoiceOver reads (§9.5).
+/// the symbol stays; the name is still what VoiceOver reads (§9.5). With only the symbol the capsule
+/// is a fixed 44×44 circle, as `GlassIconButton` is, whatever the symbol's own width.
 struct GlassLabelButton: View {
     let systemImage: String
     let title: LocalizedStringKey
@@ -64,8 +65,8 @@ struct GlassLabelButton: View {
                 }
             }
             .foregroundStyle(Theme.body)
-            .padding(.horizontal, showsTitle ? 12 : 11.5)
-            .frame(height: 44)
+            .padding(.horizontal, showsTitle ? 12 : 0)
+            .frame(width: showsTitle ? nil : 44, height: 44)
             .glassEffect(.regular, in: .capsule)
         }
         .buttonStyle(PressStyle(scale: 0.94))
