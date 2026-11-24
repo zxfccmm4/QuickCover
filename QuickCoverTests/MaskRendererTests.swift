@@ -136,17 +136,18 @@ struct MaskRendererTests {
     // MARK: - 遮盖取的是哪一块（修「小画布里只有框左下角那几个像素」）
 
     /// The box under test: 100×40 at (10, 10) in a 120×60 picture. The mosaic's `cell` comes to 12
-    /// here (the floor is above 40 / 6), so it has 9 × 4 cells; the blur's is 10, 10 × 4.
+    /// here (the floor is above 40 / 6), so it has 9 × 4 cells; the blur's grain is 12 too
+    /// (`BlurGrain.default`), so 9 × 4 as well.
     private static let coverBox = CGRect(x: 10, y: 10, width: 100, height: 40)
 
     private var cover: [Finding] { [Finding(kind: .text, quad: quad(Self.coverBox))] }
 
-    /// A 120×60 white picture with `paint` added to it, drawn in UIKit's top-left coordinates.
-    private func picture(_ paint: (UIGraphicsRendererContext) -> Void) -> CGImage {
+    /// A white picture with `paint` added to it, drawn in UIKit's top-left coordinates.
+    private func picture(size: CGSize = CGSize(width: 120, height: 60),
+                         _ paint: (UIGraphicsRendererContext) -> Void) -> CGImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         format.opaque = true
-        let size = CGSize(width: 120, height: 60)
         return UIGraphicsImageRenderer(size: size, format: format).image { context in
             UIColor.white.setFill()
             context.fill(CGRect(origin: .zero, size: size))
@@ -294,10 +295,11 @@ struct MaskRendererTests {
         let image = fineStripes()
         #expect(steepestStep(reds(image), inside: Self.coverBox) == 255, "the stripes step from black to white")
         let red = reds(MaskRenderer.flatten(image, findings: cover, style: .blur))
-        // The blur's grain is never under 10 pixels (the floor in `cell`), so the steepest thing a
-        // picture holds, black next to white, is spread over at least 10 pixels: 255 / 10 ≈ 26 a pixel.
-        // Stretching the grains is interpolated and rings a little at a hard step, so twice that.
-        #expect(steepestStep(red, inside: Self.coverBox) <= 51)
+        // The blur's grain is never under 12 pixels (`BlurGrain.default`'s floor), so the steepest
+        // thing a picture holds, black next to white, is spread over at least 12 pixels: 255 / 12
+        // ≈ 21 a pixel. Stretching the grains is interpolated and rings a little at a hard step, so
+        // twice that.
+        #expect(steepestStep(red, inside: Self.coverBox) <= 42)
     }
 
     @Test
@@ -346,6 +348,84 @@ struct MaskRendererTests {
                 #expect(values.max()! <= 191, "cell (\(column), \(row)) is not black: the white is mixed in")
             }
         }
+    }
+
+    // MARK: - 模糊的档位（修「模糊下机器还能读出 4–5 个连续字符」）
+
+    /// A white picture with black and white bands `band` pixels tall all over, stacked from the top
+    /// of the box under test: a blur grain exactly two bands tall averages to the same grey.
+    private func bands(_ band: CGFloat, height: CGFloat) -> CGImage {
+        picture(size: CGSize(width: 120, height: height)) { context in
+            UIColor.black.setFill()
+            for top in stride(from: 10, to: height, by: 2 * band) {
+                context.fill(CGRect(x: 0, y: top, width: 120, height: band))
+            }
+        }
+    }
+
+    /// Red of every pixel two or more inside `box`, away from the clip's edge.
+    private func inside(_ box: CGRect, of red: [[Int]]) -> [Int] {
+        red[(Int(box.minY) + 2)..<(Int(box.maxY) - 2)].flatMap { $0[(Int(box.minX) + 2)..<(Int(box.maxX) - 2)] }
+    }
+
+    /// Pixels of row `y` inside `box` that are neither white nor black: the softer an edge, the more.
+    private func middles(inRow y: Int, of box: CGRect, in red: [[Int]]) -> Int {
+        red[y][(Int(box.minX) + 2)..<(Int(box.maxX) - 2)].filter { (64..<191).contains($0) }.count
+    }
+
+    private func blurred(_ image: CGImage, box: CGRect, grain: MaskRenderer.BlurGrain = .default) -> [[Int]] {
+        reds(MaskRenderer.flatten(image, findings: [Finding(kind: .text, quad: quad(box))], style: .blur, blurGrain: grain))
+    }
+
+    @Test
+    func shippedBlurGrainIsTheMosaicsNumbers() {
+        #expect(MaskRenderer.BlurGrain.default == MaskRenderer.BlurGrain(divisor: 6, floor: 12))
+        let grain = MaskRenderer.BlurGrain.default
+        #expect(grain.cell(forHeight: 8) == 12, "a low thing gets the floor")
+        #expect(grain.cell(forHeight: 72) == 12, "a sixth of 72 is the floor")
+        #expect(grain.cell(forHeight: 300) == 50, "a tall thing gets a sixth of its height")
+    }
+
+    @Test(arguments: [(CGFloat(60), CGFloat(6)), (CGFloat(72), CGFloat(6))])
+    func blurOfALowLineIsGrainedNoFinerThanTheFloor(height: CGFloat, band: CGFloat) {
+        // 100×60 and 100×72 at (10, 10): up to 72 tall the floor rules (a sixth is under it or just
+        // 12), so rows of 12 pixels, 5 and 6 of them. Bands 6 pixels tall stack two to a row and the
+        // blur comes out one flat grey. Any other number of rows leaves the bands' alternation in it:
+        // the old tenth makes 6 and 8 rows, a fifth 5 of 14 pixels in the taller box.
+        let box = CGRect(x: 10, y: 10, width: 100, height: height)
+        let grey = inside(box, of: blurred(bands(band, height: height + 20), box: box))
+        #expect(grey.min()! >= 126, "one grey")
+        #expect(grey.max()! <= 130, "one grey")
+    }
+
+    @Test
+    func blurOfATallThingIsGrainedASixthOfItsHeight() {
+        // 100×120: a sixth is 20, over the floor, so 6 rows of 20 pixels; bands 10 pixels tall vanish
+        // the same way. The floor alone (12: 10 rows), a tenth (15: 8), a fifth (24: 5) or a quarter
+        // (30: 4) would leave them showing.
+        let box = CGRect(x: 10, y: 10, width: 100, height: 120)
+        let grey = inside(box, of: blurred(bands(10, height: 140), box: box))
+        #expect(grey.min()! >= 126, "one grey")
+        #expect(grey.max()! <= 130, "one grey")
+    }
+
+    @Test
+    func blurGrainPassedInIsTheOneUsed() {
+        // `coverBox`, its left half white and its right half black. One grain for the whole box: flat
+        // at their mean. Grains of 2 pixels: the edge between the halves stays sharp, while the
+        // shipped grain spreads it over about ten pixels.
+        let image = picture { context in
+            UIColor.black.setFill()
+            context.fill(CGRect(x: 60, y: 0, width: 60, height: 60))
+        }
+        let one = inside(Self.coverBox, of: blurred(image, box: Self.coverBox, grain: .init(divisor: 1, floor: 100)))
+        #expect(one.min()! >= 126)
+        #expect(one.max()! <= 130)
+        #expect(middles(inRow: 30, of: Self.coverBox, in: blurred(image, box: Self.coverBox)) >= 6, "the shipped grain softens the edge")
+        let fine = blurred(image, box: Self.coverBox, grain: .init(divisor: 1_000, floor: 2))
+        #expect(fine[30][30] >= 250, "white stays white")
+        #expect(fine[30][90] <= 5, "black stays black")
+        #expect(middles(inRow: 30, of: Self.coverBox, in: fine) <= 2, "the edge stays sharp")
     }
 }
 

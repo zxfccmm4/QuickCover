@@ -22,6 +22,22 @@ enum MaskRenderer {
         /// The export leaves out location and other metadata of the original.
         var stripMetadata = true
         var quality = 0.95
+        /// How coarse the blur is. The app leaves it at the shipped grain; the probe tries others.
+        var blurGrain: BlurGrain = .default
+    }
+
+    /// How coarse the blur is: a hidden thing `height` pixels tall gets one blurred grain to every
+    /// `divisor`th of its height, but never one under `floor` pixels.
+    struct BlurGrain: Equatable, Sendable {
+        var divisor: CGFloat
+        var floor: CGFloat
+
+        func cell(forHeight height: CGFloat) -> CGFloat { max(floor, height / divisor) }
+
+        /// The mosaic's numbers. Measured on the fixtures (`RenderProbeTests`): with a tenth and a
+        /// floor of 10, Vision still read runs of 3–5 characters of card and ID numbers through the
+        /// blur; with these, no more than one character in a row.
+        static let `default` = BlurGrain(divisor: 6, floor: 12)
     }
 
     enum Failure: Error {
@@ -35,7 +51,7 @@ enum MaskRenderer {
         let decode = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let raw = CGImageSourceCreateImageAtIndex(source, 0, decode) else { throw Failure.cannotDecode }
         let upright = raw.oriented(orientation)
-        let flat = flatten(upright, findings: findings, style: options.style)
+        let flat = flatten(upright, findings: findings, style: options.style, blurGrain: options.blurGrain)
 
         let fileType = (CGImageSourceGetType(source) as String?) ?? UTType.jpeg.identifier
         let data = NSMutableData()
@@ -55,7 +71,8 @@ enum MaskRenderer {
     }
 
     /// `image` is upright; findings are in its pixels, top-left origin.
-    static func flatten(_ image: CGImage, findings: [Finding], style: MaskStyle) -> CGImage {
+    static func flatten(_ image: CGImage, findings: [Finding], style: MaskStyle,
+                        blurGrain: BlurGrain = .default) -> CGImage {
         guard !findings.isEmpty, let context = CGImage.rgbaContext(width: image.width, height: image.height) else { return image }
         let width = CGFloat(image.width)
         let height = CGFloat(image.height)
@@ -73,7 +90,7 @@ enum MaskRenderer {
                 context.addPath(path)
                 context.fillPath()
             case .mosaic, .blur:
-                cover(from: image, rect: finding.box, path: path, into: context, style: style)
+                cover(from: image, rect: finding.box, path: path, into: context, style: style, blurGrain: blurGrain)
             }
         }
         return context.makeImage() ?? image
@@ -88,15 +105,17 @@ enum MaskRenderer {
     /// centre read 1.6 px off, the last one's 4.3) and takes the picture's outermost pixel for all
     /// that lies beyond its edge (55 % of a cell flush with the edge), which left such a cell with a
     /// light or a dark rim.
-    private static func cover(from image: CGImage, rect: CGRect, path: CGPath, into context: CGContext, style: MaskStyle) {
+    private static func cover(from image: CGImage, rect: CGRect, path: CGPath, into context: CGContext,
+                              style: MaskStyle, blurGrain: BlurGrain) {
         let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
         guard bounds.width >= 2, bounds.height >= 2 else { return }
         // Mosaic cells and blur grain follow the height of the thing hidden: a text line gets
         // cells a fraction of its height, never below the floor that keeps digits unreadable.
+        // The blur's grain is `BlurGrain.default`, a sixth of the height and never under 12.
         let cell: CGFloat
         switch style {
         case .mosaic: cell = max(12, bounds.height / 6)
-        case .blur: cell = max(10, bounds.height / 8)
+        case .blur: cell = blurGrain.cell(forHeight: bounds.height)
         case .solid: cell = 1
         }
         let columns = max(1, Int((bounds.width / cell).rounded(.up)))
