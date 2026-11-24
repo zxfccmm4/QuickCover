@@ -53,7 +53,7 @@ struct ExportScreen: View {
                     if facts.showsBlurNotice {
                         NoticeBar(systemImage: "exclamationmark.triangle", tint: Theme.blurNoticeIcon,
                                   ground: Theme.blurNotice, text: "6.3.1") {
-                            SmallButton(title: "6.3.2") { model.setStyle(.solid) }
+                            SmallButton(title: "6.3.2") { switchToSolid() }
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 10)
@@ -77,6 +77,12 @@ struct ExportScreen: View {
         .onChange(of: saveFailed) { _, failed in
             if failed { AccessibilityNotification.Announcement(L10n.text("6.4.2")).post() }
         }
+    }
+
+    /// 6.3.2「改用純色」：换成纯色，给一次「选」的触感（design.md §8「换样式」）。
+    private func switchToSolid() {
+        UISelectionFeedbackGenerator().selectionChanged()
+        model.setStyle(.solid)
     }
 
     /// 6.2.4 那一行（design.md §7.5.1 第 4 条）：前面一个 15 pt 的 `checkmark`。
