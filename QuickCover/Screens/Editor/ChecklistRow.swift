@@ -61,7 +61,9 @@ struct CoverAllTextRow: View {
                     .lineLimit(3)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Toggle("", isOn: Binding(get: { isOn }, set: setOn))
+            // A closure, not the method itself: a main-actor function reference as Binding's
+            // `@Sendable` setter crashes the Xcode 26.5 / 26.6 compiler in Release (see StylePicker).
+            Toggle("", isOn: Binding(get: { isOn }, set: { setOn($0) }))
                 .labelsHidden()
                 .tint(nil)
                 .padding(.top, 3)

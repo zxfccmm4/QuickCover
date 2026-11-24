@@ -14,9 +14,9 @@ on:
         options: [macos-26, macos-26-intel]
         default: macos-26
       xcode:
-        description: 用哪个 Xcode。26.6 的编译器在 Release 下编这个工程会崩，所以平时不用它。
+        description: 用哪个 Xcode。26.0.1 的编译机里没装 iOS 平台，所以不在列表里。
         type: choice
-        options: [26.5, 26.4.1, 26.3, 26.2, 26.1.1, 26.0.1, 26.6]
+        options: [26.5, 26.4.1, 26.3, 26.2, 26.1.1, 26.6]
         default: 26.5
 
 permissions:

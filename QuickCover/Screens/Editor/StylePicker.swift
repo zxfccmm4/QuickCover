@@ -20,7 +20,11 @@ struct StylePicker: View {
                     .foregroundStyle(Theme.secondaryLabel)
                     .textCase(.uppercase)
                     .padding(.leading, Metrics.pageInset)
-                Picker("4.7.1", selection: Binding(get: { model.preferences.style }, set: pick)) {
+                // The setter is a closure that calls `pick`, not the method itself. Xcode 26.5 and 26.6
+                // crash in the compiler (Release, IRGen) turning a main-actor method reference into the
+                // `@Sendable` setter Binding takes: "While emitting IR SIL function
+                // …MaskStyle…_TR". A closure literal takes the same path as every other Binding here.
+                Picker("4.7.1", selection: Binding(get: { model.preferences.style }, set: { pick($0) })) {
                     Text("4.7.2").tag(MaskStyle.mosaic)
                     Text("4.7.3").tag(MaskStyle.solid)
                     Text("4.7.4").tag(MaskStyle.blur)
