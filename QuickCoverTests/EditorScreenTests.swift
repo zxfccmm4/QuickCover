@@ -291,6 +291,69 @@ struct CoverPainterTests {
         #expect(pixel(42, 20) == 0)
         #expect(pixel(31, 20) == 255)
     }
+
+    /// Black, but for one white stripe from the top of the picture to its bottom.
+    private func striped(stripeAt minX: Int, width: Int = 120, height: Int = 60) -> CGImage {
+        let context = CGImage.rgbaContext(width: width, height: height)!
+        context.setFillColor(Sample.black)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        context.setFillColor(Sample.white)
+        context.fill(CGRect(x: minX, y: 0, width: 12, height: height))
+        return context.makeImage()!
+    }
+
+    /// The red of one pixel of `image`, counted from its top-left corner.
+    private func red(_ image: CGImage, at x: Int, _ y: Int) throws -> Int {
+        let context = try #require(CGImage.rgbaContext(width: image.width, height: image.height))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        let bytes = try #require(context.data).assumingMemoryBound(to: UInt8.self)
+        return Int(bytes[y * context.bytesPerRow + x * 4])
+    }
+
+    /// How many pixels of `box` differ in red between the two pictures, each counted from its own
+    /// top-left corner. The two contexts are alive until the counting is over, so their bytes are.
+    private func differingPixels(onScreen: CGImage, inFile: CGImage, over box: CGRect) throws -> Int {
+        let a = try #require(CGImage.rgbaContext(width: onScreen.width, height: onScreen.height))
+        a.draw(onScreen, in: CGRect(x: 0, y: 0, width: onScreen.width, height: onScreen.height))
+        let b = try #require(CGImage.rgbaContext(width: inFile.width, height: inFile.height))
+        b.draw(inFile, in: CGRect(x: 0, y: 0, width: inFile.width, height: inFile.height))
+        let p = try #require(a.data).assumingMemoryBound(to: UInt8.self)
+        let q = try #require(b.data).assumingMemoryBound(to: UInt8.self)
+        var differing = 0
+        for y in Int(box.minY)..<Int(box.maxY) {
+            for x in Int(box.minX)..<Int(box.maxX) where p[y * a.bytesPerRow + x * 4] != q[y * b.bytesPerRow + x * 4] {
+                differing += 1
+            }
+        }
+        return differing
+    }
+
+    @Test
+    func previewCutsTheCellsTheWayTheExportDoes() throws {
+        // Black with a white stripe from 64 to 76. Over the box (40, 20, 60, 20) the export's
+        // mosaic is three cells of 20: black, the stripe spread over the middle one, black. That
+        // takes what sizes the cells: the 18 the letters are tall for text that was read, the
+        // box's own height for one drawn by hand. Cut by the floor of 12 alone, as the preview
+        // used to be, it is five cells of 12 and the middle one is the stripe at full white.
+        let preview = striped(stripeAt: 64)
+        let box = CGRect(x: 40, y: 20, width: 60, height: 20)
+        let read = MaskItem(id: 1, group: .text, origin: .suggestion, rule: nil, quads: [quad(box)], isOn: true,
+                            evidence: "136 1234 5678", textHeight: 18)
+        let drawn = MaskItem(id: 2, group: .text, origin: .manual, rule: nil, quads: [quad(box)], isOn: true, evidence: "")
+        for item in [read, drawn] {
+            let patch = try #require(CoverPainter.patches(items: [item], style: .mosaic, preview: preview,
+                                                           scale: CGSize(width: 1, height: 1)).first)
+            let exported = MaskRenderer.flatten(preview, findings: item.findings, style: .mosaic)
+            let inFile = try #require(exported.cropping(to: patch.frame))
+            // What the file has, so that the two agreeing is not the two of them wrong alike.
+            #expect(try red(inFile, at: 10, 10) == 0)
+            #expect(try red(inFile, at: 34, 10) > 0 && red(inFile, at: 34, 10) < 255)
+            #expect(try red(inFile, at: 58, 10) == 0)
+            // Inside the box the patch is the cover; the pixel on its edge may be half of one.
+            let inside = box.insetBy(dx: 1, dy: 1).offsetBy(dx: -patch.frame.minX, dy: -patch.frame.minY)
+            #expect(try differingPixels(onScreen: patch.image, inFile: inFile, over: inside) == 0)
+        }
+    }
 }
 
 /// The sheet's height is measured against what was asked (`SheetGeometry.addition`).

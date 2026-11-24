@@ -46,9 +46,12 @@ enum CoverPainter {
                     .intersection(imageRect)
                     .integral
                 guard crop.width >= 2, crop.height >= 2, let pixels = preview.cropping(to: crop) else { continue }
+                // Sized as the export sizes it: `textHeight` and `drawnByHand` are what the cells
+                // and the blur's grains are cut by, so they go along with the box.
                 let moved = Finding(kind: inPreview.kind, rule: inPreview.rule,
                                     quad: inPreview.quad.map { CGPoint(x: $0.x - crop.minX, y: $0.y - crop.minY) },
-                                    evidence: inPreview.evidence, tolerant: inPreview.tolerant)
+                                    evidence: inPreview.evidence, tolerant: inPreview.tolerant,
+                                    textHeight: inPreview.textHeight, drawnByHand: inPreview.drawnByHand)
                 let drawn = MaskRenderer.flatten(pixels, findings: [moved], style: style)
                 patches.append(CoverPatch(id: "\(item.id).\(index)", frame: crop,
                                           image: onlyCover(drawn, quad: moved.quad)))
