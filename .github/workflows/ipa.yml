@@ -7,6 +7,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 在哪种编译机上编。排不到 Apple 芯片的机器时，换 Intel 试试。
+        type: choice
+        options: [macos-26, macos-26-intel]
+        default: macos-26
 
 permissions:
   contents: write
@@ -18,7 +24,7 @@ concurrency:
 jobs:
   ipa:
     name: 自检包
-    runs-on: macos-26
+    runs-on: ${{ inputs.runner || 'macos-26' }}
     timeout-minutes: 45
     steps:
       - name: 取代码
@@ -86,7 +92,7 @@ jobs:
 
           - 版本：$VERSION ($BUILD)
           - 代码：[\`${GITHUB_SHA::7}\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA)，main
-          - 工具：$xcode，$SDK
+          - 工具：$xcode，$SDK，$RUNNER_ARCH 的编译机
           - 文件：\`$IPA_NAME\`（$SIZE）
           - SHA-256：\`$SHA256\`
           - 这次构建：[#$GITHUB_RUN_NUMBER]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)
