@@ -392,4 +392,57 @@ struct RecognizerTests {
         let grown = Geometry.bounds(of: Recognizer.padded(q, by: 5))
         #expect(grown == CGRect(x: 5, y: 5, width: 50, height: 30))
     }
+    @Test
+    func pieceStaysClearOfTheLinesAroundIt() {
+        // A notice's line with the rest of an address, 15 point at 2x: Vision's box of the line
+        // is swollen under the baseline by its full-width comma, 49 tall for a row of 38; the
+        // label line above ends two pixels higher, the one below starts inside the swollen part.
+        let own = CGRect(x: 38, y: 502, width: 420, height: 49)
+        let above = CGRect(x: 62, y: 466, width: 583, height: 34)
+        let below = CGRect(x: 45, y: 540, width: 40, height: 32)
+        let padded = CGRect(x: 25, y: 478, width: 446, height: 84)
+        let lines = [above, own, below]
+        // The margin stops at the label line's box above and at the line below: its top is where
+        // this line's glyphs end, its own box being no taller than its row.
+        let kept = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "www.fictbank.cn/notice/482", lines: lines)
+        #expect(kept == CGRect(x: 25, y: 500, width: 446, height: 40))
+        // A letter hanging under the baseline keeps the swollen box: the cut could take its tail.
+        // The margin above is stopped all the same.
+        let tail = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "fict.ly/8Kd2Qz", lines: lines)
+        #expect(tail == CGRect(x: 25, y: 500, width: 446, height: 62))
+        // A line below with a swollen box of its own says where nothing ends: the box stays whole.
+        let fat = CGRect(x: 45, y: 540, width: 640, height: 90)
+        let whole = Recognizer.clearOfNeighbours(padded, own: own, glyphs: "www.fictbank.cn/notice/482", lines: [above, own, fat, CGRect(x: 45, y: 612, width: 600, height: 60)])
+        #expect(whole == tail)
+        // A line that is no taller than its row is not cut, whatever stands under it.
+        let slim = CGRect(x: 38, y: 502, width: 420, height: 34)
+        let slimPadded = CGRect(x: 30, y: 484, width: 436, height: 75)
+        #expect(Recognizer.clearOfNeighbours(slimPadded, own: slim, glyphs: "6013", lines: [above, slim, below])
+            == CGRect(x: 30, y: 500, width: 436, height: 40))
+
+        // Lines of a paragraph whose boxes touch or overlap, as on the frozen pictures: the tuned
+        // margin stands whole, above and below.
+        let own2 = CGRect(x: 196, y: 497, width: 804, height: 106)
+        let over = [CGRect(x: 195, y: 423, width: 828, height: 115), own2, CGRect(x: 197, y: 569, width: 836, height: 115)]
+        let padded2 = CGRect(x: 180, y: 443, width: 836, height: 172)
+        #expect(Recognizer.clearOfNeighbours(padded2, own: own2, glyphs: "wangfang@example.com", lines: over) == padded2)
+        // A line in another column does not count.
+        let side = CGRect(x: 900, y: 466, width: 200, height: 34)
+        #expect(Recognizer.clearOfNeighbours(padded, own: own, glyphs: "6013", lines: [side, own, below])
+            == CGRect(x: 25, y: 478, width: 446, height: 62))
+        // A label line whose box runs two pixels into ours, as Vision draws them tight: the margin
+        // stops at the piece's own box, not a hair above it.
+        let touching = CGRect(x: 62, y: 470, width: 583, height: 34)
+        #expect(Recognizer.clearOfNeighbours(padded, own: own, glyphs: "fict.ly/8Kd2Qz", lines: [touching, own, below])
+            == CGRect(x: 25, y: 502, width: 446, height: 60))
+
+        // A bare number's box is just its digits, a little over half of its row: the line above ends
+        // a few pixels higher still, and the margin stays whole, since the number's line reaches
+        // half a box above the digits.
+        let digits = CGRect(x: 158, y: 631, width: 475, height: 35)
+        let digitsPadded = CGRect(x: 143, y: 612, width: 505, height: 62)
+        let sentence = CGRect(x: 158, y: 573, width: 458, height: 54)
+        #expect(Recognizer.clearOfNeighbours(digitsPadded, own: digits, glyphs: "6222 0210 0110 8867123", lines: [sentence, digits])
+            == digitsPadded)
+    }
 }
