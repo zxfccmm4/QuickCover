@@ -43,6 +43,37 @@ import Testing
         #expect(junction(["见xhtt", "ps://demo.example.org"]).isEmpty)
     }
 
+    // MARK: A country code
+
+    @Test func countryCodeAboveItsNumber() {
+        // "+86" over a phone is one number with its country code.
+        #expect(junction(["司机电话请拨 +86", "139 0000 1111，到了打我"])
+            == [JunctionMatch(rule: .phone, text: "+86 139 0000 1111", ranges: [7..<10, 0..<13])])
+        // The number printed without groups. The text kept is the reading with the space between
+        // the two pieces, as for every value read across a cut; the number is the same one.
+        #expect(junction(["打这个 +86", "13900001111"])
+            == [JunctionMatch(rule: .phone, text: "+86 13900001111", ranges: [4..<7, 0..<11])])
+    }
+
+    @Test func aBarePlusAsItStands() {
+        // A plus with no code after it, over a number, is glued to the number by the fix that came
+        // before this one and covered with it: not what this fix changed, and not what the brief
+        // would have (the plus staying). The two are not told apart here; this is written as it
+        // stands and waits for the one who decides it.
+        #expect(junction(["合计 +", "139 0000 1111，到了打我"])
+            == [JunctionMatch(rule: .phone, text: "+139 0000 1111", ranges: [3..<4, 0..<13])])
+    }
+
+    @Test func whatIsNotACountryCode() {
+        // Nothing under it that the code could be the head of.
+        #expect(junction(["打这个 +86", "明天三点开会"]).isEmpty)
+        #expect(junction(["打这个 +86", "400-800-1234 转 2"]).isEmpty)
+        // Digits that are no code: without the plus they are glued to the phone, and no rule knows the run.
+        #expect(junction(["编号 86", "139 0000 1111，到了打我"]).isEmpty)
+        // A year over a phone is not glued to it.
+        #expect(junction(["生于 1990", "139 0000 1111，到了打我"]).isEmpty)
+    }
+
     // MARK: The first number of an address
 
     @Test func addressCutAfterItsFirstNumber() {

@@ -113,6 +113,28 @@ import UIKit
         #expect(upper.allSatisfy { $0.minX >= picture.ink(ofHead: before.count, onLine: 0).maxX })
     }
 
+    // MARK: A country code
+
+    @Test(arguments: [
+        (["司机电话请拨 +86", "139 0000 1111，到了打我"], "+86 139 0000 1111", "139 0000 1111", "司机电话请拨"),
+        (["打这个 +86", "13900001111"], "+8613900001111", "13900001111", "打这个"),
+    ])
+    func countryCodeAboveItsNumber(lines: [String], evidence: String, number: String, before: String) async throws {
+        let picture = Picture(lines)
+        let hits = try await textFindings(in: picture)
+        #expect(hits.map(\.rule) == [.phone])
+        // The text read is the number with its code, the spaces Vision reads the groups with aside:
+        // they differ from one reading to the next.
+        #expect(hits.map { $0.evidence.replacingOccurrences(of: " ", with: "") } == [evidence.replacingOccurrences(of: " ", with: "")])
+        #expect(hits.first?.boxes.count == 2)
+        let upper = boxes(onLine: 0, in: picture, of: hits), lower = boxes(onLine: 1, in: picture, of: hits)
+        #expect(upper.count == 1 && lower.count == 1)
+        #expect(hides(upper, picture.ink(ofTail: 3, onLine: 0)))
+        #expect(hides(lower, picture.ink(ofHead: number.count, onLine: 1)))
+        // The words before the code stay showing.
+        #expect(upper.allSatisfy { $0.minX >= picture.ink(ofHead: before.count, onLine: 0).maxX })
+    }
+
     // MARK: The first number of an address
 
     @Test(arguments: [
@@ -144,5 +166,16 @@ import UIKit
         #expect(hits.map(\.rule) == [.url])
         #expect(boxes(onLine: 0, in: picture, of: hits).isEmpty)
         #expect(hides(boxes(onLine: 1, in: picture, of: hits), picture.ink(ofHead: "fict.io/coupon".count, onLine: 1)))
+    }
+
+    @Test func aBarePlusAsItStands() async throws {
+        // A bare "+" before a number on the line under it is glued to the number and covered with it:
+        // what the fix that came before this one does, not what this one changed. The brief would
+        // have it stay showing; the two are not the same thing to tell apart, so this is written as
+        // it stands and waits for the one who decides it. The words before it stay showing.
+        let picture = Picture(["合计 +", "139 0000 1111，到了打我"])
+        let hits = try await textFindings(in: picture)
+        #expect(hits.map(\.rule) == [.phone])
+        #expect(boxes(onLine: 0, in: picture, of: hits).allSatisfy { $0.minX >= picture.ink(ofHead: "合计".count, onLine: 0).maxX })
     }
 }

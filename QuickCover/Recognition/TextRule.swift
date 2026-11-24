@@ -666,8 +666,13 @@ enum TextRuleMatcher {
     // Folded text is ASCII (non-ASCII became U+E000) and uppercased. Each scalar is one UTF-16
     // unit there, so an NSRange location is also a scalar index.
 
+    /// A phone: eleven digits starting with 1[3-9], the country code a number is printed with
+    /// before it where it stands, a plus and one to three digits, "+86" and the number with or
+    /// without a space. The code is read in the view where the separators between digits are gone,
+    /// so a line that wraps after the code, "+86" over "139 0000 1111", and a line that carries
+    /// both read alike.
     nonisolated(unsafe) private static let phonePattern =
-        try! NSRegularExpression(pattern: #"(?<![0-9])1[3-9][0-9]{9}(?![0-9])"#)
+        try! NSRegularExpression(pattern: #"(?<![0-9])(?:\+[1-9][0-9]{0,2})?1[3-9][0-9]{9}(?![0-9])"#)
     nonisolated(unsafe) private static let idPattern =
         try! NSRegularExpression(pattern: #"(?<![0-9X])[0-9]{17}[0-9X](?![0-9X])"#)
     nonisolated(unsafe) private static let bankPattern =
