@@ -50,9 +50,30 @@ enum CoverPainter {
                                     quad: inPreview.quad.map { CGPoint(x: $0.x - crop.minX, y: $0.y - crop.minY) },
                                     evidence: inPreview.evidence, tolerant: inPreview.tolerant)
                 let drawn = MaskRenderer.flatten(pixels, findings: [moved], style: style)
-                patches.append(CoverPatch(id: "\(item.id).\(index)", frame: crop, image: drawn))
+                patches.append(CoverPatch(id: "\(item.id).\(index)", frame: crop,
+                                          image: onlyCover(drawn, quad: moved.quad)))
             }
         }
         return patches
+    }
+
+    /// Keeps the box's own cover and makes the rest of the crop transparent. `flatten` gives back
+    /// the whole crop with the cover pressed in; crops of neighbours overlap, and a later one
+    /// would repaint the picture over an earlier one's cover.
+    private static func onlyCover(_ image: CGImage, quad: [CGPoint]) -> CGImage {
+        guard let first = quad.first, let context = CGImage.rgbaContext(width: image.width, height: image.height) else { return image }
+        // Top-left pixel coordinates, as the quad is written.
+        context.translateBy(x: 0, y: CGFloat(image.height))
+        context.scaleBy(x: 1, y: -1)
+        let path = CGMutablePath()
+        path.move(to: first)
+        for point in quad.dropFirst() { path.addLine(to: point) }
+        path.closeSubpath()
+        context.addPath(path)
+        context.clip()
+        context.translateBy(x: 0, y: CGFloat(image.height))
+        context.scaleBy(x: 1, y: -1)
+        context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
+        return context.makeImage() ?? image
     }
 }

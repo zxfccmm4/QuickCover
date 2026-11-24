@@ -26,6 +26,7 @@ struct EditorPicture: View {
     @State private var isHolding = false
     @State private var holdTask: Task<Void, Never>?
     @State private var draft: Draft?
+    /// The located item's box in fitted points (the picture at zoom 1, from its top-left corner).
     @State private var ring: CGRect?
     @State private var ringLit = false
     @State private var ringTask: Task<Void, Never>?
@@ -75,18 +76,18 @@ struct EditorPicture: View {
     var body: some View {
         let fitted = fitted
         let shown = CGSize(width: fitted.width * zoom, height: fitted.height * zoom)
-        let picture = ZStack {
+        let picture = ZStack(alignment: .topLeading) {
             Image(decorative: model.preview, scale: 1)
                 .resizable()
                 .frame(width: shown.width, height: shown.height)
             covers(pointsPerPixel: pointsPerPixel * zoom)
                 .frame(width: shown.width, height: shown.height)
             if let ring {
-                LocateRing(rect: rectInPoints(ring, scale: pointsPerPixel * zoom))
+                LocateRing(rect: scaled(ring))
                     .opacity(ringLit ? 1 : 0)
             }
             if let draft, let box = EditorGeometry.drawnBox(from: draft.start, to: draft.end) {
-                DrawBoxOverlay(rect: EditorGeometry.pictureRect(of: box, fitted: fitted, zoom: zoom, offset: offset, areaCentre: areaCentre))
+                DrawBoxOverlay(rect: scaled(EditorGeometry.pictureRect(of: box, fitted: fitted, zoom: zoom, offset: offset, areaCentre: areaCentre)))
             }
         }
         .frame(width: shown.width, height: shown.height)
@@ -104,8 +105,12 @@ struct EditorPicture: View {
         .simultaneousGesture(magnifyGesture)
         .animation(.easeInOut(duration: 0.2), value: capsulesKey)
         .task(id: coverKey) { await renderCovers() }
+        // Closing the sheet brings the picture back to the fitted size (§7.4.1); a「locate」that
+        // closed it comes after, so it is not undone.
+        .onChange(of: model.reviewShown) { _, shown in
+            if !shown { resetZoom() }
+        }
         .onChange(of: model.locateRequest) { _, id in if let id { locate(id) } }
-        .onChange(of: model.reviewShown) { _, shown in if !shown { resetZoom() } }
         .onChange(of: model.recognition) { _, state in
             if state == .done, !model.found.isEmpty, HoldHint.isDue() { showHint() }
         }
@@ -339,7 +344,8 @@ struct EditorPicture: View {
                     .transition(.opacity)
                     .frame(maxHeight: .infinity, alignment: .top)
                     .padding(.top, pictureTop + 8)
-            }        }
+            }
+        }
         .accessibilityHidden(true)
     }
 
@@ -360,6 +366,11 @@ struct EditorPicture: View {
 
     private func rectInPoints(_ rect: CGRect, scale: CGFloat) -> CGRect {
         CGRect(x: rect.minX * scale, y: rect.minY * scale, width: rect.width * scale, height: rect.height * scale)
+    }
+
+    /// A rect in fitted points (the picture at zoom 1) as the same rect of the picture as shown.
+    private func scaled(_ rect: CGRect) -> CGRect {
+        rectInPoints(rect, scale: zoom)
     }
 
     private func cancelEverything() {

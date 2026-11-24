@@ -33,16 +33,19 @@ struct EditorScreen: View {
     var body: some View {
         GeometryReader { proxy in
             let fullHeight = proxy.size.height - EditorLayout.topInset - EditorLayout.bottomInset
-            let calloutSpace = callout == nil ? 0 : calloutHeight + EditorLayout.calloutOverBar + EditorLayout.pictureOverCallout
+            // The card sits 12 over the glass bar and the picture area already ends 12 over it, so only
+            // the card and the 14 under the picture come off the area.
+            let calloutSpace = callout == nil ? 0 : calloutHeight + EditorLayout.pictureOverCallout
             ZStack(alignment: .top) {
                 Theme.page.ignoresSafeArea()
 
                 EditorPicture(area: CGSize(width: proxy.size.width, height: max(fullHeight - calloutSpace, 0)),
-                              reviewVisibleHeight: EditorLayout.sheetTop - proxy.safeAreaInsets.top - EditorLayout.topInset,
+                              reviewVisibleHeight: SheetGeometry.shared.top - proxy.safeAreaInsets.top - EditorLayout.topInset,
                               isBlurred: isFinding)
                     .padding(.top, EditorLayout.topInset)
                     .padding(.bottom, EditorLayout.bottomInset)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Pinned to the top: a centred frame would let the card cover the picture's bottom.
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: calloutSpace)
 
                 GlassEffectContainer {
@@ -51,6 +54,7 @@ struct EditorScreen: View {
                             .padding(.top, EditorLayout.topButtonsInset)
                         Spacer()
                         EditorGlassBar()
+                            .padding(.horizontal, Metrics.pageInset)
                             .padding(.bottom, EditorLayout.barInset)
                     }
                 }
@@ -59,15 +63,17 @@ struct EditorScreen: View {
 
                 if let callout {
                     EditorCallout(kind: callout, draw: startDrawing, retry: model.retryRecognition)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { calloutHeight = $0 }
                         .padding(.horizontal, Metrics.pageInset)
                         .padding(.bottom, EditorLayout.barInset + EditorLayout.barHeight + EditorLayout.calloutOverBar)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { calloutHeight = $0 }
+                        .frame(maxHeight: .infinity, alignment: .bottom)
                         .transition(reduceMotion ? .identity : .opacity)
                 }
 
                 if model.drawToolOn, !drawHintHidden {
                     PictureCapsule(text: "4.8.5")
                         .padding(.bottom, EditorLayout.barInset + EditorLayout.barHeight + EditorLayout.drawCapsuleOverBar)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
                         .transition(.opacity)
                 }
 
@@ -145,8 +151,25 @@ enum EditorLayout {
     static let drawCapsuleOverBar: CGFloat = 10
     /// §7.4.1: the sheet's edge is 300 under the top of the screen.
     static let sheetTop: CGFloat = 300
+    /// §7.4.2–§7.4.3: the sheet's sides, where the summary, the description and the cards align.
+    static let sheetInset: CGFloat = 32
     /// §8: the failed callout goes by itself after 5 s nobody touches the page.
     static let calloutIdle = Duration.seconds(5)
+}
+
+/// Where the sheet of Review Each Item is on the screen. §7.4.1 puts its edge 300 under the top,
+/// but the system places a sheet of a given height a little higher on some versions, and the
+/// sheet moves when it is pulled: the sheet measures its own top edge here, and the scrim and
+/// the「locate」framing go by that. `extra` is what the system added on top of the requested
+/// height (0 where it does not), taken off the next time the sheet comes up.
+@Observable @MainActor
+final class SheetGeometry {
+    static let shared = SheetGeometry()
+
+    /// The sheet's top edge on the screen, as last measured (the §7.4.1 value before any).
+    var top: CGFloat = EditorLayout.sheetTop
+    /// How much lower the sheet has to be asked for so that its edge comes to `EditorLayout.sheetTop`.
+    var extra: CGFloat = 0
 }
 
 /// What is above the sheet of Review Each Item (§7.4.1): black at 32%, and a tap on it closes the
@@ -155,7 +178,7 @@ private struct ReviewScrim: View {
     var body: some View {
         GeometryReader { proxy in
             Color.black.opacity(0.32)
-                .frame(height: EditorLayout.sheetTop)
+                .frame(height: SheetGeometry.shared.top)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .contentShape(Rectangle())
         }

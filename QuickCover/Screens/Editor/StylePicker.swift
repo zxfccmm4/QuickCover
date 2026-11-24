@@ -26,6 +26,9 @@ struct StylePicker: View {
                     Text("4.7.4").tag(MaskStyle.blur)
                 }
                 .pickerStyle(.segmented)
+                // The system control doesn't shrink its words: past the largest usual size they run
+                // off the right edge, so its size stops there (§11.3 covers the capsules, not this).
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 .accessibilityLabel("4.7.1")
                 if blurNoticeShown {
                     BlurNotice()

@@ -264,9 +264,31 @@ struct CoverPainterTests {
         context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
         let bytes = context.data!.assumingMemoryBound(to: UInt8.self)
         let pixel = { (x: Int, y: Int) in Int(bytes[y * context.bytesPerRow + x * 4]) }
-        // The middle of the patch is the box; its corner is the margin, still white.
+        let alpha = { (x: Int, y: Int) in Int(bytes[y * context.bytesPerRow + x * 4 + 3]) }
+        // The middle of the patch is the box, black and opaque; the corner is the margin outside
+        // the box, which stays clear so that overlapping crops don't repaint a neighbour's cover.
         #expect(pixel(image.width / 2, image.height / 2) == 0)
-        #expect(pixel(0, 0) == 255)
+        #expect(alpha(image.width / 2, image.height / 2) == 255)
+        #expect(alpha(0, 0) == 0)
+    }
+
+    @Test
+    func aNeighbourCropLeavesAnEarlierCoverAlone() throws {
+        // Two boxes two points apart: the second one's crop (the box and 4 around it) reaches over
+        // the first one's right edge, where the picture would be painted again over its cover.
+        let preview = Sample.solid(width: 100, height: 60, fill: Sample.white)
+        let items = [item(1, [CGRect(x: 10, y: 10, width: 20, height: 20)]),
+                     item(2, [CGRect(x: 32, y: 10, width: 20, height: 20)])]
+        let patches = CoverPainter.patches(items: items, style: .solid, preview: preview, scale: CGSize(width: 1, height: 1))
+        #expect(patches.count == 2)
+        let context = try #require(CGImage.rgbaContext(width: 100, height: 60))
+        context.draw(preview, in: CGRect(x: 0, y: 0, width: 100, height: 60))
+        for patch in patches { context.draw(patch.image, in: patch.frame) }
+        let bytes = context.data!.assumingMemoryBound(to: UInt8.self)
+        let pixel = { (x: Int, y: Int) in Int(bytes[(60 - 1 - y) * context.bytesPerRow + x * 4]) }
+        #expect(pixel(29, 20) == 0)
+        #expect(pixel(42, 20) == 0)
+        #expect(pixel(31, 20) == 255)
     }
 }
 
