@@ -59,6 +59,19 @@ enum MaskRenderer {
     /// box narrower than it.
     static let mosaicFloor: CGFloat = 12
 
+    /// `blurGrain` and `floor` for `flatten` on a picture that is the original shrunk by `shrink`
+    /// (the editor's preview: one of its pixels is `shrink` of the original's). What is counted in
+    /// pixels — the floors of a cell and of a blur grain — is shrunk with it, so a box is cut over
+    /// the same part of the picture as in the file: with the floors as they stand, a box smaller
+    /// than twice a floor came out coarser on the screen than in the file. Shrunk by the way it is
+    /// shrunk less, so that, shrunk unevenly, it never comes out finer than in the file. Over the
+    /// file itself, shrunk by one, they stand as they are.
+    static func onShrunkPicture(shrink: CGSize, blurGrain: BlurGrain = .default)
+        -> (blurGrain: BlurGrain, floor: CGFloat) {
+        let by = min(shrink.width, shrink.height)
+        return (BlurGrain(divisor: blurGrain.divisor, floor: blurGrain.floor / by), mosaicFloor / by)
+    }
+
     enum Failure: Error {
         case cannotDecode
         case cannotEncode
@@ -89,9 +102,11 @@ enum MaskRenderer {
         return data as Data
     }
 
-    /// `image` is upright; findings are in its pixels, top-left origin.
+    /// `image` is upright; findings are in its pixels, top-left origin. So are `blurGrain` and
+    /// `floor`: over the original they stand as they are, over the editor's shrunk preview
+    /// `onShrunkPicture` gives them.
     static func flatten(_ image: CGImage, findings: [Finding], style: MaskStyle,
-                        blurGrain: BlurGrain = .default) -> CGImage {
+                        blurGrain: BlurGrain = .default, floor: CGFloat = mosaicFloor) -> CGImage {
         guard !findings.isEmpty, let context = CGImage.rgbaContext(width: image.width, height: image.height) else { return image }
         let width = CGFloat(image.width)
         let height = CGFloat(image.height)
@@ -113,7 +128,7 @@ enum MaskRenderer {
                     context.fillPath()
                 case .mosaic, .blur:
                     cover(from: image, rect: Geometry.bounds(of: quad), path: path, finding: finding,
-                          into: context, style: style, blurGrain: blurGrain)
+                          into: context, style: style, blurGrain: blurGrain, floor: floor)
                 }
             }
         }
@@ -153,24 +168,24 @@ enum MaskRenderer {
     /// A face is cut by the height of what is hidden, as it always was: the mosaic in cells a
     /// sixth of it, never under `mosaicFloor`; the blur in `blurGrain`.
     static func grid(over bounds: CGRect, hiding finding: Finding, style: MaskStyle,
-                     blurGrain: BlurGrain = .default) -> Grid {
+                     blurGrain: BlurGrain = .default, floor: CGFloat = mosaicFloor) -> Grid {
         guard style != .solid else { return Grid(columns: 1, rows: 1) }
         if finding.kind == .face {
-            let cell = style == .mosaic ? max(mosaicFloor, bounds.height / 6) : blurGrain.cell(forHeight: bounds.height)
+            let cell = style == .mosaic ? max(floor, bounds.height / 6) : blurGrain.cell(forHeight: bounds.height)
             return Grid(columns: max(1, Int((bounds.width / cell).rounded(.up))),
                         rows: max(1, Int((bounds.height / cell).rounded(.up))))
         }
         if finding.drawnByHand {
-            return Grid(columns: max(1, whole(bounds.width / max(bounds.height, mosaicFloor))), rows: 1)
+            return Grid(columns: max(1, whole(bounds.width / max(bounds.height, floor))), rows: 1)
         }
-        return grid(over: bounds, base: base(over: bounds, textHeight: finding.textHeight))
+        return grid(over: bounds, base: base(over: bounds, textHeight: finding.textHeight, floor: floor))
     }
 
     /// The base text that was read and codes are cut by: the height of the tallest piece of text
     /// read under the box (`textHeight`), half the box's height and `mosaicFloor`, whichever is
     /// largest.
-    static func base(over bounds: CGRect, textHeight: CGFloat?) -> CGFloat {
-        max(mosaicFloor, bounds.height / 2, textHeight ?? 0)
+    static func base(over bounds: CGRect, textHeight: CGFloat?, floor: CGFloat = mosaicFloor) -> CGFloat {
+        max(floor, bounds.height / 2, textHeight ?? 0)
     }
 
     /// `grid` for a box cut by `base`: whole ones across, one row or two down.
@@ -195,11 +210,11 @@ enum MaskRenderer {
     /// that lies beyond its edge (55 % of a cell flush with the edge), which left such a cell with a
     /// light or a dark rim.
     private static func cover(from image: CGImage, rect: CGRect, path: CGPath, finding: Finding, into context: CGContext,
-                              style: MaskStyle, blurGrain: BlurGrain) {
+                              style: MaskStyle, blurGrain: BlurGrain, floor: CGFloat) {
         let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
         guard bounds.width >= 2, bounds.height >= 2 else { return }
         // Mosaic cells and blur grain follow what is hidden and how tall it is (`grid`).
-        let cut = grid(over: bounds, hiding: finding, style: style, blurGrain: blurGrain)
+        let cut = grid(over: bounds, hiding: finding, style: style, blurGrain: blurGrain, floor: floor)
         guard let small = CGImage.rgbaContext(width: cut.columns, height: cut.rows), let grains = small.data,
               let picture = context.data else { return }
         fillGrains(grains.assumingMemoryBound(to: UInt8.self), grainStride: small.bytesPerRow,

@@ -507,6 +507,25 @@ struct MaskRendererTests {
         #expect(cut(read(rect(1200, 100), height: 55)) == MaskRenderer.Grid(columns: 21, rows: 1))
     }
 
+    /// 预览图是原图缩小的，按像素算的下限跟着缩：同一个框在预览上切出来的行列数，和在文件里的一样。
+    @Test
+    func shrunkPictureShrinksWhatIsCountedInPixels() {
+        // The file: 100 × 20, letters 6 — the base is the floor, 12: eight across, the one row.
+        // Over the preview, the picture shrunk by two: 50 × 10, letters 3. The floor goes to 6
+        // with it and it is the same eight cells; kept at 12 there would be four.
+        let whole = MaskRenderer.onShrunkPicture(shrink: CGSize(width: 1, height: 1))
+        #expect(whole.floor == MaskRenderer.mosaicFloor && whole.blurGrain == .default)
+        let half = MaskRenderer.onShrunkPicture(shrink: CGSize(width: 2, height: 2))
+        #expect(half.floor == 6 && half.blurGrain == MaskRenderer.BlurGrain(divisor: 6, floor: 6))
+        let small = read(rect(50, 10), height: 3)
+        #expect(MaskRenderer.grid(over: small.box, hiding: small, style: .mosaic, floor: half.floor)
+                == MaskRenderer.Grid(columns: 8, rows: 1))
+        #expect(MaskRenderer.grid(over: small.box, hiding: small, style: .mosaic)
+                == MaskRenderer.Grid(columns: 4, rows: 1))
+        // Shrunk unevenly, by the way it is shrunk less: never finer than in the file.
+        #expect(MaskRenderer.onShrunkPicture(shrink: CGSize(width: 4, height: 2)).floor == 6)
+    }
+
     /// 每格高不小于字高、行数不超过 2、格子把盖框正好分完：(盖框宽, 盖框高, 字高)。
     @Test(arguments: [(CGFloat(300), CGFloat(55), CGFloat(40)), (300, 100, 40), (300, 90, 60), (100, 20, 6), (50, 24, 8),
                        (300, 150, 40), (1200, 30, 22), (75, 102, 74), (874, 66, 50), (139, 36, 9)])

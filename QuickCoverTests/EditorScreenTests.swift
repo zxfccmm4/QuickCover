@@ -293,12 +293,12 @@ struct CoverPainterTests {
     }
 
     /// Black, but for one white stripe from the top of the picture to its bottom.
-    private func striped(stripeAt minX: Int, width: Int = 120, height: Int = 60) -> CGImage {
+    private func striped(stripeAt minX: Int, width: Int = 120, height: Int = 60, stripe: Int = 12) -> CGImage {
         let context = CGImage.rgbaContext(width: width, height: height)!
         context.setFillColor(Sample.black)
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         context.setFillColor(Sample.white)
-        context.fill(CGRect(x: minX, y: 0, width: 12, height: height))
+        context.fill(CGRect(x: minX, y: 0, width: stripe, height: height))
         return context.makeImage()!
     }
 
@@ -353,6 +353,25 @@ struct CoverPainterTests {
             let inside = box.insetBy(dx: 1, dy: 1).offsetBy(dx: -patch.frame.minX, dy: -patch.frame.minY)
             #expect(try differingPixels(onScreen: patch.image, inFile: inFile, over: inside) == 0)
         }
+    }
+
+    @Test
+    func previewOfAShrunkPictureIsCutLikeTheFile() throws {
+        // The picture above as the editor's preview has it, shrunk by two: 60 × 30, the stripe from
+        // 32 to 38. The item is the same, in pixels of the original; over the preview its box is
+        // (20, 10, 30, 10) and its letters 9. The file has three cells of 20, so the preview three
+        // of 10. The floor of 12 is 12 pixels of the file, 6 of the preview: kept at 12 there it
+        // made two cells of 15, coarser on the screen than in the file.
+        let preview = striped(stripeAt: 32, width: 60, height: 30, stripe: 6)
+        let box = CGRect(x: 40, y: 20, width: 60, height: 20)
+        let read = MaskItem(id: 1, group: .text, origin: .suggestion, rule: nil, quads: [quad(box)], isOn: true,
+                            evidence: "136 1234 5678", textHeight: 18)
+        let patch = try #require(CoverPainter.patches(items: [read], style: .mosaic, preview: preview,
+                                                       scale: CGSize(width: 2, height: 2)).first)
+        // The box in the patch is (4, 4, 30, 10): the middle of each of its three cells, ten apart.
+        #expect(patch.frame == CGRect(x: 16, y: 6, width: 38, height: 18))
+        for x in [9, 29] { #expect(try red(patch.image, at: x, 9) == 0) }
+        #expect(try red(patch.image, at: 19, 9) > 0 && red(patch.image, at: 19, 9) < 255)
     }
 }
 

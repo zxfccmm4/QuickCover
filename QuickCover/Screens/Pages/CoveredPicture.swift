@@ -33,8 +33,11 @@ struct CoveredPicture: View {
         let toPreview = CGSize(width: 1 / editor.previewScale.width, height: 1 / editor.previewScale.height)
         let findings = editor.enabledItems.flatMap(\.findings).map { $0.scaled(by: toPreview) }
         let style = editor.preferences.style
+        // 按像素算的数（格子的下限）也跟着缩小，小框在页面上不会比文件里切得粗。
+        let cut = MaskRenderer.onShrunkPicture(shrink: editor.previewScale)
         let rendered = await Task.detached(priority: .userInitiated) {
-            MaskRenderer.flatten(preview, findings: findings, style: style)
+            MaskRenderer.flatten(preview, findings: findings, style: style,
+                                 blurGrain: cut.blurGrain, floor: cut.floor)
         }.value
         if !Task.isCancelled { image = rendered }
     }

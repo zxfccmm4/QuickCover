@@ -52,7 +52,11 @@ enum CoverPainter {
                                     quad: inPreview.quad.map { CGPoint(x: $0.x - crop.minX, y: $0.y - crop.minY) },
                                     evidence: inPreview.evidence, tolerant: inPreview.tolerant,
                                     textHeight: inPreview.textHeight, drawnByHand: inPreview.drawnByHand)
-                let drawn = MaskRenderer.flatten(pixels, findings: [moved], style: style)
+                // The preview's pixels are the original's shrunk, so what is counted in pixels is too
+                // (`MaskRenderer.onShrunkPicture`): a small box is not cut coarser here than in the file.
+                let cut = MaskRenderer.onShrunkPicture(shrink: scale)
+                let drawn = MaskRenderer.flatten(pixels, findings: [moved], style: style,
+                                                 blurGrain: cut.blurGrain, floor: cut.floor)
                 patches.append(CoverPatch(id: "\(item.id).\(index)", frame: crop,
                                           image: onlyCover(drawn, quad: moved.quad)))
             }
