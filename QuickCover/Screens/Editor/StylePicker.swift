@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Bottom-pinned masking style selector rendered inside ReviewSheet's `.safeAreaBar(edge: .bottom)`.
-/// Uses matching miniature live-texture `StyleSwatch` capsules across all 6 `MaskStyle` options
-/// (or a native `Menu` picker at Accessibility Dynamic Type sizes) with declarative `.sensoryFeedback`.
+/// Uses miniature live-texture `StyleSwatch` capsules across all 6 `MaskStyle` options (or a native
+/// `Menu` picker at Accessibility Dynamic Type sizes) with declarative `.sensoryFeedback`.
 struct StylePicker: View {
     @Environment(EditorModel.self) private var model
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -19,8 +19,8 @@ struct StylePicker: View {
                     .padding(.horizontal, Metrics.pageInset)
             } else {
                 Text("4.7.1")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Theme.secondaryLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .padding(.horizontal, Metrics.pageInset + 4)
 
@@ -42,13 +42,17 @@ struct StylePicker: View {
                                     Text(LocalizedStringKey(option.titleKey))
                                         .font(.subheadline.weight(isSelected ? .semibold : .medium))
                                 }
-                                .foregroundStyle(isSelected ? .white : Theme.body)
+                                .foregroundStyle(isSelected ? .white : .primary)
                                 .padding(.leading, 8)
-                                .padding(.trailing, 12)
-                                .padding(.vertical, 7)
+                                .padding(.trailing, 13)
+                                .padding(.vertical, 8)
                                 .background(
                                     Capsule()
-                                        .fill(isSelected ? Theme.accentButton : Theme.fill)
+                                        .fill(isSelected ? Theme.accentButton : Color.white.opacity(0.10))
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(isSelected ? 0.22 : 0.08), lineWidth: 0.5)
                                 )
                             }
                             .buttonStyle(PressStyle(scale: 0.96))
@@ -67,6 +71,11 @@ struct StylePicker: View {
         }
         .padding(.top, 10)
         .padding(.bottom, 12)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(height: 0.5)
+        }
         .sensoryFeedback(.selection, trigger: model.preferences.style)
     }
 
@@ -81,14 +90,14 @@ struct StylePicker: View {
         } label: {
             HStack {
                 Text("4.7.1")
-                    .foregroundStyle(Theme.secondaryLabel)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Text(LocalizedStringKey(model.preferences.style.titleKey))
-                    .foregroundStyle(Theme.body)
+                    .foregroundStyle(.primary)
                     .fontWeight(.semibold)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryLabel)
+                    .foregroundStyle(.secondary)
             }
             .font(.body)
             .padding(.horizontal, 16)
@@ -119,7 +128,7 @@ private struct BlurNotice: View {
                 .padding(.top, 1)
             Text("4.7.5")
                 .font(.footnote)
-                .foregroundStyle(Theme.secondaryLabel)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 4)

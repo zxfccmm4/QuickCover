@@ -1,13 +1,14 @@
 import SwiftUI
 
 /// Root navigation shell following Apple HIG: respects system Light and Dark appearance across
-/// onboarding, image picker, inspector sheet, and export screens, while letting the editor own a
-/// focused dark photo-studio canvas.
+/// onboarding, image picker, and export screens, while letting the photo editor own a focused
+/// dark studio canvas.
 struct RootView: View {
     @State private var shell = ShellModel()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var systemColorScheme
     @State private var showSelfCheck = false
+    @State private var topSafeArea: CGFloat = 0
 
     private var showsDarkStudio: Bool {
         shell.page == .editor && shell.path.isEmpty
@@ -31,11 +32,12 @@ struct RootView: View {
         .environment(\.systemColorScheme, systemColorScheme)
         .preferredColorScheme(showsDarkStudio ? .dark : nil)
         .tint(Theme.accent)
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { topSafeArea = $0 }
         .task { await shell.start() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { shell.wentToBackground() }
         }
-        .selfCheckEntrance(isPresented: $showSelfCheck)
+        .selfCheckEntrance(topSafeArea: topSafeArea, isPresented: $showSelfCheck)
     }
 
     @ViewBuilder
@@ -57,13 +59,15 @@ struct RootView: View {
 
 private extension View {
     #if SELF_CHECK
-    func selfCheckEntrance(isPresented: Binding<Bool>) -> some View {
+    func selfCheckEntrance(topSafeArea: CGFloat, isPresented: Binding<Bool>) -> some View {
         self
-            .overlay(alignment: .top) { SelfCheckHold { isPresented.wrappedValue = true } }
+            .overlay(alignment: .top) {
+                SelfCheckHold(topSafeArea: topSafeArea) { isPresented.wrappedValue = true }
+            }
             .sheet(isPresented: isPresented) { SelfCheckView() }
     }
     #else
-    func selfCheckEntrance(isPresented: Binding<Bool>) -> some View { self }
+    func selfCheckEntrance(topSafeArea: CGFloat, isPresented: Binding<Bool>) -> some View { self }
     #endif
 }
 

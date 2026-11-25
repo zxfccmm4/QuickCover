@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Native iOS 26/27 Liquid Glass Inspector Sheet for reviewing, batch-toggling by category,
-/// deleting manual boxes, and switching masking styles.
+/// Native iOS 26/27 dark-studio Liquid Glass Inspector Sheet for reviewing detected items,
+/// batch-toggling by category, deleting manual boxes, and switching masking styles.
 struct ReviewSheet: View {
     @Environment(EditorModel.self) private var model
     @Environment(ShellModel.self) private var shell
@@ -31,11 +31,11 @@ struct ReviewSheet: View {
                             SummaryText(found: model.found)
                             Text("4.4.2")
                                 .font(.footnote)
-                                .foregroundStyle(Theme.secondaryLabel)
+                                .foregroundStyle(.secondary)
 
                             if !availableBatchGroups.isEmpty {
                                 batchToggleStrip
-                                    .padding(.top, 2)
+                                    .padding(.top, 4)
                             }
                         }
                         .listRowBackground(Color.clear)
@@ -51,6 +51,7 @@ struct ReviewSheet: View {
                         stateKeys: nil,
                         hint: nil
                     )
+                    .listRowBackground(sheetCardFill)
                 }
 
                 if !suggestions.isEmpty {
@@ -63,6 +64,7 @@ struct ReviewSheet: View {
                             ) {
                                 locate(item)
                             }
+                            .listRowBackground(sheetCardFill)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 if item.origin == .manual {
                                     Button(role: .destructive) {
@@ -81,6 +83,7 @@ struct ReviewSheet: View {
                         CoverAllTextRow(isOn: model.coversAllText) {
                             model.setAllText($0)
                         }
+                        .listRowBackground(sheetCardFill)
                     } footer: {
                         if model.hasUncoveredTextLines {
                             UncoveredTextReminder(draw: startDrawing)
@@ -97,11 +100,13 @@ struct ReviewSheet: View {
                             ) {
                                 locate(item)
                             }
+                            .listRowBackground(sheetCardFill)
                         }
                     }
                 }
             }
             .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .scrollBounceBehavior(.basedOnSize)
             .scrollEdgeEffectStyle(.soft, for: .all)
@@ -116,12 +121,14 @@ struct ReviewSheet: View {
                     Button(role: .close) {
                         shell.hideReview()
                     }
+                    .tint(.primary)
                 }
             }
         }
         .sensoryFeedback(.selection, trigger: batchFeedbackCount)
         .presentationDetents([.fraction(0.62), .large])
         .presentationDragIndicator(.visible)
+        .presentationBackground(.thickMaterial)
         .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.62)))
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { top in
             SheetGeometry.shared.top = top
@@ -129,6 +136,10 @@ struct ReviewSheet: View {
         .task {
             AccessibilityNotification.Announcement(L10n.text("4.4.1")).post()
         }
+    }
+
+    private var sheetCardFill: Color {
+        Color(.secondarySystemGroupedBackground).opacity(0.86)
     }
 
     private var batchToggleStrip: some View {
@@ -151,15 +162,19 @@ struct ReviewSheet: View {
                                 .padding(.vertical, 1)
                                 .background(
                                     Capsule()
-                                        .fill(isCovered ? Color.white.opacity(0.22) : Theme.fillTwo)
+                                        .fill(isCovered ? Color.white.opacity(0.22) : Color.white.opacity(0.12))
                                 )
                         }
-                        .foregroundStyle(isCovered ? .white : Theme.body)
-                        .padding(.horizontal, 11)
+                        .foregroundStyle(isCovered ? .white : .primary)
+                        .padding(.horizontal, 12)
                         .padding(.vertical, 7)
                         .background(
                             Capsule()
-                                .fill(isCovered ? Theme.accentButton : Theme.fill)
+                                .fill(isCovered ? Theme.accentButton : Color.white.opacity(0.10))
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(isCovered ? 0.18 : 0.08), lineWidth: 0.5)
                         )
                     }
                     .buttonStyle(PressStyle(scale: 0.95))

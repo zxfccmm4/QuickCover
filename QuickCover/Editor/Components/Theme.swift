@@ -2,12 +2,12 @@ import SwiftUI
 import UIKit
 
 /// Apple HIG semantic design tokens for QuickCover across Light and Dark appearances.
-/// Standard pages adopt dynamic system surfaces and Liquid Glass; the editor canvas remains a dark
-/// studio backdrop so screenshots and photos stay the focal point.
+/// Standard pages adopt dynamic system surfaces and Liquid Glass; the editor canvas and its live
+/// inspector sheets share a focused dark photo-studio aesthetic like Apple Photos & Markup.
 enum Theme {
     /// Adaptive brand teal (`#0A7E80` Light / `#5EDCD4` Dark).
     static let accent = Color("AccentColor")
-    /// Luminous teal for overlays on the dark editor canvas (selection rings, drawn boxes).
+    /// Luminous teal for active tool indicators and selection overlays on the dark editor canvas.
     static let accentOnBlack = Color("AccentOnBlack")
     /// Deep accessible teal for prominent white-on-tint actions (`#0B7A7A` Light / `#0D8A8B` Dark).
     static let accentButton = Color("AccentButton")
@@ -46,6 +46,11 @@ enum Theme {
     static let errorIcon = Color.red
 
     static let disabledOpacity = 0.42
+
+    /// Subtle hairline border adapting cleanly to Light and Dark Mode cards.
+    static func cardBorder(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? Color.white.opacity(0.09) : Color.black.opacity(0.05)
+    }
 }
 
 extension Color {
@@ -60,8 +65,8 @@ extension Color {
 
 extension Font {
     static let glassIcon = Font.system(size: 19, weight: .semibold)
-    static let tileIcon = Font.system(size: 17, weight: .medium)
-    static let noticeIcon = Font.system(size: 19, weight: .medium)
+    static let tileIcon = Font.system(size: 16, weight: .semibold)
+    static let noticeIcon = Font.system(size: 18, weight: .semibold)
     static let buttonText = Font.body.weight(.semibold)
     static let smallButtonText = Font.subheadline.weight(.semibold)
 }
@@ -79,21 +84,6 @@ enum Metrics {
 // MARK: - iOS 26 / 27 Progressive Apple Design Helpers
 
 extension View {
-    /// Applies iOS 27 `toolbarMinimizationBehavior(.never, for: .bottomBar)` when compiled with
-    /// the iOS 27 SDK (Swift 6.4+) and running on iOS 27+, keeping editing controls reachable.
-    @ViewBuilder
-    func keepsBottomToolbarExpanded() -> some View {
-        #if compiler(>=6.4)
-        if #available(iOS 27.0, *) {
-            self.toolbarMinimizationBehavior(.never, for: .bottomBar)
-        } else {
-            self
-        }
-        #else
-        self
-        #endif
-    }
-
     /// Applies iOS 27 `navigationTransition(.crossFade)` when compiled with the iOS 27 SDK.
     @ViewBuilder
     func crossFadeTransitionIfAvailable() -> some View {
@@ -171,20 +161,7 @@ extension View {
     }
 }
 
-/// Resolves iOS 27 `ToolbarItemPlacement.topBarPinnedTrailing` on iOS 27+ and `.topBarTrailing` on iOS 26.
-enum AppleToolbarPlacement {
-    static var pinnedTrailing: ToolbarItemPlacement {
-        #if compiler(>=6.4)
-        if #available(iOS 27.0, *) {
-            return .topBarPinnedTrailing
-        }
-        #endif
-        return .topBarTrailing
-    }
-}
-
-/// Preserves the OS Light/Dark color scheme across dark-studio child subtrees so sheets follow
-/// the user's true system appearance.
+/// Preserves the OS Light/Dark color scheme across dark-studio child subtrees when needed.
 private struct SystemColorSchemeKey: EnvironmentKey {
     static let defaultValue: ColorScheme = .light
 }

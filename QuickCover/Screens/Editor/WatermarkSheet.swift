@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Translucent Liquid Glass half-sheet for configuring diagonal anti-theft watermarks
+/// Dark-studio Liquid Glass inspector sheet for configuring diagonal anti-theft watermarks
 /// (ideal for ID cards, licenses, contracts, and verification screenshots).
 /// Allows live canvas preview directly above the sheet while editing text, opacity, density, and tint.
 struct WatermarkSheet: View {
@@ -13,6 +13,10 @@ struct WatermarkSheet: View {
         "wm.preset.rental",
         "wm.preset.once",
     ]
+
+    private var sheetCardFill: Color {
+        Color(.secondarySystemGroupedBackground).opacity(0.86)
+    }
 
     private var enabledBinding: Binding<Bool> {
         Binding(
@@ -61,9 +65,18 @@ struct WatermarkSheet: View {
             List {
                 Section {
                     Toggle(isOn: enabledBinding) {
-                        Label("wm.enable", systemImage: "checkerboard.shield")
+                        HStack(spacing: 12) {
+                            IconTile(
+                                systemImage: "checkerboard.shield",
+                                ground: model.watermark.isEnabled ? Theme.accentOnBlack.opacity(0.18) : Color.white.opacity(0.10),
+                                tint: model.watermark.isEnabled ? Theme.accentOnBlack : .secondary
+                            )
+                            Text("wm.enable")
+                                .font(.body)
+                        }
                     }
-                    .tint(Theme.accent)
+                    .tint(nil)
+                    .listRowBackground(sheetCardFill)
                 }
 
                 Section("wm.textSection") {
@@ -77,17 +90,18 @@ struct WatermarkSheet: View {
                                 model.watermark.text = ""
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Theme.tertiary)
+                                    .foregroundStyle(.tertiary)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Clear")
                         }
                     }
+                    .listRowBackground(sheetCardFill)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("wm.presets")
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(Theme.secondaryLabel)
+                            .foregroundStyle(.secondary)
                             .padding(.horizontal, 16)
 
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -102,12 +116,16 @@ struct WatermarkSheet: View {
                                     } label: {
                                         Text(LocalizedStringKey(key))
                                             .font(.footnote.weight(isSelected ? .semibold : .regular))
-                                            .foregroundStyle(isSelected ? .white : Theme.body)
+                                            .foregroundStyle(isSelected ? .white : .primary)
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 7)
                                             .background(
                                                 Capsule()
-                                                    .fill(isSelected ? Theme.accentButton : Theme.fill)
+                                                    .fill(isSelected ? Theme.accentButton : Color.white.opacity(0.10))
+                                            )
+                                            .overlay(
+                                                Capsule()
+                                                    .stroke(Color.white.opacity(isSelected ? 0.20 : 0.08), lineWidth: 0.5)
                                             )
                                     }
                                     .buttonStyle(PressStyle(scale: 0.96))
@@ -118,6 +136,7 @@ struct WatermarkSheet: View {
                         }
                     }
                     .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
+                    .listRowBackground(sheetCardFill)
                 }
 
                 Section("wm.appearance") {
@@ -126,13 +145,14 @@ struct WatermarkSheet: View {
                             Text("wm.opacity")
                             Spacer()
                             Text("\(Int((model.watermark.opacity * 100).rounded()))%")
-                                .font(.footnote.monospacedDigit())
-                                .foregroundStyle(Theme.secondaryLabel)
+                                .font(.footnote.weight(.medium).monospacedDigit())
+                                .foregroundStyle(.secondary)
                         }
                         Slider(value: opacityBinding, in: 0.10...0.55, step: 0.01)
-                            .tint(Theme.accent)
+                            .tint(Theme.accentOnBlack)
                     }
-                    .padding(.vertical, 1)
+                    .padding(.vertical, 2)
+                    .listRowBackground(sheetCardFill)
 
                     HStack {
                         Text("wm.density")
@@ -145,6 +165,7 @@ struct WatermarkSheet: View {
                         .pickerStyle(.segmented)
                         .frame(maxWidth: 210)
                     }
+                    .listRowBackground(sheetCardFill)
 
                     HStack {
                         Text("wm.color")
@@ -162,11 +183,11 @@ struct WatermarkSheet: View {
                                             .frame(width: 24, height: 24)
                                             .overlay(
                                                 Circle()
-                                                    .stroke(Theme.separator, lineWidth: 0.75)
+                                                    .stroke(Color.white.opacity(0.28), lineWidth: 0.75)
                                             )
                                         if isSelected {
                                             Circle()
-                                                .stroke(Theme.accent, lineWidth: 2.5)
+                                                .stroke(Theme.accentOnBlack, lineWidth: 2.2)
                                                 .frame(width: 31, height: 31)
                                         }
                                     }
@@ -178,6 +199,7 @@ struct WatermarkSheet: View {
                             }
                         }
                     }
+                    .listRowBackground(sheetCardFill)
                 }
             }
             .listStyle(.insetGrouped)
@@ -192,20 +214,22 @@ struct WatermarkSheet: View {
                     Button(role: .close) {
                         model.watermarkShown = false
                     }
+                    .tint(.primary)
                 }
             }
         }
         .sensoryFeedback(.selection, trigger: selectionFeedbackCount)
         .presentationDetents([.fraction(0.68), .large])
         .presentationDragIndicator(.visible)
+        .presentationBackground(.thickMaterial)
         .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.68)))
     }
 
     private func swatchColor(for tint: WatermarkOptions.Tint) -> Color {
         switch tint {
         case .white: Color.white
-        case .slate: Color(red: 0.22, green: 0.22, blue: 0.25)
-        case .red: Color(red: 0.85, green: 0.16, blue: 0.16)
+        case .slate: Color(red: 0.28, green: 0.28, blue: 0.32)
+        case .red: Color(red: 0.88, green: 0.20, blue: 0.20)
         }
     }
 }

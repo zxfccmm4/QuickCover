@@ -1,10 +1,12 @@
 import SwiftUI
 
 /// First-party Apple Welcome screen for initial Photo Library onboarding.
-/// Combines the adaptive App Icon, 3-item privacy & capability highlights, concentric limited-access
-/// note, and iOS 26 `.safeAreaBar` Liquid Glass CTAs.
+/// Follows Apple's OnboardingKit rhythm: continuous-corner App Icon, bold display heading,
+/// unboxed hierarchical SF Symbol highlights, quiet limited-access explanation, and `.safeAreaBar`
+/// Liquid Glass CTAs.
 struct PrimerScreen: View {
     @Environment(ShellModel.self) private var shell
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var buttonsScroll: Bool { typeSize.isAccessibilitySize }
@@ -12,24 +14,25 @@ struct PrimerScreen: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                IconArtwork()
-                    .padding(.top, 16)
+                IconArtwork(size: 96)
+                    .padding(.top, 28)
                     .padding(.bottom, 22)
 
                 Text("3.2.1")
                     .font(.title.bold())
                     .foregroundStyle(Theme.body)
                     .multilineTextAlignment(.center)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 10)
 
                 Text("3.2.2")
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryLabel)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
-                    .padding(.bottom, 26)
+                    .frame(maxWidth: 320)
+                    .padding(.bottom, 32)
 
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 22) {
                     FeatureHighlightRow(
                         systemImage: "sparkles",
                         title: "primer.feat1.title",
@@ -46,8 +49,8 @@ struct PrimerScreen: View {
                         description: "primer.feat3.body"
                     )
                 }
-                .padding(.horizontal, 4)
-                .padding(.bottom, 24)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 28)
 
                 limitedAccessNote
 
@@ -67,7 +70,7 @@ struct PrimerScreen: View {
             if !buttonsScroll {
                 actionStack
                     .padding(.horizontal, 24)
-                    .padding(.top, 8)
+                    .padding(.top, 10)
                     .padding(.bottom, 16)
             }
         }
@@ -75,9 +78,10 @@ struct PrimerScreen: View {
     }
 
     private var limitedAccessNote: some View {
-        HStack(alignment: .top, spacing: 10) {
+        let shape = ConcentricRectangle(corners: .concentric(minimum: 16), isUniform: true)
+        return HStack(alignment: .top, spacing: 10) {
             Image(systemName: "photo.stack")
-                .font(.subheadline.weight(.semibold))
+                .font(.subheadline.weight(.medium))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Theme.accent)
                 .padding(.top, 1)
@@ -90,15 +94,13 @@ struct PrimerScreen: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(
-            ConcentricRectangle(corners: .concentric(minimum: 16), isUniform: true)
-                .fill(Theme.card)
-        )
+        .background(shape.fill(Theme.card))
+        .overlay(shape.stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5))
     }
 
     private var actionStack: some View {
         GlassEffectContainer(spacing: 8) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 PrimaryButton(title: "3.2.3") {
                     Task { await shell.allowAccess() }
                 }
@@ -117,16 +119,13 @@ private struct FeatureHighlightRow: View {
     let description: LocalizedStringKey
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: 16) {
             Image(systemName: systemImage)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 25, weight: .medium))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Theme.accent)
-                .frame(width: 40, height: 40)
-                .background(
-                    ConcentricRectangle(corners: .concentric(minimum: 12), isUniform: true)
-                        .fill(Theme.accent.opacity(0.12))
-                )
+                .frame(width: 34, height: 34, alignment: .center)
+                .padding(.top, 1)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -136,6 +135,7 @@ private struct FeatureHighlightRow: View {
                 Text(description)
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryLabel)
+                    .lineSpacing(1.5)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -79,8 +79,8 @@ struct NoticeBar<Trailing: View>: View {
     }
 }
 
-/// Liquid Glass studio callout built around Apple's native `ContentUnavailableView` for empty or
-/// failed recognition states on the editor canvas.
+/// Compact Apple-style Liquid Glass studio callout for empty or failed recognition states.
+/// Deliberately proportioned so the photo canvas remains the hero above the card.
 struct CalloutCard<Action: View>: View {
     let systemImage: String
     var tint: Color = Theme.accentOnBlack
@@ -90,32 +90,46 @@ struct CalloutCard<Action: View>: View {
     @ViewBuilder let action: () -> Action
 
     var body: some View {
+        let shape = ConcentricRectangle(corners: .concentric(minimum: 26), isUniform: true)
         VStack(spacing: 14) {
-            ContentUnavailableView {
-                Label {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                } icon: {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(tint.opacity(0.16))
+                        .frame(width: 44, height: 44)
                     Image(systemName: systemImage)
-                        .font(.system(size: 36, weight: .regular))
+                        .font(.system(size: 20, weight: .semibold))
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(tint)
                 }
-            } description: {
-                Text(message)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+                VStack(spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.72))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(1.5)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 4)
             }
-            .fixedSize(horizontal: false, vertical: true)
             .accessibilityElement(children: readsTogether ? .combine : .contain)
 
             action()
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 18)
+        .padding(.top, 18)
+        .padding(.bottom, 16)
         .frame(maxWidth: .infinity)
-        .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24), isUniform: true))
+        .glassEffect(.regular, in: shape)
+        .overlay(
+            shape.stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+        )
     }
 }
 
@@ -166,24 +180,26 @@ struct SummaryText: View {
 
 /// Continuous-corner App Icon presentation for PrimerScreen, adapting smoothly to Light and Dark Mode.
 struct IconArtwork: View {
+    var size: CGFloat = 104
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 29.5, style: .continuous)
+        let radius = size * (29.5 / 132.0)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         Image("IconArtwork")
             .resizable()
-            .frame(width: 132, height: 132)
+            .frame(width: size, height: size)
             .clipShape(shape)
             .overlay(
                 shape.strokeBorder(
                     colorScheme == .dark ? Color.white.opacity(0.16) : Color.black.opacity(0.08),
-                    lineWidth: 1
+                    lineWidth: 0.75
                 )
             )
             .shadow(
-                color: colorScheme == .dark ? .clear : .black.opacity(0.16),
-                radius: 20,
-                y: 10
+                color: colorScheme == .dark ? .black.opacity(0.5) : .black.opacity(0.16),
+                radius: size * 0.16,
+                y: size * 0.08
             )
             .accessibilityHidden(true)
     }

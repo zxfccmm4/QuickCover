@@ -2,11 +2,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Native Apple Export & Share screen using adaptive Light/Dark grouped styling, concentric preview
-/// with hold-to-compare, glanceable privacy-status summary pills, export format & metadata controls,
+/// with hold-to-compare, centered glanceable privacy-status badges, export format & metadata controls,
 /// iOS 26 `.safeAreaBar(edge: .bottom)`, native SwiftUI `ShareLink`, and iOS 27 `.copyable`.
 struct ExportScreen: View {
     @Environment(ShellModel.self) private var shell
     @Environment(EditorModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var typeSize
 
     @State private var toastText: String?
@@ -80,7 +81,7 @@ struct ExportScreen: View {
             .safeAreaBar(edge: .bottom, spacing: 0) {
                 if !buttonsScroll {
                     buttons
-                        .padding(.top, 6)
+                        .padding(.top, 8)
                 }
             }
 
@@ -108,6 +109,8 @@ struct ExportScreen: View {
 
     @ViewBuilder
     private func page(_ facts: ExportFacts) -> some View {
+        let cardShape = ConcentricRectangle(corners: .concentric(minimum: 20), isUniform: true)
+
         CoveredPicture(
             editor: model,
             size: facts.pictureSize(aspect: Self.aspect(of: model.preview))
@@ -117,7 +120,7 @@ struct ExportScreen: View {
         .copyableTransferable([shareItem])
         .padding(.top, 14)
 
-        VStack(spacing: 7) {
+        VStack(spacing: 8) {
             privacySummaryStrip
 
             Text("6.1.2")
@@ -126,8 +129,8 @@ struct ExportScreen: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
         }
-        .padding(.top, 12)
-        .padding(.bottom, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 18)
 
         VStack(spacing: 0) {
             ExportToggleRow(title: "6.2.1", footnote: facts.footnote, isOn: stripMetadata)
@@ -137,10 +140,8 @@ struct ExportScreen: View {
 
             exportFormatRow
         }
-        .background(
-            ConcentricRectangle(corners: .concentric(minimum: 18), isUniform: true)
-                .fill(Theme.card)
-        )
+        .background(cardShape.fill(Theme.card))
+        .overlay(cardShape.stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5))
         .padding(.horizontal, Metrics.pageInset)
 
         if facts.showsCoveredLine {
@@ -166,45 +167,58 @@ struct ExportScreen: View {
     }
 
     private var privacySummaryStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                Text("\(Int(model.size.width)) × \(Int(model.size.height)) · \(resolvedFormatBadge)")
+        ViewThatFits(in: .horizontal) {
+            privacySummaryPills
+                .padding(.horizontal, Metrics.pageInset)
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                privacySummaryPills
+                    .padding(.horizontal, Metrics.pageInset)
+            }
+        }
+    }
+
+    private var privacySummaryPills: some View {
+        HStack(spacing: 6) {
+            Text(verbatim: "\(Int(model.size.width)) × \(Int(model.size.height)) · \(resolvedFormatBadge)")
+                .font(.caption.weight(.medium).monospacedDigit())
+                .foregroundStyle(Theme.secondaryLabel)
+                .fixedSize()
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(Theme.fill))
+
+            if !model.enabledItems.isEmpty {
+                Label(L10n.coveredCount(model.enabledItems.count), systemImage: "checkmark.shield.fill")
                     .font(.caption.weight(.medium).monospacedDigit())
-                    .foregroundStyle(Theme.secondaryLabel)
+                    .foregroundStyle(Theme.accent)
+                    .fixedSize()
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Capsule().fill(Theme.fill))
-
-                if !model.enabledItems.isEmpty {
-                    Label(L10n.coveredCount(model.enabledItems.count), systemImage: "checkmark.shield.fill")
-                        .font(.caption.weight(.medium).monospacedDigit())
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Capsule().fill(Theme.accent.opacity(0.12)))
-                }
-
-                if model.preferences.stripMetadata {
-                    Label("export.metadataStripped", systemImage: "location.slash.fill")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Capsule().fill(Theme.accent.opacity(0.12)))
-                }
-
-                if model.watermark.isActive {
-                    Label("wm.title", systemImage: "checkerboard.shield")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Capsule().fill(Theme.accent.opacity(0.12)))
-                        .accessibilityLabel("export.watermarkActive")
-                }
+                    .background(Capsule().fill(Theme.accent.opacity(0.12)))
             }
-            .padding(.horizontal, Metrics.pageInset)
-            .frame(minWidth: 0, maxWidth: .infinity)
+
+            if model.preferences.stripMetadata {
+                Label("export.metadataStripped", systemImage: "location.slash.fill")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Theme.accent)
+                    .fixedSize()
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Theme.accent.opacity(0.12)))
+            }
+
+            if model.watermark.isActive {
+                Label("wm.title", systemImage: "checkerboard.shield")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Theme.accent)
+                    .fixedSize()
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Theme.accent.opacity(0.12)))
+                    .accessibilityLabel("export.watermarkActive")
+            }
         }
     }
 

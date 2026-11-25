@@ -1,21 +1,19 @@
 import SwiftUI
 
-/// Rounded icon badge matching Apple Settings & Files visual craft, using concentric geometry.
+/// Continuous-corner icon badge matching Apple Settings & Files visual craft.
 struct IconTile: View {
     let systemImage: String
     var ground: Color = Theme.fill
     var tint: Color = Theme.accent
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
         Image(systemName: systemImage)
             .font(.tileIcon)
             .symbolRenderingMode(.monochrome)
             .foregroundStyle(tint)
             .frame(width: 30, height: 30)
-            .background(
-                ConcentricRectangle(corners: .concentric(minimum: 8), isUniform: true)
-                    .fill(ground)
-            )
+            .background(shape.fill(ground))
             .accessibilityHidden(true)
     }
 }
@@ -62,7 +60,16 @@ struct RowContent<Trailing: View>: View {
     }
 }
 
-/// Interactive row for the native `List` on PickerScreen with system-style disclosure indicator.
+/// Tactile Apple Settings-style row highlight on press for grouped cards outside `List`.
+private struct GroupedRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Theme.fill : Color.clear)
+            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+    }
+}
+
+/// Interactive row for grouped cards on PickerScreen with native disclosure chevron and press highlight.
 struct PickerRow: View {
     let systemImage: String
     let title: LocalizedStringKey
@@ -71,6 +78,8 @@ struct PickerRow: View {
     var isEnabled = true
     var ground: Color = Theme.fill
     var tint: Color = Theme.accent
+    var horizontalPadding: CGFloat = 16
+    var verticalPadding: CGFloat = 10
     let action: () -> Void
 
     var body: some View {
@@ -89,9 +98,12 @@ struct PickerRow: View {
                     .foregroundStyle(Theme.tertiary)
                     .accessibilityHidden(true)
             }
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
+            .frame(minHeight: Metrics.rowMinHeight)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GroupedRowButtonStyle())
         .disabled(!isEnabled)
     }
 }

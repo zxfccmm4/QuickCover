@@ -2,10 +2,10 @@ import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Native Apple iOS 26/27 Import Hub inspired by DAMA, Picsew, and Apple Shortcuts:
-/// features an optional recent-screenshots carousel, 2-column concentric bento hero cards for
-/// Screenshots & Photo Library, grouped secondary sources (VisionKit Document Scanner, Files,
-/// Clipboard), and a quiet on-device privacy assurance footer.
+/// Native Apple iOS 26/27 Import Hub inspired by Apple Files, Photos, and Shortcuts:
+/// features an optional recent-screenshots shelf, two balanced concentric hero cards for
+/// Screenshots & Photo Library, a grouped secondary sources card (VisionKit Document Scanner,
+/// Files, Clipboard) with tactile row press highlights, and a quiet Apple Privacy footer.
 struct PickerScreen: View {
     @Environment(ShellModel.self) private var shell
     @Environment(\.scenePhase) private var scenePhase
@@ -21,7 +21,7 @@ struct PickerScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 22) {
                 if !recentScreenshots.isEmpty {
                     recentScreenshotsSection
                 }
@@ -32,7 +32,7 @@ struct PickerScreen: View {
 
                 privacyFooter
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
+                    .padding(.top, 10)
             }
             .padding(.top, 8)
             .padding(.bottom, 28)
@@ -88,7 +88,7 @@ struct PickerScreen: View {
         }
     }
 
-    // MARK: - Recent Screenshots Carousel
+    // MARK: - Recent Screenshots Shelf
 
     private var recentScreenshotsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -111,13 +111,10 @@ struct PickerScreen: View {
                                 .frame(width: 88, height: 124)
                                 .clipShape(shape)
                                 .overlay(
-                                    shape.stroke(
-                                        colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08),
-                                        lineWidth: 0.5
-                                    )
+                                    shape.stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5)
                                 )
                                 .shadow(
-                                    color: .black.opacity(colorScheme == .dark ? 0.35 : 0.10),
+                                    color: .black.opacity(colorScheme == .dark ? 0.35 : 0.08),
                                     radius: 8,
                                     y: 3
                                 )
@@ -132,7 +129,7 @@ struct PickerScreen: View {
         }
     }
 
-    // MARK: - Concentric Bento Hero Cards
+    // MARK: - Balanced Apple Bento Hero Cards
 
     private var heroBentoSection: some View {
         let layout = typeSize.isAccessibilitySize
@@ -175,8 +172,6 @@ struct PickerScreen: View {
                     PickerRow(systemImage: "doc.viewfinder", title: "picker.scanDocument") {
                         showsScanner = true
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
 
                     Divider().padding(.leading, 58)
                 }
@@ -184,8 +179,6 @@ struct PickerScreen: View {
                 PickerRow(systemImage: "folder", title: "3.1.4") {
                     showsFileImporter = true
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 9)
 
                 Divider().padding(.leading, 58)
 
@@ -198,43 +191,38 @@ struct PickerScreen: View {
                 ) {
                     open { Intake.pictureFromPasteboard() }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 9)
             }
-            .background(shape.fill(Theme.card))
+            .background(Theme.card)
+            .clipShape(shape)
             .overlay(
-                shape.stroke(
-                    colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.04),
-                    lineWidth: 0.5
-                )
+                shape.stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5)
             )
 
             if !hasClipboardImage {
                 Text("3.1.6")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryLabel)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 2)
             }
         }
         .padding(.horizontal, Metrics.pageInset)
     }
 
-    // MARK: - On-Device Privacy Trust Badge
+    // MARK: - Quiet Apple Privacy Footer
 
     private var privacyFooter: some View {
         HStack(spacing: 6) {
             Image(systemName: "lock.shield.fill")
-                .font(.caption.weight(.semibold))
+                .font(.footnote.weight(.medium))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Theme.accent)
                 .accessibilityHidden(true)
             Text("picker.privacyBadge")
-                .font(.caption.weight(.medium))
+                .font(.footnote)
                 .foregroundStyle(Theme.secondaryLabel)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-        .background(Capsule().fill(Theme.fill))
+        .padding(.horizontal, Metrics.pageInset)
     }
 
     // MARK: - Actions
@@ -272,7 +260,9 @@ private enum PickerOpenError: LocalizedError {
     }
 }
 
-/// Concentric bento hero card backed by an isolated `PhotosPicker` presentation.
+/// Balanced Apple HIG concentric card backed by an isolated `PhotosPicker` presentation.
+/// Emphasizes Screenshots subtly via a solid brand-teal icon badge and gentle tinted wash while
+/// maintaining visual equilibrium with Photo Library across Light and Dark Mode.
 private struct LibraryHeroCard: View {
     let systemImage: String
     let title: LocalizedStringKey
@@ -290,70 +280,73 @@ private struct LibraryHeroCard: View {
         Button {
             isShown = true
         } label: {
-            ZStack(alignment: .topTrailing) {
-                if isPrimary {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 74, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.10))
-                        .offset(x: 16, y: -12)
-                        .accessibilityHidden(true)
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top) {
                     ZStack {
                         Circle()
-                            .fill(isPrimary ? Color.white.opacity(0.20) : Theme.accent.opacity(0.13))
+                            .fill(isPrimary ? Theme.accentButton : Theme.accent.opacity(colorScheme == .dark ? 0.18 : 0.12))
                             .frame(width: 40, height: 40)
                         Image(systemName: systemImage)
                             .font(.system(size: 18, weight: .semibold))
+                            .symbolRenderingMode(.monochrome)
                             .foregroundStyle(isPrimary ? .white : Theme.accent)
                     }
                     .accessibilityHidden(true)
 
-                    Spacer(minLength: 10)
+                    Spacer()
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(title)
-                            .font(.headline)
-                            .foregroundStyle(isPrimary ? .white : Theme.body)
-                            .lineLimit(2)
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(isPrimary ? Color.white.opacity(0.82) : Theme.secondaryLabel)
-                            .lineLimit(2)
-                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isPrimary ? Theme.accent.opacity(0.7) : Theme.tertiary)
+                        .padding(.top, 4)
+                        .accessibilityHidden(true)
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, minHeight: 138, alignment: .topLeading)
+
+                Spacer(minLength: 4)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(Theme.body)
+                        .lineLimit(2)
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.secondaryLabel)
+                        .lineLimit(2)
+                }
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
             .background {
-                if isPrimary {
-                    shape.fill(
-                        LinearGradient(
-                            colors: [Color(hex: 0x0E8B8C), Color(hex: 0x086066)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                } else {
+                ZStack {
                     shape.fill(Theme.card)
+                    if isPrimary {
+                        shape.fill(
+                            LinearGradient(
+                                colors: [
+                                    Theme.accent.opacity(colorScheme == .dark ? 0.16 : 0.10),
+                                    Theme.accent.opacity(colorScheme == .dark ? 0.05 : 0.02),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    }
                 }
             }
             .clipShape(shape)
             .overlay(
                 shape.stroke(
                     isPrimary
-                        ? Color.white.opacity(0.18)
-                        : (colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.05)),
+                        ? Theme.accent.opacity(colorScheme == .dark ? 0.30 : 0.20)
+                        : Theme.cardBorder(for: colorScheme),
                     lineWidth: 0.5
                 )
             )
             .shadow(
-                color: isPrimary
-                    ? Color(hex: 0x086066).opacity(colorScheme == .dark ? 0.35 : 0.22)
-                    : .black.opacity(colorScheme == .dark ? 0.25 : 0.05),
-                radius: isPrimary ? 14 : 8,
-                y: isPrimary ? 6 : 3
+                color: .black.opacity(colorScheme == .dark ? 0.22 : 0.04),
+                radius: 8,
+                y: 2
             )
         }
         .buttonStyle(PressStyle(scale: 0.97))

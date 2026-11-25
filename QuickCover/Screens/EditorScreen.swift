@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// Full-bleed dark photo-editing studio inspired by Apple Photos, Photomator, and iOS 26/27 Markup.
-/// Features a live top-center Liquid Glass coverage / zoom HUD pill, grouped trailing watermark &
-/// review controls, live-texture `QuickStyleTray`, and scoped dark-studio chrome.
+/// Full-bleed dark photo-editing studio inspired by Apple Photos and iOS 26/27 Screenshot Markup.
+/// Uses unified monochrome Liquid Glass toolbar controls (highlighting brand teal only for active
+/// tools and the primary Export action), a centered live coverage/zoom HUD pill, gallery-framed
+/// canvas, and harmonized dark-studio inspector sheets.
 struct EditorScreen: View {
     @Environment(EditorModel.self) private var model
     @Environment(ShellModel.self) private var shell
-    @Environment(\.systemColorScheme) private var systemColorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Namespace private var glassNamespace
 
@@ -20,14 +20,23 @@ struct EditorScreen: View {
 
     private var isFinding: Bool { model.recognition == .running }
     private var enabledCount: Int { model.enabledItems.count }
+    private var isSheetOpen: Bool { model.reviewShown || model.watermarkShown }
 
     private var callout: EditorCallout.Kind? {
-        guard !calloutDismissed else { return nil }
+        guard !calloutDismissed, !isSheetOpen else { return nil }
         return switch model.recognition {
         case .running: nil
         case .done: model.found.isEmpty ? .nothing : nil
         case .failed: .failed
         }
+    }
+
+    private var showsStyleTray: Bool {
+        model.styleTrayShown && !isSheetOpen
+    }
+
+    private var showsDrawHint: Bool {
+        model.drawToolOn && !drawHintHidden && !isSheetOpen && !showsStyleTray && callout == nil
     }
 
     private var manualBoxCount: Int { model.items.filter { $0.origin == .manual }.count }
@@ -48,19 +57,20 @@ struct EditorScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let bottomOverlayHeight: CGFloat = if callout != nil {
-                calloutHeight + EditorLayout.pictureOverCallout
-            } else if model.styleTrayShown {
+            let horizontalMat: CGFloat = 10
+            let bottomOverlayHeight: CGFloat = if showsStyleTray {
                 styleTrayHeight + 12
+            } else if callout != nil {
+                calloutHeight + EditorLayout.pictureOverCallout
             } else {
                 0
             }
             let reviewHeight = max(SheetGeometry.shared.top - proxy.safeAreaInsets.top, 0)
 
-            ZStack {
+            ZStack(alignment: .bottom) {
                 EditorPicture(
                     area: CGSize(
-                        width: proxy.size.width,
+                        width: max(proxy.size.width - horizontalMat * 2, 0),
                         height: max(proxy.size.height - bottomOverlayHeight, 0)
                     ),
                     reviewVisibleHeight: reviewHeight,
@@ -69,55 +79,55 @@ struct EditorScreen: View {
                     onZoomChanged: { canvasZoom = $0 },
                     onTapOutsideReview: { shell.hideReview() }
                 )
+                .padding(.horizontal, horizontalMat)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: bottomOverlayHeight)
 
-                GlassEffectContainer(spacing: 12) {
-                    VStack {
-                        Spacer()
-                        if let callout {
-                            EditorCallout(
-                                kind: callout,
-                                draw: startDrawing,
-                                retry: retryRecognition
-                            )
-                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { calloutHeight = $0 }
-                            .padding(.horizontal, Metrics.pageInset)
-                            .padding(.bottom, EditorLayout.calloutOverBar)
-                            .glassEffectID("callout", in: glassNamespace)
-                            .glassEffectTransition(.materialize)
-                            .transition(reduceMotion ? .identity : .opacity.combined(with: .scale(scale: 0.96)))
-                        } else if model.styleTrayShown {
-                            QuickStyleTray()
-                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { styleTrayHeight = $0 }
+                if showsStyleTray || callout != nil || showsDrawHint {
+                    GlassEffectContainer(spacing: 12) {
+                        Group {
+                            if showsStyleTray {
+                                QuickStyleTray()
+                                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { styleTrayHeight = $0 }
+                                    .padding(.horizontal, Metrics.pageInset)
+                                    .padding(.bottom, EditorLayout.calloutOverBar)
+                                    .glassEffectID("styleTray", in: glassNamespace)
+                                    .glassEffectTransition(.materialize)
+                                    .transition(reduceMotion ? .identity : .opacity.combined(with: .move(edge: .bottom)))
+                            } else if let callout {
+                                EditorCallout(
+                                    kind: callout,
+                                    draw: startDrawing,
+                                    retry: retryRecognition
+                                )
+                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { calloutHeight = $0 }
                                 .padding(.horizontal, Metrics.pageInset)
                                 .padding(.bottom, EditorLayout.calloutOverBar)
-                                .glassEffectID("styleTray", in: glassNamespace)
+                                .glassEffectID("callout", in: glassNamespace)
                                 .glassEffectTransition(.materialize)
-                                .transition(reduceMotion ? .identity : .opacity.combined(with: .move(edge: .bottom)))
-                        } else if model.drawToolOn, !drawHintHidden {
-                            PictureCapsule(text: "4.8.5")
-                                .padding(.bottom, EditorLayout.drawCapsuleOverBar)
-                                .glassEffectID("drawHint", in: glassNamespace)
-                                .glassEffectTransition(.matchedGeometry)
-                                .transition(.opacity)
+                                .transition(reduceMotion ? .identity : .opacity.combined(with: .scale(scale: 0.96)))
+                            } else if showsDrawHint {
+                                PictureCapsule(text: "4.8.5")
+                                    .padding(.bottom, EditorLayout.drawCapsuleOverBar)
+                                    .glassEffectID("drawHint", in: glassNamespace)
+                                    .glassEffectTransition(.matchedGeometry)
+                                    .transition(.opacity)
+                            }
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
             .background { ambientBackdrop(for: proxy.size) }
-            .animation(.easeInOut(duration: 0.2), value: model.drawToolOn && !drawHintHidden)
+            .animation(.easeInOut(duration: 0.2), value: showsDrawHint)
             .animation(.snappy(duration: 0.28), value: callout)
-            .animation(.snappy(duration: 0.26), value: model.styleTrayShown)
+            .animation(.snappy(duration: 0.26), value: showsStyleTray)
         }
         .environment(\.colorScheme, .dark)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar, .bottomBar)
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .toolbarBackgroundVisibility(.hidden, for: .bottomBar)
-        .keepsBottomToolbarExpanded()
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
@@ -125,6 +135,7 @@ struct EditorScreen: View {
                 } label: {
                     Label("3.1.8", systemImage: "photo.on.rectangle")
                 }
+                .tint(.primary)
                 .disabled(isFinding)
                 .accessibilityLabel("3.1.8")
             }
@@ -133,27 +144,26 @@ struct EditorScreen: View {
                 studioStatusPill
             }
 
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {
                     model.drawToolOn = false
                     model.styleTrayShown = false
                     model.watermarkShown = true
                 } label: {
-                    Image(systemName: "checkerboard.shield")
-                        .fontWeight(model.watermark.isActive ? .semibold : .regular)
-                        .foregroundStyle(model.watermark.isActive ? Theme.accentOnBlack : .primary)
+                    Label("editor.watermarkButton", systemImage: "checkerboard.shield")
+                        .symbolVariant(model.watermark.isActive ? .fill : .none)
                 }
+                .tint(model.watermark.isActive ? Theme.accentOnBlack : .primary)
                 .disabled(isFinding)
                 .accessibilityLabel("editor.watermarkButton")
                 .accessibilityAddTraits(model.watermark.isActive ? [.isSelected] : [])
-            }
 
-            ToolbarItem(placement: AppleToolbarPlacement.pinnedTrailing) {
                 Button {
                     shell.showReview()
                 } label: {
                     Label("4.4.1", systemImage: "list.bullet")
                 }
+                .tint(model.reviewShown ? Theme.accentOnBlack : .primary)
                 .disabled(isFinding)
                 .accessibilityLabel("4.4.1")
             }
@@ -164,6 +174,7 @@ struct EditorScreen: View {
                 } label: {
                     Label("4.8.1", systemImage: "arrow.uturn.backward")
                 }
+                .tint(.primary)
                 .disabled(!model.canUndo || isFinding)
                 .accessibilityLabel("4.8.1")
 
@@ -172,6 +183,7 @@ struct EditorScreen: View {
                 } label: {
                     Label("4.8.2", systemImage: "arrow.uturn.forward")
                 }
+                .tint(.primary)
                 .disabled(!model.canRedo || isFinding)
                 .accessibilityLabel("4.8.2")
 
@@ -181,10 +193,9 @@ struct EditorScreen: View {
                     }
                     model.drawToolOn.toggle()
                 } label: {
-                    Image(systemName: "rectangle.dashed")
-                        .fontWeight(model.drawToolOn ? .bold : .regular)
-                        .foregroundStyle(model.drawToolOn ? Theme.accentOnBlack : .primary)
+                    Label("4.8.3", systemImage: "rectangle.dashed")
                 }
+                .tint(model.drawToolOn ? Theme.accentOnBlack : .primary)
                 .disabled(isFinding)
                 .accessibilityLabel("4.8.3")
                 .accessibilityAddTraits(model.drawToolOn ? [.isSelected] : [])
@@ -195,10 +206,10 @@ struct EditorScreen: View {
                     }
                     model.styleTrayShown.toggle()
                 } label: {
-                    Image(systemName: "swatchpalette")
-                        .fontWeight(model.styleTrayShown ? .semibold : .regular)
-                        .foregroundStyle(model.styleTrayShown ? Theme.accentOnBlack : .primary)
+                    Label("editor.styleButton", systemImage: "swatchpalette")
+                        .symbolVariant(model.styleTrayShown ? .fill : .none)
                 }
+                .tint(model.styleTrayShown ? Theme.accentOnBlack : .primary)
                 .disabled(isFinding)
                 .accessibilityLabel("editor.styleButton")
                 .accessibilityAddTraits(model.styleTrayShown ? [.isSelected] : [])
@@ -213,6 +224,7 @@ struct EditorScreen: View {
                     Text("4.9.1")
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Theme.accentButton)
@@ -224,12 +236,12 @@ struct EditorScreen: View {
             ReviewSheet()
                 .environment(shell)
                 .environment(model)
-                .preferredColorScheme(systemColorScheme)
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: watermarkShown) {
             WatermarkSheet()
                 .environment(model)
-                .preferredColorScheme(systemColorScheme)
+                .preferredColorScheme(.dark)
         }
         .task(id: isFinding) {
             if isFinding { announce("4.2.1") }
@@ -269,7 +281,7 @@ struct EditorScreen: View {
                 }
                 .foregroundStyle(Theme.accentOnBlack)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .frame(height: 32)
                 .glassEffect(.regular.interactive(), in: .capsule)
             }
             .buttonStyle(.plain)
@@ -282,13 +294,13 @@ struct EditorScreen: View {
                 HStack(spacing: 5) {
                     Image(systemName: enabledCount > 0 ? "checkmark.shield.fill" : "shield")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(enabledCount > 0 ? Theme.accentOnBlack : .secondary)
+                        .foregroundStyle(enabledCount > 0 ? Theme.accentOnBlack : .white.opacity(0.5))
                     Text(L10n.coveredCount(enabledCount))
-                        .font(.footnote.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(.white.opacity(enabledCount > 0 ? 0.95 : 0.65))
+                        .font(.footnote.weight(.medium).monospacedDigit())
+                        .foregroundStyle(.white.opacity(enabledCount > 0 ? 0.95 : 0.72))
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .frame(height: 32)
                 .glassEffect(.regular.interactive(), in: .capsule)
             }
             .buttonStyle(.plain)
@@ -308,8 +320,8 @@ struct EditorScreen: View {
                     .scaledToFill()
                     .frame(width: size.width, height: size.height)
                     .clipped()
-                    .blur(radius: 70)
-                    .opacity(0.18)
+                    .blur(radius: 72)
+                    .opacity(0.14)
                     .backgroundExtensionEffect()
             }
         }

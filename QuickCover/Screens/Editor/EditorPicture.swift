@@ -97,6 +97,7 @@ struct EditorPicture: View {
     var body: some View {
         let fitted = fitted
         let shown = CGSize(width: fitted.width * zoom, height: fitted.height * zoom)
+        let pictureShape = RoundedRectangle(cornerRadius: zoom > 1.01 ? 0 : 14, style: .continuous)
         let picture = ZStack(alignment: .topLeading) {
             Image(decorative: model.preview, scale: 1)
                 .resizable()
@@ -144,7 +145,11 @@ struct EditorPicture: View {
             }
         }
         .frame(width: shown.width, height: shown.height)
-        .clipShape(RoundedRectangle(cornerRadius: zoom > 1.01 ? 0 : 12, style: .continuous))
+        .clipShape(pictureShape)
+        .overlay(
+            pictureShape.stroke(Color.white.opacity(zoom > 1.01 ? 0 : 0.14), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(zoom > 1.01 ? 0 : 0.5), radius: 22, y: 10)
         .position(x: fitted.midX + offset.width, y: fitted.midY + offset.height)
         .blur(radius: isBlurred ? 14 : 0)
         .animation(.easeInOut(duration: 0.25), value: isBlurred)
