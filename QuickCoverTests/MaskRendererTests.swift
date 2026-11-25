@@ -638,6 +638,84 @@ struct MaskRendererTests {
         #expect(middles(inRow: 30, of: Self.coverBox, in: blur) >= 6)
         #expect(blur[30][12] >= 250 && blur[30][107] <= 5)
     }
+
+    // MARK: - New Styles, Colors, Strength & Anti-Theft Watermark
+
+    @Test
+    func concealMatchesSurroundingBackgroundAndErasesText() {
+        let image = Sample.text("13812345678", at: CGPoint(x: 20, y: 20))
+        let cover = CGRect(x: 15, y: 15, width: 300, height: 55)
+        let before = darkPixels(image, in: cover)
+        let flat = MaskRenderer.flatten(image, findings: [Finding(kind: .text, quad: quad(cover))], style: .conceal)
+        let after = darkPixels(flat, in: cover)
+        #expect(before > 2000)
+        #expect(after == 0, "conceal completely erases dark text into white paper background")
+        #expect(Sample.brightness(flat, x: 100, y: 40) > 0.95)
+    }
+
+    @Test
+    func stripesAlternatesBlackAndMosaicInsideCoverWithoutTouchingOutside() {
+        let image = Sample.solid(width: 120, height: 60, fill: Sample.white)
+        let flat = MaskRenderer.flatten(image, findings: cover, style: .stripes)
+        let values = inside(Self.coverBox, of: reds(flat))
+        #expect(values.contains(where: { $0 < 10 }), "stripes includes black diagonal bands")
+        #expect(values.contains(where: { $0 > 240 }), "stripes alternates with mosaic white cells")
+        #expect(reds(flat)[5] == reds(image)[5], "pixels outside the cover are untouched")
+    }
+
+    @Test
+    func emojiCoverCompletelyReplacesTextWithoutTouchingOutside() {
+        let image = Sample.text("13812345678", at: CGPoint(x: 20, y: 20))
+        let cover = CGRect(x: 15, y: 15, width: 300, height: 55)
+        let appearance = MaskAppearance(style: .emoji, emoji: "😎")
+        let flat = MaskRenderer.flatten(image, findings: [Finding(kind: .text, quad: quad(cover))], appearance: appearance)
+        #expect(flat.width == image.width && flat.height == image.height)
+        // Pixels outside the cover are untouched.
+        let a = bytes(image), b = bytes(flat)
+        let row = 200 * 4 * 600
+        #expect(Array(a[row..<(row + 600 * 4)]) == Array(b[row..<(row + 600 * 4)]))
+    }
+
+    @Test
+    func solidColorPresetAndStrengthAndWatermarkWorkEndToEnd() throws {
+        let image = Sample.solid(width: 240, height: 160, fill: Sample.white)
+        let box = CGRect(x: 20, y: 20, width: 80, height: 40)
+
+        // Teal solid fill preset
+        let tealFlat = MaskRenderer.flatten(
+            image,
+            findings: [Finding(kind: .text, quad: quad(box))],
+            appearance: MaskAppearance(style: .solid, solidColor: .teal)
+        )
+        let tealRed = reds(tealFlat)
+        #expect(tealRed[40][60] < 30, "teal has very low red channel")
+        #expect(tealRed[10][10] > 240, "outside remains white")
+
+        // Coarse strength produces fewer (coarser) columns than fine strength.
+        let faceFinding = face(rect(300, 120))
+        let fineGrid = MaskRenderer.grid(over: faceFinding.box, hiding: faceFinding, style: .mosaic, strength: .fine)
+        let coarseGrid = MaskRenderer.grid(over: faceFinding.box, hiding: faceFinding, style: .mosaic, strength: .coarse)
+        #expect(coarseGrid.columns < fineGrid.columns)
+
+        // Anti-theft watermark alters pixels across the canvas when enabled and is a no-op when disabled.
+        let off = MaskRenderer.flatten(image, findings: [], appearance: MaskAppearance(watermark: .off))
+        #expect(off === image)
+
+        let wm = WatermarkOptions(isEnabled: true, text: "FOR VERIFICATION ONLY", opacity: 0.4, density: .dense, tint: .red)
+        let watermarked = MaskRenderer.flatten(image, findings: [], appearance: MaskAppearance(watermark: wm))
+        #expect(bytes(watermarked) != bytes(image), "active watermark visibly paints diagonal text")
+
+        // PNG export format encodes as PNG even when source is JPEG.
+        let source = try #require(CGImageSourceCreateWithData(Sample.jpeg(image) as CFData, nil))
+        let pngData = try MaskRenderer.encode(
+            source,
+            orientation: .up,
+            findings: [],
+            options: .init(watermark: wm, format: .png)
+        )
+        let pngSource = try #require(CGImageSourceCreateWithData(pngData as CFData, nil))
+        #expect((CGImageSourceGetType(pngSource) as String?) == UTType.png.identifier)
+    }
 }
 
 struct PictureSourceTests {

@@ -140,4 +140,79 @@ struct EditorModelTests {
         #expect(Sample.brightness(image, x: 250, y: 215) < 0.05)    // phone number area: covered
         #expect(Sample.brightness(image, x: 480, y: 80) < 0.05)     // code area: covered
     }
+
+    @Test
+    @MainActor
+    func tappingAnUncoveredTextLineFindsItAndIgnoresCoveredOnes() throws {
+        let model = try makeModel()
+        model.adopt(sampleResult())
+        // Plain text line is at (20, 160, 400, 30) in full pixels and starts off.
+        let hit = try #require(model.uncoveredItem(at: CGPoint(x: 100, y: 175), minimumSide: 44, smallTargetPad: 8))
+        #expect(hit.origin == .textLine)
+        // Small-target margin catches a tap slightly outside a thin text line.
+        let nearHit = try #require(model.uncoveredItem(at: CGPoint(x: 100, y: 154), minimumSide: 44, smallTargetPad: 8))
+        #expect(nearHit.id == hit.id)
+        // Once covered, tapping the same point returns nil.
+        model.setOn(hit.id, true)
+        #expect(model.uncoveredItem(at: CGPoint(x: 100, y: 175), minimumSide: 44, smallTargetPad: 8) == nil)
+    }
+
+    @Test
+    @MainActor
+    func categoryBatchTogglesAreUndoableAndScopedToSuggestions() throws {
+        let model = try makeModel()
+        model.adopt(sampleResult())
+        #expect(model.isGroupCovered(.face))
+        #expect(model.isGroupCovered(.text))
+        #expect(model.isGroupCovered(.code))
+
+        model.setGroupCovered(.face, false)
+        #expect(!model.isGroupCovered(.face))
+        #expect(model.counts == (0, 1, 1))
+        model.undo()
+        #expect(model.isGroupCovered(.face))
+        #expect(model.counts == (1, 1, 1))
+    }
+
+    @Test
+    @MainActor
+    func manualBoxCanBeHitMovedClampedAndUndone() throws {
+        let model = try makeModel()
+        model.adopt(sampleResult())
+        model.addManualBox(CGRect(x: 100, y: 100, width: 80, height: 40))
+        let manual = try #require(model.items.first { $0.origin == .manual })
+
+        let hit = try #require(model.hitItem(at: CGPoint(x: 140, y: 120), minimumSide: 44, smallTargetPad: 8))
+        #expect(hit.id == manual.id)
+
+        // Move far beyond right edge: clamps cleanly inside 600×300 image bounds.
+        model.moveManualBox(manual.id, by: CGSize(width: 900, height: 50))
+        let moved = try #require(model.items.first { $0.id == manual.id })
+        #expect(moved.bounds.maxX == 600)
+        #expect(moved.bounds.minY == 150)
+
+        model.undo()
+        let restored = try #require(model.items.first { $0.id == manual.id })
+        #expect(restored.bounds.minX == 100)
+        #expect(restored.bounds.minY == 100)
+    }
+
+    @Test
+    @MainActor
+    func extendedPreferencesPersistAcrossLaunches() throws {
+        let defaults = try #require(UserDefaults(suiteName: "EditorModelTests"))
+        let model = try makeModel()
+        model.setStyle(.emoji)
+        model.setSolidColor(.teal)
+        model.setEmoji("🐱")
+        model.setStrength(.coarse)
+        model.setExportFormat(.png)
+
+        let loaded = EditorModel.Preferences.load(from: defaults)
+        #expect(loaded.style == .emoji)
+        #expect(loaded.solidColor == .teal)
+        #expect(loaded.emoji == "🐱")
+        #expect(loaded.strength == .coarse)
+        #expect(loaded.exportFormat == .png)
+    }
 }

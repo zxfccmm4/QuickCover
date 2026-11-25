@@ -1,42 +1,51 @@
 import SwiftUI
-import UIKit
 
-/// The picture and everything on it (design.md §7.3): fitted in the area it is given, the covers
-/// the export will press in, the capsules, and the gestures (two fingers zoom 1…4 and move, a
-/// held finger shows the original, the drawing tool draws a box). Single taps do nothing.
+/// Interactive photo canvas with covers, live anti-theft watermark, pinch & double-tap zoom, pan,
+/// hold-to-compare, direct tap-to-toggle on any detected area, subtle uncovered-suggestion hints,
+/// draggable/deletable Markup-style manual boxes, and Liquid Glass status capsules.
 struct EditorPicture: View {
-    /// The area the picture may fill, in points.
     let area: CGSize
-    /// How much of the area stays visible when Review Each Item is up: from its top down to the
-    /// sheet's edge.「Locate」(§7.4.3) frames an item in that part.
     var reviewVisibleHeight: CGFloat = 0
-    /// While the picture is being looked at it is blurred, 14 pt, and what is on it is not (§7.3.1).
     var isBlurred = false
+    var zoomResetTrigger: Int = 0
+    var onZoomChanged: ((CGFloat) -> Void)? = nil
+    var onTapOutsideReview: (() -> Void)? = nil
 
     @Environment(EditorModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var capsuleNamespace
 
     @State private var zoom: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var patches: [CoverPatch] = []
-    /// Whether the covers have had their entrance (§7.3.2, §8): they come once, all together.
     @State private var coversAppeared = false
     @State private var drag: DragState?
+    @State private var manualDrag: ManualDragState?
     @State private var pinch: PinchState?
     @State private var isHolding = false
     @State private var holdTask: Task<Void, Never>?
     @State private var draft: Draft?
-    /// The located item's box in fitted points (the picture at zoom 1, from its top-left corner).
     @State private var ring: CGRect?
     @State private var ringLit = false
     @State private var ringTask: Task<Void, Never>?
     @State private var hintShown = false
     @State private var hintTask: Task<Void, Never>?
+    @State private var lastEmptyTap: (point: CGPoint, time: ContinuousClock.Instant)?
+    @State private var holdFeedbackCount = 0
+    @State private var boxFeedbackCount = 0
+    @State private var selectionFeedbackCount = 0
 
     private struct DragState {
         var startOffset: CGSize
+        var startLocation: CGPoint
         var moved = false
         var magnified = false
+        var startedAt = ContinuousClock.now
+    }
+
+    private struct ManualDragState {
+        var itemID: Int
+        var liveOffset: CGSize = .zero
     }
 
     private struct PinchState {
@@ -49,7 +58,7 @@ struct EditorPicture: View {
         var end: CGPoint
     }
 
-    // MARK: - Where things are
+    // MARK: - Geometry
 
     private var previewSize: CGSize {
         CGSize(width: model.preview.width, height: model.preview.height)
@@ -57,19 +66,31 @@ struct EditorPicture: View {
 
     private var fitted: CGRect { EditorGeometry.fitted(size: previewSize, in: area) }
     private var areaCentre: CGPoint { CGPoint(x: area.width / 2, y: area.height / 2) }
-    /// Points per preview pixel at zoom 1.
     private var pointsPerPixel: CGFloat {
         previewSize.width > 0 ? fitted.width / previewSize.width : 1
     }
 
-    /// The part of the area that has to stay covered by the picture: all of it, or what is above
-    /// the sheet while Review Each Item is up.
     private var visible: CGRect {
         let height = model.reviewShown && reviewVisibleHeight > 0 ? reviewVisibleHeight : area.height
         return CGRect(x: 0, y: 0, width: area.width, height: height)
     }
 
-    private var coverKey: CoverKey { CoverKey(items: model.items, style: model.preferences.style) }
+    private var coverKey: CoverKey { CoverKey(items: model.items, appearance: model.maskAppearance) }
+
+    private var appearanceIdentity: String {
+        let p = model.preferences
+        return "\(p.style.rawValue).\(p.solidColor.rawValue).\(p.emoji).\(p.strength.rawValue)"
+    }
+
+    private var selectedManualItem: MaskItem? {
+        guard let id = model.selectedManualID, !model.showsOriginal, !model.reviewShown else { return nil }
+        return model.items.first { $0.id == id && $0.origin == .manual && $0.isOn }
+    }
+
+    private var uncoveredSuggestions: [MaskItem] {
+        guard !model.showsOriginal else { return [] }
+        return model.items.filter { $0.origin == .suggestion && !$0.isOn }
+    }
 
     // MARK: - Body
 
@@ -80,53 +101,131 @@ struct EditorPicture: View {
             Image(decorative: model.preview, scale: 1)
                 .resizable()
                 .frame(width: shown.width, height: shown.height)
+
             covers(pointsPerPixel: pointsPerPixel * zoom)
                 .frame(width: shown.width, height: shown.height)
+
+            if model.watermark.isActive {
+                WatermarkLiveOverlay(options: model.watermark)
+                    .frame(width: shown.width, height: shown.height)
+                    .opacity(model.showsOriginal ? 0 : 1)
+                    .animation(.easeInOut(duration: 0.15), value: model.showsOriginal)
+            }
+
+            ForEach(uncoveredSuggestions) { item in
+                UncoveredSuggestionOutline(rect: scaled(fittedRect(for: item.bounds)))
+                    .transition(.opacity)
+            }
+
+            if let selected = selectedManualItem {
+                let baseRect = scaled(fittedRect(for: selected.bounds))
+                let liveShift = manualDrag?.itemID == selected.id ? (manualDrag?.liveOffset ?? .zero) : .zero
+                let shiftedRect = baseRect.offsetBy(dx: liveShift.width, dy: liveShift.height)
+                SelectedManualBoxFrame(rect: shiftedRect)
+            }
+
             if let ring {
                 LocateRing(rect: scaled(ring))
                     .opacity(ringLit ? 1 : 0)
             }
+
             if let draft, let box = EditorGeometry.drawnBox(from: draft.start, to: draft.end) {
-                DrawBoxOverlay(rect: scaled(EditorGeometry.pictureRect(of: box, fitted: fitted, zoom: zoom, offset: offset, areaCentre: areaCentre)))
+                DrawBoxOverlay(
+                    rect: scaled(
+                        EditorGeometry.pictureRect(
+                            of: box,
+                            fitted: fitted,
+                            zoom: zoom,
+                            offset: offset,
+                            areaCentre: areaCentre
+                        )
+                    )
+                )
             }
         }
         .frame(width: shown.width, height: shown.height)
+        .clipShape(RoundedRectangle(cornerRadius: zoom > 1.01 ? 0 : 12, style: .continuous))
         .position(x: fitted.midX + offset.width, y: fitted.midY + offset.height)
         .blur(radius: isBlurred ? 14 : 0)
         .animation(.easeInOut(duration: 0.25), value: isBlurred)
 
         ZStack {
             picture
+            selectedManualDeleteButton(fitted: fitted, shown: shown)
             capsules(pictureTop: max(fitted.midY + offset.height - shown.height / 2, 0))
         }
         .frame(width: area.width, height: area.height)
-        .contentShape(Rectangle())
+        .contentShape(.rect)
         .gesture(dragGesture)
         .simultaneousGesture(magnifyGesture)
+        .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.7), trigger: holdFeedbackCount)
+        .sensoryFeedback(.impact(flexibility: .rigid, intensity: 0.6), trigger: boxFeedbackCount)
+        .sensoryFeedback(.selection, trigger: selectionFeedbackCount)
         .animation(.easeInOut(duration: 0.2), value: capsulesKey)
         .task(id: coverKey) { await renderCovers() }
-        // Closing the sheet brings the picture back to the fitted size (§7.4.1); a「locate」that
-        // closed it comes after, so it is not undone.
+        .onChange(of: zoom) { _, newZoom in
+            onZoomChanged?(newZoom)
+        }
+        .onChange(of: zoomResetTrigger) { _, _ in
+            resetZoom()
+        }
         .onChange(of: model.reviewShown) { _, shown in
             if !shown { resetZoom() }
+            if shown { model.selectedManualID = nil }
         }
-        .onChange(of: model.locateRequest) { _, id in if let id { locate(id) } }
+        .onChange(of: model.drawToolOn) { _, on in
+            if on { model.selectedManualID = nil }
+        }
+        .onChange(of: model.locateRequest) { _, id in
+            if let id { locate(id) }
+        }
         .onChange(of: model.recognition) { _, state in
             if state == .done, !model.found.isEmpty, HoldHint.isDue() { showHint() }
         }
         .onDisappear { cancelEverything() }
     }
 
+    // MARK: - Selected Manual Box Delete Control
+
+    @ViewBuilder
+    private func selectedManualDeleteButton(fitted: CGRect, shown: CGSize) -> some View {
+        if let selected = selectedManualItem, manualDrag == nil {
+            let picOriginX = fitted.midX + offset.width - shown.width / 2
+            let picOriginY = fitted.midY + offset.height - shown.height / 2
+            let boxInShown = scaled(fittedRect(for: selected.bounds))
+            let boxMinYInArea = picOriginY + boxInShown.minY
+            let boxMaxYInArea = picOriginY + boxInShown.maxY
+            let centerX = min(max(picOriginX + boxInShown.midX, 70), max(70, area.width - 70))
+            let placeAbove = boxMinYInArea > 56
+            let targetY = placeAbove
+                ? max(28, boxMinYInArea - 26)
+                : min(max(28, area.height - 28), boxMaxYInArea + 26)
+
+            Button {
+                model.remove(selected.id)
+                selectionFeedbackCount += 1
+            } label: {
+                Label("editor.deleteBox", systemImage: "trash")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .glassEffect(.regular.tint(Color.red.opacity(0.88)).interactive(), in: .capsule)
+            }
+            .buttonStyle(PressStyle(scale: 0.94))
+            .position(x: centerX, y: targetY)
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        }
+    }
+
     // MARK: - Covers
 
-    /// The boxes that are on, each the picture's own pixels with its cover pressed in by
-    /// `MaskRenderer`: what the export will give (§7.3.2). They fade in and out in 0.2 s; the
-    /// first time they come they grow from 0.6, all at once (§8). A change of style cross-fades.
     private func covers(pointsPerPixel: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
+        let appearanceID = appearanceIdentity
+        return ZStack(alignment: .topLeading) {
             ForEach(patches) { patch in
                 CoverPatchView(patch: patch, pointsPerPixel: pointsPerPixel)
-                    .id("\(patch.id).\(model.preferences.style.rawValue)")
+                    .id("\(patch.id).\(appearanceID)")
                     .transition(.opacity)
                     .scaleEffect(coversAppeared || reduceMotion ? 1 : 0.6)
                     .opacity(coversAppeared || reduceMotion ? 1 : 0)
@@ -145,7 +244,6 @@ struct EditorPicture: View {
             coversAppeared = true
             return
         }
-        // Drawn once at 0.6 and transparent, then let go: the spring of §8, 0.26 s, bounce 0.2.
         try? await Task.sleep(for: .milliseconds(32))
         guard !Task.isCancelled else { return }
         withAnimation(.spring(duration: 0.26, bounce: 0.2)) { coversAppeared = true }
@@ -153,19 +251,23 @@ struct EditorPicture: View {
 
     // MARK: - Gestures
 
-    /// One finger: a touch that stays down 0.35 s without moving shows the original until it lifts
-    /// (§7.3.6); a touch that moves pans the picture, or draws a box with the drawing tool
-    /// (§7.3.7). While the original is shown nothing pans.
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .local)
             .onChanged { value in dragChanged(value) }
-            .onEnded { _ in dragEnded() }
+            .onEnded { value in dragEnded(value) }
     }
 
     private func dragChanged(_ value: DragGesture.Value) {
         if drag == nil {
-            drag = DragState(startOffset: offset)
-            if pinch == nil { beginHold() }
+            drag = DragState(startOffset: offset, startLocation: value.startLocation)
+
+            if pinch == nil, !model.reviewShown, !model.drawToolOn,
+               let selected = selectedManualItem,
+               hitTestFullPoint(value.startLocation, hits: selected) {
+                manualDrag = ManualDragState(itemID: selected.id)
+            } else if pinch == nil, !model.reviewShown, model.recognition != .running {
+                beginHold()
+            }
         }
         guard var state = drag else { return }
         if isHolding { return }
@@ -175,35 +277,175 @@ struct EditorPicture: View {
             cancelHold()
         }
         if pinch != nil {
-            // Two fingers: the pinch moves the picture too (§7.3.7), and no box is being drawn.
             state.magnified = true
+            manualDrag = nil
             drag = state
             return
         }
         drag = state
+
+        if var draggingManual = manualDrag {
+            guard state.moved else { return }
+            draggingManual.liveOffset = value.translation
+            manualDrag = draggingManual
+            return
+        }
+
         if model.drawToolOn {
-            if state.magnified { draft = nil } else { draft = Draft(start: value.startLocation, end: value.location) }
+            draft = state.magnified ? nil : Draft(start: value.startLocation, end: value.location)
             return
         }
         guard state.moved else { return }
-        offset = EditorGeometry.clamped(CGSize(width: state.startOffset.width + value.translation.width,
-                                               height: state.startOffset.height + value.translation.height),
-                                        picture: fitted.size, zoom: zoom, areaCentre: areaCentre, visible: visible)
+        offset = EditorGeometry.clamped(
+            CGSize(
+                width: state.startOffset.width + value.translation.width,
+                height: state.startOffset.height + value.translation.height
+            ),
+            picture: fitted.size,
+            zoom: zoom,
+            areaCentre: areaCentre,
+            visible: visible
+        )
     }
 
-    private func dragEnded() {
+    private func dragEnded(_ value: DragGesture.Value) {
         let state = drag
+        let wasHolding = isHolding
+        let finishedManualDrag = manualDrag
         drag = nil
+        manualDrag = nil
         endHold()
+
+        if let finishedManualDrag, state?.moved == true, state?.magnified == false, pointsPerPixel > 0 {
+            let scaleX = model.previewScale.width / (pointsPerPixel * zoom)
+            let scaleY = model.previewScale.height / (pointsPerPixel * zoom)
+            let pixelDelta = CGSize(
+                width: finishedManualDrag.liveOffset.width * scaleX,
+                height: finishedManualDrag.liveOffset.height * scaleY
+            )
+            model.moveManualBox(finishedManualDrag.itemID, by: pixelDelta)
+            return
+        }
+
         if model.drawToolOn, let draft, state?.magnified == false,
            let box = EditorGeometry.drawnBox(from: draft.start, to: draft.end) {
             close(box)
+            self.draft = nil
+            return
         }
-        draft = nil
+        self.draft = nil
+
+        // Quick tap without drag, pinch, or hold-to-original:
+        // dismiss ReviewSheet if open, select/deselect manual boxes, toggle any detected area,
+        // or double-tap empty canvas to smoothly zoom in/out (Apple Photos muscle memory).
+        if let state, !state.moved, !state.magnified, !wasHolding,
+           state.startedAt.duration(to: .now) < EditorGeometry.holdDelay {
+            if model.reviewShown {
+                onTapOutsideReview?()
+            } else if model.recognition == .done {
+                handleCanvasTap(at: value.location)
+            }
+        }
     }
 
-    /// Two fingers zoom 1…4 about where they are (§7.3.2); with the drawing tool on, two fingers
-    /// still zoom rather than draw (§7.3.7).
+    private func handleCanvasTap(at areaPoint: CGPoint) {
+        guard pointsPerPixel > 0 else { return }
+        let fullPoint = fullImagePoint(for: areaPoint)
+        let scaleX = model.previewScale.width / pointsPerPixel
+        let scaleY = model.previewScale.height / pointsPerPixel
+        let fullPerScreenPoint = max(scaleX, scaleY) / max(zoom, 1)
+
+        if let hit = model.hitItem(
+            at: fullPoint,
+            minimumSide: Metrics.minimumTarget * fullPerScreenPoint,
+            smallTargetPad: 8 * fullPerScreenPoint
+        ) {
+            lastEmptyTap = nil
+            if hit.origin == .manual {
+                withAnimation(.snappy(duration: 0.2)) {
+                    model.selectedManualID = model.selectedManualID == hit.id ? nil : hit.id
+                }
+            } else {
+                model.selectedManualID = nil
+                model.toggle(hit.id)
+            }
+            selectionFeedbackCount += 1
+        } else {
+            if model.selectedManualID != nil {
+                withAnimation(.snappy(duration: 0.2)) {
+                    model.selectedManualID = nil
+                }
+                lastEmptyTap = nil
+                return
+            }
+            // Double-tap empty area toggles 1× ↔ 2.2× centered on the finger.
+            let now = ContinuousClock.now
+            if let prev = lastEmptyTap,
+               prev.time.duration(to: now) < .milliseconds(320),
+               hypot(prev.point.x - areaPoint.x, prev.point.y - areaPoint.y) < 42 {
+                lastEmptyTap = nil
+                toggleDoubleTapZoom(at: areaPoint)
+            } else {
+                lastEmptyTap = (areaPoint, now)
+            }
+        }
+    }
+
+    private func toggleDoubleTapZoom(at anchor: CGPoint) {
+        if zoom > 1.05 {
+            resetZoom()
+        } else {
+            let targetZoom: CGFloat = 2.2
+            let rawOffset = EditorGeometry.offset(
+                zoomingFrom: zoom,
+                to: targetZoom,
+                anchor: anchor,
+                areaCentre: areaCentre,
+                offset: offset
+            )
+            let clamped = EditorGeometry.clamped(
+                rawOffset,
+                picture: fitted.size,
+                zoom: targetZoom,
+                areaCentre: areaCentre,
+                visible: visible
+            )
+            withAnimation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.08)) {
+                zoom = targetZoom
+                offset = clamped
+            }
+        }
+    }
+
+    private func hitTestFullPoint(_ areaPoint: CGPoint, hits item: MaskItem) -> Bool {
+        guard pointsPerPixel > 0 else { return false }
+        let fullPoint = fullImagePoint(for: areaPoint)
+        let pad = 14 * max(model.previewScale.width, model.previewScale.height) / max(pointsPerPixel * zoom, 1)
+        return item.bounds.insetBy(dx: -pad, dy: -pad).contains(fullPoint)
+    }
+
+    private func fullImagePoint(for areaPoint: CGPoint) -> CGPoint {
+        let inPicture = EditorGeometry.picturePoint(
+            of: areaPoint,
+            fitted: fitted,
+            zoom: zoom,
+            offset: offset,
+            areaCentre: areaCentre
+        )
+        let scaleX = model.previewScale.width / pointsPerPixel
+        let scaleY = model.previewScale.height / pointsPerPixel
+        return CGPoint(x: inPicture.x * scaleX, y: inPicture.y * scaleY)
+    }
+
+    private func fittedRect(for fullBounds: CGRect) -> CGRect {
+        CGRect(
+            x: fullBounds.minX / model.previewScale.width * pointsPerPixel,
+            y: fullBounds.minY / model.previewScale.height * pointsPerPixel,
+            width: fullBounds.width / model.previewScale.width * pointsPerPixel,
+            height: fullBounds.height / model.previewScale.height * pointsPerPixel
+        )
+    }
+
     private var magnifyGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in
@@ -211,26 +453,35 @@ struct EditorPicture: View {
                     pinch = PinchState(zoom: zoom, offset: offset)
                     cancelHold()
                     draft = nil
+                    manualDrag = nil
                 }
                 guard let start = pinch else { return }
                 let newZoom = EditorGeometry.clampedZoom(start.zoom * value.magnification)
-                // Zoom about where the fingers began (the gesture gives no current point).
-                // Its anchor is in units of the view (0…1); the view is the area.
                 let from = point(value.startAnchor)
-                let newOffset = EditorGeometry.offset(zoomingFrom: start.zoom, to: newZoom, anchor: from,
-                                                      areaCentre: areaCentre, offset: start.offset)
+                let newOffset = EditorGeometry.offset(
+                    zoomingFrom: start.zoom,
+                    to: newZoom,
+                    anchor: from,
+                    areaCentre: areaCentre,
+                    offset: start.offset
+                )
                 zoom = newZoom
-                offset = EditorGeometry.clamped(newOffset, picture: fitted.size, zoom: newZoom, areaCentre: areaCentre, visible: visible)
+                offset = EditorGeometry.clamped(
+                    newOffset,
+                    picture: fitted.size,
+                    zoom: newZoom,
+                    areaCentre: areaCentre,
+                    visible: visible
+                )
             }
             .onEnded { _ in pinch = nil }
     }
 
-    /// A point of the gesture, in units of this view (0…1), in the area's points.
     private func point(_ unit: UnitPoint) -> CGPoint {
         CGPoint(x: unit.x * area.width, y: unit.y * area.height)
     }
 
-    // MARK: - Hold to see the original
+    // MARK: - Hold to compare original
 
     private func beginHold() {
         holdTask?.cancel()
@@ -239,7 +490,7 @@ struct EditorPicture: View {
             guard !Task.isCancelled else { return }
             isHolding = true
             model.showsOriginal = true
-            Haptics.hold()
+            holdFeedbackCount += 1
         }
     }
 
@@ -257,30 +508,36 @@ struct EditorPicture: View {
         model.showsOriginal = false
     }
 
-    // MARK: - Drawing a box
+    // MARK: - Manual box
 
-    /// `box` is in the area's points; the model keeps full-size pixels.
     private func close(_ box: CGRect) {
-        let inPicture = EditorGeometry.pictureRect(of: box, fitted: fitted, zoom: zoom, offset: offset, areaCentre: areaCentre)
-        let perPoint = CGPoint(x: model.previewScale.width / pointsPerPixel, y: model.previewScale.height / pointsPerPixel)
-        let rect = CGRect(x: inPicture.minX * perPoint.x, y: inPicture.minY * perPoint.y,
-                          width: inPicture.width * perPoint.x, height: inPicture.height * perPoint.y)
+        let inPicture = EditorGeometry.pictureRect(
+            of: box,
+            fitted: fitted,
+            zoom: zoom,
+            offset: offset,
+            areaCentre: areaCentre
+        )
+        let perPoint = CGPoint(
+            x: model.previewScale.width / pointsPerPixel,
+            y: model.previewScale.height / pointsPerPixel
+        )
+        let rect = CGRect(
+            x: inPicture.minX * perPoint.x,
+            y: inPicture.minY * perPoint.y,
+            width: inPicture.width * perPoint.x,
+            height: inPicture.height * perPoint.y
+        )
         model.addManualBox(rect)
-        Haptics.boxClosed()
+        boxFeedbackCount += 1
     }
 
     // MARK: - Locate
 
-    ///「Locate」(§7.4.3): the item to the middle of what is visible above the sheet, as large as
-    /// it may be (1…3×), with the edge lit for 0.7 s then fading for 0.6 s.
     private func locate(_ id: Int) {
         model.locateRequest = nil
         guard let item = model.items.first(where: { $0.id == id }) else { return }
-        let bounds = item.bounds
-        let rect = CGRect(x: bounds.minX / model.previewScale.width * pointsPerPixel,
-                          y: bounds.minY / model.previewScale.height * pointsPerPixel,
-                          width: bounds.width / model.previewScale.width * pointsPerPixel,
-                          height: bounds.height / model.previewScale.height * pointsPerPixel)
+        let rect = fittedRect(for: item.bounds)
         let framing = EditorGeometry.locate(item: rect, fitted: fitted, areaCentre: areaCentre, visible: visible)
         withAnimation(reduceMotion ? nil : .spring(duration: 0.35, bounce: 0)) {
             zoom = framing.zoom
@@ -311,7 +568,7 @@ struct EditorPicture: View {
         }
     }
 
-    // MARK: - Capsules
+    // MARK: - Liquid Glass Capsules
 
     private struct CapsulesKey: Equatable {
         var isFinding: Bool
@@ -320,36 +577,43 @@ struct EditorPicture: View {
     }
 
     private var capsulesKey: CapsulesKey {
-        CapsulesKey(isFinding: model.recognition == .running, showsOriginal: model.showsOriginal,
-                    hint: hintShown && !model.showsOriginal)
+        CapsulesKey(
+            isFinding: model.recognition == .running,
+            showsOriginal: model.showsOriginal,
+            hint: hintShown && !model.showsOriginal
+        )
     }
 
-    /// 4.2.1 in the middle while the picture is being looked at; 4.8.4 the first time, and 4.8.6
-    /// while the original is shown, 8 under the picture's top edge. They fade in and out (§8) and
-    /// are not read by VoiceOver (§9.1).
     private func capsules(pictureTop: CGFloat) -> some View {
-        ZStack {
-            if model.recognition == .running {
-                PictureCapsule(text: "4.2.1", spins: true)
-                    .transition(.opacity)
-            }
-            if hintShown, !model.showsOriginal {
-                PictureCapsule(text: "4.8.4")
-                    .transition(.opacity)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .padding(.top, pictureTop + 8)
-            }
-            if model.showsOriginal {
-                PictureCapsule(text: "4.8.6", weight: .semibold)
-                    .transition(.opacity)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .padding(.top, pictureTop + 8)
+        GlassEffectContainer(spacing: 8) {
+            ZStack {
+                if model.recognition == .running {
+                    PictureCapsule(text: "4.2.1", spins: true)
+                        .glassEffectID("statusCapsule", in: capsuleNamespace)
+                        .glassEffectTransition(.matchedGeometry)
+                        .transition(.opacity)
+                }
+                if hintShown, !model.showsOriginal {
+                    PictureCapsule(text: "4.8.4")
+                        .glassEffectID("statusCapsule", in: capsuleNamespace)
+                        .glassEffectTransition(.matchedGeometry)
+                        .transition(.opacity)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .padding(.top, pictureTop + 10)
+                }
+                if model.showsOriginal {
+                    PictureCapsule(text: "4.8.6", weight: .semibold)
+                        .glassEffectID("statusCapsule", in: capsuleNamespace)
+                        .glassEffectTransition(.matchedGeometry)
+                        .transition(.opacity)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .padding(.top, pictureTop + 10)
+                }
             }
         }
         .accessibilityHidden(true)
     }
 
-    /// 4.8.4 stays 5 s the first time a covered picture is seen, then never again (§7.3.3).
     private func showHint() {
         guard !hintShown else { return }
         HoldHint.markSeen()
@@ -365,10 +629,14 @@ struct EditorPicture: View {
     // MARK: - Helpers
 
     private func rectInPoints(_ rect: CGRect, scale: CGFloat) -> CGRect {
-        CGRect(x: rect.minX * scale, y: rect.minY * scale, width: rect.width * scale, height: rect.height * scale)
+        CGRect(
+            x: rect.minX * scale,
+            y: rect.minY * scale,
+            width: rect.width * scale,
+            height: rect.height * scale
+        )
     }
 
-    /// A rect in fitted points (the picture at zoom 1) as the same rect of the picture as shown.
     private func scaled(_ rect: CGRect) -> CGRect {
         rectInPoints(rect, scale: zoom)
     }
@@ -382,7 +650,6 @@ struct EditorPicture: View {
     }
 }
 
-/// One cover on the picture: its pixels at its place. `pointsPerPixel` is the scale of the moment.
 private struct CoverPatchView: View {
     let patch: CoverPatch
     let pointsPerPixel: CGFloat
@@ -394,14 +661,4 @@ private struct CoverPatchView: View {
             .frame(width: patch.frame.width * pointsPerPixel, height: patch.frame.height * pointsPerPixel)
             .position(x: patch.frame.midX * pointsPerPixel, y: patch.frame.midY * pointsPerPixel)
     }
-}
-
-/// The two touches the editor makes (design.md §8): a light one when the hold shows the original
-/// and when a drawn box closes, and a selection one when the style changes. Switches, glass
-/// buttons and the segmented control have the system's own.
-@MainActor
-enum Haptics {
-    static func hold() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
-    static func boxClosed() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
-    static func styleChanged() { UISelectionFeedbackGenerator().selectionChanged() }
 }

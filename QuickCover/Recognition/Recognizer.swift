@@ -184,12 +184,16 @@ struct Recognizer: Sendable {
                            height: CGFloat(upright.height) / CGFloat(working.height))
         let workingSize = CGSize(width: working.width, height: working.height)
 
-        let text = try await Self.textRequest(languages: options.languages).perform(on: working, orientation: .up)
-        var faces = try await DetectFaceRectanglesRequest().perform(on: working, orientation: .up)
+        let handler = ImageRequestHandler(working, orientation: .up)
+        let (text, initialFaces, codes) = try await handler.perform(
+            Self.textRequest(languages: options.languages),
+            Self.faceRequest(),
+            DetectBarcodesRequest()
+        )
+        var faces = initialFaces
         if let pass = options.smallFacePass, !faces.isEmpty {
             faces += try await Self.smallFaces(in: working, pass: pass, known: faces.map(\.boundingBox))
         }
-        let codes = try await DetectBarcodesRequest().perform(on: working, orientation: .up)
 
         var findings: [Finding] = []
         findings.reserveCapacity(faces.count + codes.count)
@@ -214,6 +218,15 @@ struct Recognizer: Sendable {
     }
 
     // MARK: - Vision requests
+
+    private static func faceRequest() -> DetectFaceRectanglesRequest {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) {
+            return DetectFaceRectanglesRequest(.revision4)
+        }
+        #endif
+        return DetectFaceRectanglesRequest()
+    }
 
     private static func textRequest(languages: [String]) -> RecognizeTextRequest {
         var request = RecognizeTextRequest()
@@ -279,7 +292,7 @@ struct Recognizer: Sendable {
                 guard let piece = image.cropping(to: crop),
                       let big = piece.resized(to: CGSize(width: crop.width * zoom, height: crop.height * zoom))
                 else { continue }
-                let seen = try await DetectFaceRectanglesRequest().perform(on: big, orientation: .up)
+                let seen = try await Self.faceRequest().perform(on: big, orientation: .up)
                 for face in seen {
                     // Crop fractions, then whole-picture fractions. Vision counts y from the bottom, so
                     // the crop's bottom edge is where its y starts.

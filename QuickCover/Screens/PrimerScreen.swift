@@ -1,73 +1,162 @@
 import SwiftUI
 
-/// 引导页（design.md §7.2，copy.md §3.2）：还没允许取用照片时的第一页。图标作品（§10.2），居中的粗标题
-/// 3.2.1，正文 3.2.2，小字 3.2.6；钉在下面的是主按钮 3.2.3「允許取用照片」(`ShellModel.allowAccess()`)
-/// 和纯文字按钮 3.2.4「先選一張圖」(`ShellModel.showPicker()`)。导航栏是空的。
+/// First-party Apple Welcome screen for initial Photo Library onboarding.
+/// Combines the adaptive App Icon, 3-item privacy & capability highlights, concentric limited-access
+/// note, and iOS 26 `.safeAreaBar` Liquid Glass CTAs.
 struct PrimerScreen: View {
     @Environment(ShellModel.self) private var shell
     @Environment(\.dynamicTypeSize) private var typeSize
 
+    private var buttonsScroll: Bool { typeSize.isAccessibilitySize }
+
     var body: some View {
-        // design.md §9.5: from AX1 on the text is taller than the screen, so the buttons stand at
-        // the end of it and scroll with it, and the text keeps the whole screen.
-        let buttonsScroll = typeSize.isAccessibilitySize
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    icon
-                        .padding(.bottom, 26)
-                    Text("3.2.1")
-                        .font(.title2.bold())
-                        .foregroundStyle(Theme.body)
-                        .multilineTextAlignment(.center)
-                        .padding(.bottom, 10)
-                    Text("3.2.2")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryLabel)
-                        .multilineTextAlignment(.center)
-                        .padding(.bottom, 12)
-                    Text("3.2.6")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.secondaryLabel)
-                        .multilineTextAlignment(.center)
-                    if buttonsScroll {
-                        buttons
-                            .padding(.top, 24)
-                    }
+        ScrollView {
+            VStack(spacing: 0) {
+                IconArtwork()
+                    .padding(.top, 16)
+                    .padding(.bottom, 22)
+
+                Text("3.2.1")
+                    .font(.title.bold())
+                    .foregroundStyle(Theme.body)
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 8)
+
+                Text("3.2.2")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryLabel)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+                    .padding(.bottom, 26)
+
+                VStack(alignment: .leading, spacing: 18) {
+                    FeatureHighlightRow(
+                        systemImage: "sparkles",
+                        title: "primer.feat1.title",
+                        description: "primer.feat1.body"
+                    )
+                    FeatureHighlightRow(
+                        systemImage: "swatchpalette",
+                        title: "primer.feat2.title",
+                        description: "primer.feat2.body"
+                    )
+                    FeatureHighlightRow(
+                        systemImage: "lock.shield.fill",
+                        title: "primer.feat3.title",
+                        description: "primer.feat3.body"
+                    )
                 }
-                .padding(.horizontal, 32)
-                .padding(.top, 28)
-                .padding(.bottom, buttonsScroll ? 0 : 16)
-                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 4)
+                .padding(.bottom, 24)
+
+                limitedAccessNote
+
+                if buttonsScroll {
+                    actionStack
+                        .padding(.top, 24)
+                }
             }
-            .scrollBounceBehavior(.basedOnSize)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 20)
+            .frame(maxWidth: .infinity)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollEdgeEffectStyle(.soft, for: .all)
+        .background(Theme.page.ignoresSafeArea())
+        .safeAreaBar(edge: .bottom, spacing: 0) {
             if !buttonsScroll {
-                buttons
-                    .padding(.horizontal, 32)
+                actionStack
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
             }
         }
-        .background(Theme.page.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    /// 主按钮 3.2.3 和文字按钮 3.2.4，离底部安全区 24（design.md §7.2.1 第 5 条）。
-    private var buttons: some View {
-        VStack(spacing: 2) {
-            PrimaryButton(title: "3.2.3") { Task { await shell.allowAccess() } }
-            PlainTextButton(title: "3.2.4") { shell.showPicker() }
-                .frame(maxWidth: .infinity)
+    private var limitedAccessNote: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "photo.stack")
+                .font(.subheadline.weight(.semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Theme.accent)
+                .padding(.top, 1)
+                .accessibilityHidden(true)
+            Text("3.2.6")
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryLabel)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.bottom, 24)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            ConcentricRectangle(corners: .concentric(minimum: 16), isUniform: true)
+                .fill(Theme.card)
+        )
     }
 
-    /// 那张画（design.md §10.2）：就是 App 图标，132，自己裁 29.5 的圆角，沿边 1 pt 白 14%，不投影。
-    private var icon: some View {
-        let shape = RoundedRectangle(cornerRadius: 29.5, style: .continuous)
-        return Image("IconArtwork")
-            .resizable()
-            .frame(width: 132, height: 132)
-            .clipShape(shape)
-            .overlay(shape.strokeBorder(.white.opacity(0.14), lineWidth: 1))
-            .accessibilityHidden(true)
+    private var actionStack: some View {
+        GlassEffectContainer(spacing: 8) {
+            VStack(spacing: 8) {
+                PrimaryButton(title: "3.2.3") {
+                    Task { await shell.allowAccess() }
+                }
+                PlainTextButton(title: "3.2.4") {
+                    shell.showPicker()
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
     }
+}
+
+private struct FeatureHighlightRow: View {
+    let systemImage: String
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: systemImage)
+                .font(.system(size: 20, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Theme.accent)
+                .frame(width: 40, height: 40)
+                .background(
+                    ConcentricRectangle(corners: .concentric(minimum: 12), isUniform: true)
+                        .fill(Theme.accent.opacity(0.12))
+                )
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.body)
+                Text(description)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryLabel)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+#Preview("Primer Light") {
+    NavigationStack {
+        PrimerScreen()
+    }
+    .environment(ShellModel())
+    .tint(Theme.accent)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Primer Dark") {
+    NavigationStack {
+        PrimerScreen()
+    }
+    .environment(ShellModel())
+    .tint(Theme.accent)
+    .preferredColorScheme(.dark)
 }

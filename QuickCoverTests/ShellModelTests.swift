@@ -100,6 +100,8 @@ struct ShellModelTests {
     @Test
     @MainActor
     func theStylePickedForAPictureIsRemembered() async throws {
+        UserDefaults.standard.removeObject(forKey: EditorModel.Preferences.styleKey)
+        defer { UserDefaults.standard.removeObject(forKey: EditorModel.Preferences.styleKey) }
         let shell = shell()
         shell.open(try picture())
         let editor = try #require(shell.editor)

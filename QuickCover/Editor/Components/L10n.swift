@@ -17,22 +17,38 @@ enum L10n {
 
     /// 4.3.1:「{n} 張人臉」, "{n} faces".
     static func faces(_ n: Int, bundle: Bundle? = nil) -> String {
-        String(localized: "4.3.1", defaultValue: "\(n)", bundle: bundle)
+        plural("4.3.1", count: n, bundle: bundle)
     }
 
     /// 4.3.2:「{n} 處文字」, "{n} lines of text".
     static func textLines(_ n: Int, bundle: Bundle? = nil) -> String {
-        String(localized: "4.3.2", defaultValue: "\(n)", bundle: bundle)
+        plural("4.3.2", count: n, bundle: bundle)
     }
 
     /// 4.3.3:「{n} 個 QR Code」, "{n} QR Codes".
     static func qrCodes(_ n: Int, bundle: Bundle? = nil) -> String {
-        String(localized: "4.3.3", defaultValue: "\(n)", bundle: bundle)
+        plural("4.3.3", count: n, bundle: bundle)
     }
 
     /// 4.3.4:「{n} 個條碼」, "{n} barcodes".
     static func barcodes(_ n: Int, bundle: Bundle? = nil) -> String {
-        String(localized: "4.3.4", defaultValue: "\(n)", bundle: bundle)
+        plural("4.3.4", count: n, bundle: bundle)
+    }
+
+    /// Evaluates `.stringsdict` plural rules using the target `.lproj` bundle's language locale so
+    /// singular/plural grammar is always accurate even when the host locale differs.
+    private static func plural(_ key: String, count: Int, bundle: Bundle?) -> String {
+        let target = bundle ?? .main
+        let format = target.localizedString(forKey: key, value: nil, table: nil)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
+    private static func locale(for bundle: Bundle) -> Locale? {
+        let name = bundle.bundleURL.lastPathComponent
+        guard name.hasSuffix(".lproj") else { return nil }
+        let identifier = String(name.dropLast(".lproj".count))
+        return identifier.isEmpty ? nil : Locale(identifier: identifier)
     }
 
     /// The parts of the summary that have something, in the fixed order of copy.md §4.3: faces,
@@ -68,6 +84,14 @@ enum L10n {
     static func rowTitle(_ kind: RowKind, number: Int?, bundle: Bundle? = nil) -> String {
         let name = text(kind.rawValue, bundle: bundle)
         return number.map { "\(name) \($0)" } ?? name
+    }
+
+    /// Compact live badge for how many areas are currently masked (e.g. "已遮 4 处" / "4 Covered").
+    static func coveredCount(_ count: Int, bundle: Bundle? = nil) -> String {
+        guard count > 0 else { return text("editor.noCoverYet", bundle: bundle) }
+        let format = text("editor.coveredFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
     }
 
     /// The app's strings in one language ("en", "zh-Hans", "zh-Hant"), for tests and previews.

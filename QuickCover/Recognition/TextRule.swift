@@ -701,31 +701,31 @@ enum TextRuleMatcher {
     /// without a space. The code is read in the view where the separators between digits are gone,
     /// so a line that wraps after the code, "+86" over "139 0000 1111", and a line that carries
     /// both read alike.
-    nonisolated(unsafe) private static let phonePattern =
+    private static let phonePattern =
         try! NSRegularExpression(pattern: #"(?<![0-9])(?:\+[1-9][0-9]{0,2})?1[3-9][0-9]{9}(?![0-9])"#)
-    nonisolated(unsafe) private static let idPattern =
+    private static let idPattern =
         try! NSRegularExpression(pattern: #"(?<![0-9X])[0-9]{17}[0-9X](?![0-9X])"#)
-    nonisolated(unsafe) private static let bankPattern =
+    private static let bankPattern =
         try! NSRegularExpression(pattern: #"(?<![0-9])[0-9]{16,19}(?![0-9])"#)
-    nonisolated(unsafe) private static let emailPattern =
+    private static let emailPattern =
         try! NSRegularExpression(pattern: #"[A-Z0-9._%+\-]+@[A-Z0-9\-]+(?:\.[A-Z0-9\-]+)*\.[A-Z]{2,}"#)
-    nonisolated(unsafe) private static let urlPattern =
+    private static let urlPattern =
         try! NSRegularExpression(pattern: #"[A-Z][A-Z0-9+.\-]*://[^\s\uE000]+|(?<![A-Z0-9.\-/])(?:[A-Z0-9\-]+\.)+(?:COM|CN|NET|ORG|JP|TW|HK|IO|CO|ME|INFO|BIZ|EDU|GOV|TOP|XYZ|APP|DEV|AI|CC|TV|US|UK|DE|FR|KR|SG|AU|CA|IN|RU|BR|EU|NL|SE|CH|AT|IT|ES|PL|NZ|CLUB|SITE|ONLINE|SHOP|STORE|TECH|CLOUD|WIKI|PRO|MOE|LINK|VIP|WORK|LIVE|FUN|ART|DESIGN|LTD|GROUP|TEAM|ONE|CYOU|BE|IM|LA|SO|TO|WS|NAME)(?![A-Z0-9\-])(?:/[^\s\uE000]*)?"#)
-    nonisolated(unsafe) private static let ipv4Pattern =
+    private static let ipv4Pattern =
         try! NSRegularExpression(pattern: #"(?<![0-9.])(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(?![0-9.])"#)
     /// Ten or more digits, or ten or more letters and digits that include both kinds. A long
     /// plain word is a word.
-    nonisolated(unsafe) private static let referencePattern =
+    private static let referencePattern =
         try! NSRegularExpression(pattern: #"(?<![0-9A-Z])(?:[0-9]{10,}|(?=[0-9A-Z]{10,}(?![0-9A-Z]))(?=[0-9]*[A-Z])(?=[A-Z]*[0-9])[0-9A-Z]{10,})(?![0-9A-Z])"#)
     /// Mainland plate: province, city letter, five (or six for new energy) characters, optional
     /// suffix. The dot may be printed after the city letter or after the first character.
-    nonisolated(unsafe) private static let platePattern =
+    private static let platePattern =
         try! NSRegularExpression(pattern: #"[京津沪渝冀晋辽吉黑苏浙皖闽赣鲁豫鄂湘粤桂琼川贵云藏陕甘青蒙新宁使领][A-Z][·\- ]?[A-Z0-9][·\- ]?[A-Z0-9]{4,5}[挂学警港澳]?(?![A-Z0-9])"#)
 
     /// What a reader prints for a plate's dot and for a province in its older spelling, one
     /// character each, so the plate text is put right before the pattern sees it and nothing else
     /// is let through.
-    nonisolated(unsafe) private static let plateSpelling: [Unicode.Scalar: Unicode.Scalar] = [
+    private static let plateSpelling: [Unicode.Scalar: Unicode.Scalar] = [
         "・": "·", "•": "·", "‧": "·", "∙": "·", "⋅": "·", "●": "·", "･": "·", ".": "·",
         "粵": "粤", "滬": "沪", "蘇": "苏", "閩": "闽", "贛": "赣", "魯": "鲁", "瓊": "琼", "貴": "贵", "雲": "云", "陝": "陕",
         "寧": "宁", "遼": "辽", "晉": "晋",

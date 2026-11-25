@@ -1,50 +1,97 @@
 import SwiftUI
 
-/// 导出页上的那张图（design.md §7.5）：按导出的样子画出来，也就是 `MaskRenderer` 盖上开着的遮盖。
-/// 开着的遮盖变了、换样式了，就重画一次。大小由页面先按原图比例定好，画完不会跳。
+/// Live preview of the flattened export output (including all 6 mask styles, colors, granularity,
+/// and anti-theft diagonal watermark) framed in an iOS 26 concentric rounded container.
+/// Supports press-and-hold to compare directly against the untouched original before saving.
 struct CoveredPicture: View {
     let editor: EditorModel
     let size: CGSize
+    var onRendered: ((CGImage) -> Void)? = nil
+
+    @Environment(\.colorScheme) private var colorScheme
     @State private var image: CGImage?
+    @State private var showsOriginal = false
+    @State private var holdFeedbackCount = 0
 
     var body: some View {
-        ZStack {
-            if let image {
-                Image(decorative: image, scale: 1)
-                    .resizable()
-                    .scaledToFit()
+        let shape = ConcentricRectangle(corners: .concentric(minimum: 16), isUniform: true)
+        ZStack(alignment: .top) {
+            Image(decorative: (showsOriginal ? editor.preview : (image ?? editor.preview)), scale: 1)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size.width, height: size.height)
+
+            if showsOriginal {
+                Text("4.8.6")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .glassEffect(.regular, in: .capsule)
+                    .padding(.top, 10)
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
             }
         }
         .frame(width: size.width, height: size.height)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .shadow(color: .black.opacity(0.2), radius: 22, y: 6)
+        .clipShape(shape)
+        .overlay(
+            shape.stroke(
+                colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.08),
+                lineWidth: 0.5
+            )
+        )
+        .shadow(
+            color: .black.opacity(colorScheme == .dark ? 0.35 : 0.14),
+            radius: 20,
+            y: 8
+        )
+        .contentShape(.rect)
+        .onLongPressGesture(minimumDuration: 0.18, maximumDistance: 24, perform: {}, onPressingChanged: { pressing in
+            withAnimation(.easeInOut(duration: 0.14)) {
+                showsOriginal = pressing
+            }
+            if pressing {
+                holdFeedbackCount += 1
+            }
+        })
+        .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: holdFeedbackCount)
+        .animation(.easeInOut(duration: 0.2), value: image != nil)
         .task(id: key) { await render() }
     }
 
-    /// 重画的依据：哪一张、哪些遮盖开着、什么样式。
     private var key: RenderKey {
-        RenderKey(editor: ObjectIdentifier(editor), items: editor.enabledItems.map(\.id), style: editor.preferences.style)
+        RenderKey(
+            editor: ObjectIdentifier(editor),
+            items: editor.enabledItems.map(\.id),
+            appearance: editor.maskAppearance
+        )
     }
 
     @MainActor
     private func render() async {
         let preview = editor.preview
-        // 遮盖的坐标是整尺寸的像素，预览图比它小 `previewScale` 倍。
         let toPreview = CGSize(width: 1 / editor.previewScale.width, height: 1 / editor.previewScale.height)
         let findings = editor.enabledItems.flatMap(\.findings).map { $0.scaled(by: toPreview) }
-        let style = editor.preferences.style
-        // 按像素算的数（格子的下限）也跟着缩小，小框在页面上不会比文件里切得粗。
+        let appearance = editor.maskAppearance
         let cut = MaskRenderer.onShrunkPicture(shrink: editor.previewScale)
         let rendered = await Task.detached(priority: .userInitiated) {
-            MaskRenderer.flatten(preview, findings: findings, style: style,
-                                 blurGrain: cut.blurGrain, floor: cut.floor)
+            MaskRenderer.flatten(
+                preview,
+                findings: findings,
+                appearance: appearance,
+                blurGrain: cut.blurGrain,
+                floor: cut.floor
+            )
         }.value
-        if !Task.isCancelled { image = rendered }
+        if !Task.isCancelled {
+            image = rendered
+            onRendered?(rendered)
+        }
     }
 }
 
 private struct RenderKey: Equatable {
     let editor: ObjectIdentifier
     let items: [Int]
-    let style: MaskStyle
+    let appearance: MaskAppearance
 }

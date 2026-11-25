@@ -23,19 +23,15 @@ struct MaskItem: Identifiable, Equatable, Sendable {
     /// For text that matched a rule, which one.
     var rule: TextRule?
     /// The boxes of the item, each top-left, top-right, bottom-right, bottom-left, in upright
-    /// full-size pixels. One as a rule; two when a value was wrapped onto two lines, which is still
-    /// one item: one row, one switch (design.md §0). At least one, always.
+    /// full-size pixels.
     var quads: [[CGPoint]]
     var isOn: Bool
     /// What was read there. For the checklist's accessibility label and for tests.
     var evidence: String
-    /// Text the recognizer read, a rule's hit or a text line: what a mosaic leaves the traces of
-    /// that copy 6.3.3 is about. Not a box drawn by hand.
+    /// Text the recognizer read, a rule's hit or a text line. Not a box drawn by hand.
     var isTextRead: Bool { group == .text && origin != .manual }
 
-    /// For text the recognizer read, a suggestion or a text line: the height of Vision's box before
-    /// any padding, in pixels of the picture, which the mosaic's cells and the blur's grains are
-    /// sized by (`Finding.textHeight`). Nil for faces, codes and boxes drawn by hand.
+    /// Height of Vision's box before any padding, in upright full-size pixels.
     var textHeight: CGFloat?
 
     init(id: Int, group: Group, origin: Origin, rule: TextRule?, quads: [[CGPoint]], isOn: Bool, evidence: String,
@@ -51,31 +47,22 @@ struct MaskItem: Identifiable, Equatable, Sendable {
         self.textHeight = textHeight
     }
 
-    /// An item of one box.
     init(id: Int, group: Group, origin: Origin, rule: TextRule?, quad: [CGPoint], isOn: Bool, evidence: String,
          textHeight: CGFloat? = nil) {
         self.init(id: id, group: group, origin: origin, rule: rule, quads: [quad], isOn: isOn, evidence: evidence,
                   textHeight: textHeight)
     }
 
-    /// The first box: what an item was before it could hold several. New code reads `quads`.
     var quad: [CGPoint] { quads[0] }
 
-    /// All the boxes together: where the picture goes for「locate」and where the outline goes.
     var bounds: CGRect {
         quads.map { Geometry.bounds(of: $0) }.reduce(CGRect.null) { $0.union($1) }
     }
 
-    /// Whether the checklist shows it: suggestions and hand-drawn boxes always, plain text lines
-    /// only once they are on.
     var isListed: Bool { origin != .textLine || isOn }
 
-    /// The first box as the renderer takes it; see `findings` for all of them.
     var finding: Finding { findings[0] }
 
-    /// One finding per box, in the order of `quads`: what the export fills in. The boxes of an item
-    /// go together, so one switch covers or uncovers them all. A box drawn by hand says so: with
-    /// nothing read under it, the mosaic is cut by the box's own height.
     var findings: [Finding] {
         quads.map {
             Finding(kind: Kind.of(group), rule: rule, quad: $0, evidence: evidence,
@@ -94,7 +81,7 @@ struct MaskItem: Identifiable, Equatable, Sendable {
     }
 }
 
-/// The picture being worked on: what is covered, in which style, and the export.
+/// The picture being worked on: covers, style/color/emoji/granularity, anti-theft watermark, and export.
 @MainActor
 @Observable
 final class EditorModel {
@@ -110,20 +97,58 @@ final class EditorModel {
     struct Preferences: Equatable, Sendable {
         var style: MaskStyle
         var stripMetadata: Bool
+        var solidColor: SolidColorPreset = .black
+        var emoji: String = EmojiPreset.default
+        var strength: MaskStrength = .standard
+        var exportFormat: ExportFormat = .original
 
         static let styleKey = "editor.style"
         static let stripMetadataKey = "editor.stripMetadata"
+        static let solidColorKey = "editor.solidColor"
+        static let emojiKey = "editor.emoji"
+        static let strengthKey = "editor.strength"
+        static let exportFormatKey = "editor.exportFormat"
+
+        init(
+            style: MaskStyle,
+            stripMetadata: Bool,
+            solidColor: SolidColorPreset = .black,
+            emoji: String = EmojiPreset.default,
+            strength: MaskStrength = .standard,
+            exportFormat: ExportFormat = .original
+        ) {
+            self.style = style
+            self.stripMetadata = stripMetadata
+            self.solidColor = solidColor
+            self.emoji = emoji
+            self.strength = strength
+            self.exportFormat = exportFormat
+        }
 
         static func load(from defaults: UserDefaults = .standard) -> Preferences {
             let style = defaults.string(forKey: styleKey).flatMap(MaskStyle.init(rawValue:)) ?? .default
-            let strip: Bool
-            if defaults.object(forKey: stripMetadataKey) == nil { strip = true } else { strip = defaults.bool(forKey: stripMetadataKey) }
-            return Preferences(style: style, stripMetadata: strip)
+            let strip = defaults.object(forKey: stripMetadataKey) == nil ? true : defaults.bool(forKey: stripMetadataKey)
+            let solidColor = defaults.string(forKey: solidColorKey).flatMap(SolidColorPreset.init(rawValue:)) ?? .black
+            let emoji = defaults.string(forKey: emojiKey) ?? EmojiPreset.default
+            let strength = defaults.string(forKey: strengthKey).flatMap(MaskStrength.init(rawValue:)) ?? .standard
+            let format = defaults.string(forKey: exportFormatKey).flatMap(ExportFormat.init(rawValue:)) ?? .original
+            return Preferences(
+                style: style,
+                stripMetadata: strip,
+                solidColor: solidColor,
+                emoji: emoji,
+                strength: strength,
+                exportFormat: format
+            )
         }
 
         func save(to defaults: UserDefaults = .standard) {
             defaults.set(style.rawValue, forKey: Self.styleKey)
             defaults.set(stripMetadata, forKey: Self.stripMetadataKey)
+            defaults.set(solidColor.rawValue, forKey: Self.solidColorKey)
+            defaults.set(emoji, forKey: Self.emojiKey)
+            defaults.set(strength.rawValue, forKey: Self.strengthKey)
+            defaults.set(exportFormat.rawValue, forKey: Self.exportFormatKey)
         }
     }
 
@@ -137,22 +162,29 @@ final class EditorModel {
     private(set) var recognition: Recognition = .running
     private(set) var items: [MaskItem] = []
     private(set) var preferences: Preferences
+    /// Per-image anti-theft watermark settings (intentionally off by default on each new image).
+    var watermark: WatermarkOptions = .off
+    /// Whether the watermark configuration sheet is presented.
+    var watermarkShown = false
+    /// Whether the floating in-editor quick style tray is expanded.
+    var styleTrayShown = false
+    /// Selected hand-drawn box ID for quick reposition or delete on canvas.
+    var selectedManualID: Int?
     /// While true the picture is shown without its covers (hold to see the original).
     var showsOriginal = false
-    /// Whether Review Each Item is up (design.md §7.4). It goes off by itself when the sheet
-    /// closes, when the editor is left and when the app goes to the background.
+    /// Whether Review Each Item is up.
     var reviewShown = false
-    /// Whether the drawing tool is selected (design.md §7.3.7): the next drag on the picture draws a
-    /// box. Selecting it again, opening Review Each Item or leaving the editor switches it off.
+    /// Whether the drawing tool is selected.
     var drawToolOn = false
     /// The item the picture should scroll to, set by "locate", cleared by the picture once there.
     var locateRequest: Int?
+
     private var nextID = 1
     private var undoStack: [[MaskItem]] = []
     private var redoStack: [[MaskItem]] = []
     private var recognitionTask: Task<Void, Never>?
-    /// How long to wait for suggestions before giving up and leaving only the hand-drawn boxes.
     var recognitionTimeout: Duration = .seconds(8)
+    @ObservationIgnored var onStyleChanged: ((MaskStyle) -> Void)?
 
     init(picture: PictureSource, previewLongSide: Int = 2048, defaults: UserDefaults = .standard) {
         self.picture = picture
@@ -165,6 +197,30 @@ final class EditorModel {
     }
 
     private let defaults: UserDefaults
+
+    /// Combined appearance state for preview & export rendering.
+    var maskAppearance: MaskAppearance {
+        MaskAppearance(
+            style: preferences.style,
+            solidColor: preferences.solidColor,
+            emoji: preferences.emoji,
+            strength: preferences.strength,
+            watermark: watermark
+        )
+    }
+
+    /// Resolved export options for `MaskRenderer.encode` and `CoveredImageExport`.
+    var exportOptions: MaskRenderer.Options {
+        MaskRenderer.Options(
+            style: preferences.style,
+            solidColor: preferences.solidColor,
+            emoji: preferences.emoji,
+            strength: preferences.strength,
+            watermark: watermark,
+            stripMetadata: preferences.stripMetadata,
+            format: preferences.exportFormat
+        )
+    }
 
     // MARK: - Recognition
 
@@ -180,26 +236,26 @@ final class EditorModel {
         recognitionTask = nil
     }
 
-    /// 「再試一次」after recognition failed (design.md §7.3.5): a fresh look at the picture, from the
-    /// beginning, with nothing left of the previous one.
     func retryRecognition() {
         cancelRecognition()
         items = []
         undoStack = []
         redoStack = []
         locateRequest = nil
+        selectedManualID = nil
         showsOriginal = false
         drawToolOn = false
         recognition = .running
         startRecognition()
     }
 
-    /// What has to go off by itself when the editor is left, the export page or the picker opens,
-    /// or the app goes to the background (copy.md 7.3, design.md §7.3.7).
     func resetTransientState() {
         showsOriginal = false
         drawToolOn = false
         reviewShown = false
+        watermarkShown = false
+        styleTrayShown = false
+        selectedManualID = nil
     }
 
     private func recognize() async {
@@ -260,13 +316,10 @@ final class EditorModel {
 
     var enabledItems: [MaskItem] { items.filter(\.isOn) }
 
-    /// 导出的图里有没有文字类的遮罩：开着的、从文字识别出来的那些（规则认出来的，和「文字」那些行，含「遮住所有文字」
-    /// 盖上的）。自己框的不算，人脸、二维码、条形码也不算。导出页马赛克下那条提醒说的是字，看的是它（copy.md 6.3.3）。
     var coversText: Bool { enabledItems.contains { $0.isTextRead } }
 
     var checklist: [MaskItem] { items.filter(\.isListed) }
 
-    /// What is covered right now, for the checklist's headline.
     var counts: (faces: Int, texts: Int, codes: Int) {
         var faces = 0, texts = 0, codes = 0
         for item in checklist where item.isOn {
@@ -279,10 +332,30 @@ final class EditorModel {
         return (faces, texts, codes)
     }
 
-    /// True when every text line the recognizer read is covered.
     var coversAllText: Bool {
         let lines = items.filter { $0.origin == .textLine }
         return !lines.isEmpty && lines.allSatisfy(\.isOn)
+    }
+
+    /// Suggested items belonging to a given category (`face`, `text` suggestions, or `code`).
+    func suggestionItems(in group: MaskItem.Group) -> [MaskItem] {
+        items.filter { $0.origin == .suggestion && $0.group == group }
+    }
+
+    /// Whether every suggested item in `group` is currently covered.
+    func isGroupCovered(_ group: MaskItem.Group) -> Bool {
+        let matched = suggestionItems(in: group)
+        return !matched.isEmpty && matched.allSatisfy(\.isOn)
+    }
+
+    /// Batch toggles all auto-detected items in a category (`face`, sensitive `text`, or `code`).
+    func setGroupCovered(_ group: MaskItem.Group, _ on: Bool) {
+        let changed = items.contains { $0.origin == .suggestion && $0.group == group && $0.isOn != on }
+        guard changed else { return }
+        pushUndo()
+        for index in items.indices where items[index].origin == .suggestion && items[index].group == group {
+            items[index].isOn = on
+        }
     }
 
     // MARK: - Edits (each one undoable)
@@ -302,6 +375,7 @@ final class EditorModel {
         guard items.contains(where: { $0.id == id }) else { return }
         pushUndo()
         items.removeAll { $0.id == id }
+        if selectedManualID == id { selectedManualID = nil }
     }
 
     /// Adds a box drawn by hand. `rect` is in full-size upright pixels.
@@ -313,6 +387,19 @@ final class EditorModel {
                                       CGPoint(x: rect.maxX, y: rect.maxY), CGPoint(x: rect.minX, y: rect.maxY)]],
                               isOn: true, evidence: ""))
         nextID += 1
+    }
+
+    /// Moves a hand-drawn box by `(dx, dy)` in full-size upright pixels, clamped within the image bounds.
+    func moveManualBox(_ id: Int, by delta: CGSize) {
+        guard let index = items.firstIndex(where: { $0.id == id && $0.origin == .manual }) else { return }
+        let bounds = items[index].bounds
+        let clampedDX = min(max(delta.width, -bounds.minX), size.width - bounds.maxX)
+        let clampedDY = min(max(delta.height, -bounds.minY), size.height - bounds.maxY)
+        guard abs(clampedDX) >= 1 || abs(clampedDY) >= 1 else { return }
+        pushUndo()
+        items[index].quads = items[index].quads.map { quad in
+            quad.map { CGPoint(x: $0.x + clampedDX, y: $0.y + clampedDY) }
+        }
     }
 
     func setAllText(_ on: Bool) {
@@ -328,6 +415,65 @@ final class EditorModel {
         guard preferences.style != style else { return }
         preferences.style = style
         preferences.save(to: defaults)
+        onStyleChanged?(style)
+    }
+
+    func setSolidColor(_ preset: SolidColorPreset) {
+        guard preferences.solidColor != preset else { return }
+        preferences.solidColor = preset
+        preferences.save(to: defaults)
+    }
+
+    func setEmoji(_ emoji: String) {
+        guard preferences.emoji != emoji else { return }
+        preferences.emoji = emoji
+        preferences.save(to: defaults)
+    }
+
+    func setStrength(_ strength: MaskStrength) {
+        guard preferences.strength != strength else { return }
+        preferences.strength = strength
+        preferences.save(to: defaults)
+    }
+
+    func setExportFormat(_ format: ExportFormat) {
+        guard preferences.exportFormat != format else { return }
+        preferences.exportFormat = format
+        preferences.save(to: defaults)
+    }
+
+    /// Finds an uncovered item hit by a tap in upright full-size pixels.
+    func uncoveredItem(at point: CGPoint, minimumSide: CGFloat, smallTargetPad: CGFloat) -> MaskItem? {
+        items.first { item in
+            guard !item.isOn else { return false }
+            return hits(item, at: point, minimumSide: minimumSide, smallTargetPad: smallTargetPad)
+        }
+    }
+
+    /// Finds the topmost item (preferring hand-drawn boxes, then covered suggestions, then uncovered
+    /// text lines) at `point` in upright full-size pixels for direct tap-to-toggle/select on canvas.
+    func hitItem(at point: CGPoint, minimumSide: CGFloat, smallTargetPad: CGFloat) -> MaskItem? {
+        if let manual = items.reversed().first(where: {
+            $0.origin == .manual && $0.isOn && hits($0, at: point, minimumSide: minimumSide, smallTargetPad: smallTargetPad)
+        }) {
+            return manual
+        }
+        if let active = items.reversed().first(where: {
+            $0.isOn && hits($0, at: point, minimumSide: minimumSide, smallTargetPad: smallTargetPad)
+        }) {
+            return active
+        }
+        return uncoveredItem(at: point, minimumSide: minimumSide, smallTargetPad: smallTargetPad)
+    }
+
+    private func hits(_ item: MaskItem, at point: CGPoint, minimumSide: CGFloat, smallTargetPad: CGFloat) -> Bool {
+        item.quads.contains { quad in
+            var rect = Geometry.bounds(of: quad)
+            if rect.width < minimumSide || rect.height < minimumSide {
+                rect = rect.insetBy(dx: -smallTargetPad, dy: -smallTargetPad)
+            }
+            return rect.contains(point)
+        }
     }
 
     func setStripMetadata(_ on: Bool) {
@@ -353,6 +499,9 @@ final class EditorModel {
         guard let previous = undoStack.popLast() else { return }
         redoStack.append(items)
         items = previous
+        if let selected = selectedManualID, !items.contains(where: { $0.id == selected }) {
+            selectedManualID = nil
+        }
     }
 
     func redo() {
@@ -363,12 +512,11 @@ final class EditorModel {
 
     // MARK: - Export
 
-    /// The result file, same pixel size as the original, covers pressed in. Encoded off the main actor.
+    /// The result file, same pixel size as the original, covers & optional watermark pressed in.
     func exportData() async throws -> Data {
         let picture = picture
-        // One finding per box: an item of two boxes is covered as the two of them.
         let findings = enabledItems.flatMap(\.findings)
-        let options = MaskRenderer.Options(style: preferences.style, stripMetadata: preferences.stripMetadata)
+        let options = exportOptions
         return try await Task.detached(priority: .userInitiated) {
             try MaskRenderer.encode(picture.source, orientation: picture.orientation, findings: findings, options: options)
         }.value

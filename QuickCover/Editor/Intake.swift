@@ -1,6 +1,7 @@
 import Photos
 import PhotosUI
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 enum PhotosAccess: Equatable, Sendable {
@@ -11,9 +12,14 @@ enum PhotosAccess: Equatable, Sendable {
     case denied
 }
 
-/// Brings a picture in: the newest screenshot, one picked in the system picker or a file, or the clipboard.
-/// Nothing here asks for the photo library to read anything the person did not choose, except with
-/// `.full` access, and nothing downloads from iCloud.
+/// Lightweight local screenshot thumbnail shown in PickerScreen's recent-screenshots carousel.
+struct RecentScreenshot: Identifiable, Sendable {
+    let id: String
+    let thumbnail: CGImage
+}
+
+/// Brings a picture in: recent screenshots, PhotosPicker, Files, Document Scanner, or clipboard.
+/// Nothing downloads from iCloud and nothing asks for full access unless explicitly authorized.
 enum Intake {
 
     /// Asks once if it has to.
@@ -40,6 +46,51 @@ enum Intake {
         return nil
     }
 
+    /// Fetches up to `limit` locally cached recent screenshots for PickerScreen's quick strip.
+    /// Returns empty immediately unless the user already granted `.authorized` full library access.
+    static func recentScreenshots(limit: Int = 10, targetPixels: CGSize = CGSize(width: 240, height: 340)) async -> [RecentScreenshot] {
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized else { return [] }
+        let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "mediaSubtype & %d != 0", PHAssetMediaSubtype.photoScreenshot.rawValue)
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.fetchLimit = limit
+        let assets = PHAsset.fetchAssets(with: PHAssetMediaType.image, options: options)
+        var results: [RecentScreenshot] = []
+        results.reserveCapacity(assets.count)
+        for index in 0..<assets.count {
+            let asset = assets.object(at: index)
+            if let thumb = await thumbnail(of: asset, targetSize: targetPixels) {
+                results.append(RecentScreenshot(id: asset.localIdentifier, thumbnail: thumb))
+            }
+        }
+        return results
+    }
+
+    /// Loads full-resolution original data for a screenshot picked from the quick strip.
+    static func picture(localIdentifier: String) async -> PictureSource? {
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized else { return nil }
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+        guard let asset = fetched.firstObject, let data = await imageData(of: asset) else { return nil }
+        return try? PictureSource(data: data)
+    }
+
+    private static func thumbnail(of asset: PHAsset, targetSize: CGSize) async -> CGImage? {
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .fast
+        return await withCheckedContinuation { continuation in
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: targetSize,
+                contentMode: .aspectFill,
+                options: options
+            ) { image, _ in
+                continuation.resume(returning: image?.cgImage)
+            }
+        }
+    }
+
     private static func imageData(of asset: PHAsset) async -> Data? {
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = false
@@ -62,6 +113,12 @@ enum Intake {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         return try? PictureSource(url: url)
+    }
+
+    /// A scanned page from VisionKit Document Camera encoded cleanly as JPEG data.
+    static func picture(from uiImage: UIImage) -> PictureSource? {
+        guard let data = uiImage.jpegData(compressionQuality: 0.96) else { return nil }
+        return try? PictureSource(data: data)
     }
 
     /// An image on the clipboard, as its file when there is one, else as PNG.

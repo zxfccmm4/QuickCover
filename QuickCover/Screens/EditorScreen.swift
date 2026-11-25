@@ -1,21 +1,25 @@
 import SwiftUI
 
-/// The editor (design.md §7.3): black, no navigation bar. The picture fitted between the top
-/// buttons and the glass bar, the callout at the bottom when nothing was found or the look failed,
-/// and the sheet of Review Each Item over the lower part of the screen.
+/// Full-bleed dark photo-editing studio inspired by Apple Photos, Photomator, and iOS 26/27 Markup.
+/// Features a live top-center Liquid Glass coverage / zoom HUD pill, grouped trailing watermark &
+/// review controls, live-texture `QuickStyleTray`, and scoped dark-studio chrome.
 struct EditorScreen: View {
     @Environment(EditorModel.self) private var model
     @Environment(ShellModel.self) private var shell
+    @Environment(\.systemColorScheme) private var systemColorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var glassNamespace
 
     @State private var calloutHeight: CGFloat = 0
-    /// Set by the card's「手動框選」(§7.3.4) or by the 5 s of §8; a new picture starts over.
+    @State private var styleTrayHeight: CGFloat = 0
     @State private var calloutDismissed = false
-    @State private var calloutTask: Task<Void, Never>?
     @State private var drawHintHidden = false
     @State private var announcedCallout: EditorCallout.Kind?
+    @State private var canvasZoom: CGFloat = 1
+    @State private var zoomResetTrigger = 0
 
     private var isFinding: Bool { model.recognition == .running }
+    private var enabledCount: Int { model.enabledItems.count }
 
     private var callout: EditorCallout.Kind? {
         guard !calloutDismissed else { return nil }
@@ -28,110 +32,304 @@ struct EditorScreen: View {
 
     private var manualBoxCount: Int { model.items.filter { $0.origin == .manual }.count }
 
-    // MARK: - Body
+    private var reviewShown: Binding<Bool> {
+        Binding(
+            get: { model.reviewShown },
+            set: { shown in if !shown { shell.hideReview() } }
+        )
+    }
+
+    private var watermarkShown: Binding<Bool> {
+        Binding(
+            get: { model.watermarkShown },
+            set: { model.watermarkShown = $0 }
+        )
+    }
 
     var body: some View {
         GeometryReader { proxy in
-            let fullHeight = proxy.size.height - EditorLayout.topInset - EditorLayout.bottomInset
-            // The card sits 12 over the glass bar and the picture area already ends 12 over it, so only
-            // the card and the 14 under the picture come off the area.
-            let calloutSpace = callout == nil ? 0 : calloutHeight + EditorLayout.pictureOverCallout
-            ZStack(alignment: .top) {
-                Theme.page.ignoresSafeArea()
+            let bottomOverlayHeight: CGFloat = if callout != nil {
+                calloutHeight + EditorLayout.pictureOverCallout
+            } else if model.styleTrayShown {
+                styleTrayHeight + 12
+            } else {
+                0
+            }
+            let reviewHeight = max(SheetGeometry.shared.top - proxy.safeAreaInsets.top, 0)
 
-                EditorPicture(area: CGSize(width: proxy.size.width, height: max(fullHeight - calloutSpace, 0)),
-                              reviewVisibleHeight: SheetGeometry.shared.top - proxy.safeAreaInsets.top - EditorLayout.topInset,
-                              isBlurred: isFinding)
-                    .padding(.top, EditorLayout.topInset)
-                    .padding(.bottom, EditorLayout.bottomInset)
-                    // Pinned to the top: a centred frame would let the card cover the picture's bottom.
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: calloutSpace)
+            ZStack {
+                EditorPicture(
+                    area: CGSize(
+                        width: proxy.size.width,
+                        height: max(proxy.size.height - bottomOverlayHeight, 0)
+                    ),
+                    reviewVisibleHeight: reviewHeight,
+                    isBlurred: isFinding,
+                    zoomResetTrigger: zoomResetTrigger,
+                    onZoomChanged: { canvasZoom = $0 },
+                    onTapOutsideReview: { shell.hideReview() }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: bottomOverlayHeight)
 
-                GlassEffectContainer {
-                    VStack(spacing: 0) {
-                        EditorTopButtons(hidesTitlesWhenTheyDoNotFit: true)
-                            .padding(.top, EditorLayout.topButtonsInset)
+                GlassEffectContainer(spacing: 12) {
+                    VStack {
                         Spacer()
-                        EditorGlassBar()
+                        if let callout {
+                            EditorCallout(
+                                kind: callout,
+                                draw: startDrawing,
+                                retry: retryRecognition
+                            )
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { calloutHeight = $0 }
                             .padding(.horizontal, Metrics.pageInset)
-                            .padding(.bottom, EditorLayout.barInset)
+                            .padding(.bottom, EditorLayout.calloutOverBar)
+                            .glassEffectID("callout", in: glassNamespace)
+                            .glassEffectTransition(.materialize)
+                            .transition(reduceMotion ? .identity : .opacity.combined(with: .scale(scale: 0.96)))
+                        } else if model.styleTrayShown {
+                            QuickStyleTray()
+                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { styleTrayHeight = $0 }
+                                .padding(.horizontal, Metrics.pageInset)
+                                .padding(.bottom, EditorLayout.calloutOverBar)
+                                .glassEffectID("styleTray", in: glassNamespace)
+                                .glassEffectTransition(.materialize)
+                                .transition(reduceMotion ? .identity : .opacity.combined(with: .move(edge: .bottom)))
+                        } else if model.drawToolOn, !drawHintHidden {
+                            PictureCapsule(text: "4.8.5")
+                                .padding(.bottom, EditorLayout.drawCapsuleOverBar)
+                                .glassEffectID("drawHint", in: glassNamespace)
+                                .glassEffectTransition(.matchedGeometry)
+                                .transition(.opacity)
+                        }
                     }
-                }
-                .disabled(isFinding)
-                .opacity(isFinding ? Theme.disabledOpacity : 1)
-
-                if let callout {
-                    EditorCallout(kind: callout, draw: startDrawing, retry: model.retryRecognition)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { calloutHeight = $0 }
-                        .padding(.horizontal, Metrics.pageInset)
-                        // Never over the top buttons: with a long card at accessibility sizes the text gives.
-                        .padding(.top, EditorLayout.topInset)
-                        .padding(.bottom, EditorLayout.barInset + EditorLayout.barHeight + EditorLayout.calloutOverBar)
-                        .frame(maxHeight: .infinity, alignment: .bottom)
-                        .transition(reduceMotion ? .identity : .opacity)
-                }
-
-                if model.drawToolOn, !drawHintHidden {
-                    PictureCapsule(text: "4.8.5")
-                        .padding(.bottom, EditorLayout.barInset + EditorLayout.barHeight + EditorLayout.drawCapsuleOverBar)
-                        .frame(maxHeight: .infinity, alignment: .bottom)
-                        .transition(.opacity)
-                }
-
-                if model.reviewShown {
-                    ReviewScrim()
-                        .onTapGesture { shell.hideReview() }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .background { ambientBackdrop(for: proxy.size) }
             .animation(.easeInOut(duration: 0.2), value: model.drawToolOn && !drawHintHidden)
-            .animation(.easeInOut(duration: 0.25), value: model.reviewShown)
-            .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in touched() })
+            .animation(.snappy(duration: 0.28), value: callout)
+            .animation(.snappy(duration: 0.26), value: model.styleTrayShown)
         }
-        .toolbar(.hidden, for: .navigationBar)
-        .task(id: isFinding) { if isFinding { announce("4.2.1") } }
+        .environment(\.colorScheme, .dark)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar, .bottomBar)
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        .toolbarBackgroundVisibility(.hidden, for: .bottomBar)
+        .keepsBottomToolbarExpanded()
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    shell.showPickerFromEditor()
+                } label: {
+                    Label("3.1.8", systemImage: "photo.on.rectangle")
+                }
+                .disabled(isFinding)
+                .accessibilityLabel("3.1.8")
+            }
+
+            ToolbarItem(placement: .principal) {
+                studioStatusPill
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    model.drawToolOn = false
+                    model.styleTrayShown = false
+                    model.watermarkShown = true
+                } label: {
+                    Image(systemName: "checkerboard.shield")
+                        .fontWeight(model.watermark.isActive ? .semibold : .regular)
+                        .foregroundStyle(model.watermark.isActive ? Theme.accentOnBlack : .primary)
+                }
+                .disabled(isFinding)
+                .accessibilityLabel("editor.watermarkButton")
+                .accessibilityAddTraits(model.watermark.isActive ? [.isSelected] : [])
+            }
+
+            ToolbarItem(placement: AppleToolbarPlacement.pinnedTrailing) {
+                Button {
+                    shell.showReview()
+                } label: {
+                    Label("4.4.1", systemImage: "list.bullet")
+                }
+                .disabled(isFinding)
+                .accessibilityLabel("4.4.1")
+            }
+
+            ToolbarItemGroup(placement: .bottomBar) {
+                Button {
+                    model.undo()
+                } label: {
+                    Label("4.8.1", systemImage: "arrow.uturn.backward")
+                }
+                .disabled(!model.canUndo || isFinding)
+                .accessibilityLabel("4.8.1")
+
+                Button {
+                    model.redo()
+                } label: {
+                    Label("4.8.2", systemImage: "arrow.uturn.forward")
+                }
+                .disabled(!model.canRedo || isFinding)
+                .accessibilityLabel("4.8.2")
+
+                Button {
+                    if !model.drawToolOn {
+                        model.styleTrayShown = false
+                    }
+                    model.drawToolOn.toggle()
+                } label: {
+                    Image(systemName: "rectangle.dashed")
+                        .fontWeight(model.drawToolOn ? .bold : .regular)
+                        .foregroundStyle(model.drawToolOn ? Theme.accentOnBlack : .primary)
+                }
+                .disabled(isFinding)
+                .accessibilityLabel("4.8.3")
+                .accessibilityAddTraits(model.drawToolOn ? [.isSelected] : [])
+
+                Button {
+                    if !model.styleTrayShown {
+                        model.drawToolOn = false
+                    }
+                    model.styleTrayShown.toggle()
+                } label: {
+                    Image(systemName: "swatchpalette")
+                        .fontWeight(model.styleTrayShown ? .semibold : .regular)
+                        .foregroundStyle(model.styleTrayShown ? Theme.accentOnBlack : .primary)
+                }
+                .disabled(isFinding)
+                .accessibilityLabel("editor.styleButton")
+                .accessibilityAddTraits(model.styleTrayShown ? [.isSelected] : [])
+            }
+
+            ToolbarSpacer(.flexible, placement: .bottomBar)
+
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    shell.showExport()
+                } label: {
+                    Text("4.9.1")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Theme.accentButton)
+                .disabled(isFinding)
+                .accessibilityLabel("4.9.1")
+            }
+        }
+        .sheet(isPresented: reviewShown) {
+            ReviewSheet()
+                .environment(shell)
+                .environment(model)
+                .preferredColorScheme(systemColorScheme)
+        }
+        .sheet(isPresented: watermarkShown) {
+            WatermarkSheet()
+                .environment(model)
+                .preferredColorScheme(systemColorScheme)
+        }
+        .task(id: isFinding) {
+            if isFinding { announce("4.2.1") }
+        }
         .task(id: callout) {
             guard let callout else { return }
             if announcedCallout != callout {
                 announcedCallout = callout
                 announce(callout == .nothing ? "5.1.1" : "5.2.1")
             }
-            scheduleCalloutDismissal()
         }
         .onChange(of: model.drawToolOn) { _, on in
             if on { drawHintHidden = false }
         }
         .onChange(of: manualBoxCount) { _, count in
-            // The capsule 4.8.5 stays until the first box is drawn (§7.3.7).
             if model.drawToolOn, count > 0 { drawHintHidden = true }
         }
-        .onDisappear { calloutTask?.cancel() }
+    }
+
+    // MARK: - Top-Center Live Studio HUD Pill
+
+    @ViewBuilder
+    private var studioStatusPill: some View {
+        if isFinding {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .accessibilityHidden(true)
+        } else if canvasZoom > 1.05 {
+            Button {
+                zoomResetTrigger += 1
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        .font(.caption2.weight(.semibold))
+                    Text("\(String(format: "%.1f", canvasZoom))×")
+                        .font(.footnote.weight(.semibold).monospacedDigit())
+                }
+                .foregroundStyle(Theme.accentOnBlack)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .glassEffect(.regular.interactive(), in: .capsule)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("editor.resetZoom")
+            .transition(.opacity.combined(with: .scale(scale: 0.92)))
+        } else {
+            Button {
+                shell.showReview()
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: enabledCount > 0 ? "checkmark.shield.fill" : "shield")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(enabledCount > 0 ? Theme.accentOnBlack : .secondary)
+                    Text(L10n.coveredCount(enabledCount))
+                        .font(.footnote.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.white.opacity(enabledCount > 0 ? 0.95 : 0.65))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .glassEffect(.regular.interactive(), in: .capsule)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L10n.coveredCount(enabledCount))
+            .transition(.opacity)
+        }
+    }
+
+    /// Subtle dark ambient wash constrained strictly to container bounds so `scaledToFill()` never
+    /// widens the editor layout.
+    private func ambientBackdrop(for size: CGSize) -> some View {
+        ZStack {
+            Theme.studioCanvas
+            if !reduceMotion {
+                Image(decorative: model.preview, scale: 1)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+                    .blur(radius: 70)
+                    .opacity(0.18)
+                    .backgroundExtensionEffect()
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     // MARK: - Actions
 
-    /// The card goes, the picture comes back and the drawing tool goes on (§7.3.4, §7.3.5).
     private func startDrawing() {
-        calloutTask?.cancel()
         calloutDismissed = true
+        model.styleTrayShown = false
         model.drawToolOn = true
     }
 
-    /// Any touch on the page keeps the failed callout up another 5 s (§8).
-    private func touched() {
-        guard callout == .failed else { return }
-        scheduleCalloutDismissal()
-    }
-
-    private func scheduleCalloutDismissal() {
-        calloutTask?.cancel()
-        guard callout == .failed else { return }
-        calloutTask = Task { @MainActor in
-            try? await Task.sleep(for: EditorLayout.calloutIdle)
-            guard !Task.isCancelled else { return }
-            calloutDismissed = true
-        }
+    private func retryRecognition() {
+        calloutDismissed = false
+        announcedCallout = nil
+        model.retryRecognition()
     }
 
     private func announce(_ key: String) {
@@ -139,9 +337,7 @@ struct EditorScreen: View {
     }
 }
 
-/// The numbers of design.md §7.3 and §4. The picture area ends 62 under the top safe area (12 under
-/// the top buttons, which are 6 down and 44 high) and 72 over the bottom safe area (12 over the
-/// glass bar, 8 up and 52 high).
+/// Shared editor spacing & layout constants.
 enum EditorLayout {
     static let topInset: CGFloat = 62
     static let bottomInset: CGFloat = 72
@@ -151,48 +347,20 @@ enum EditorLayout {
     static let calloutOverBar: CGFloat = 12
     static let pictureOverCallout: CGFloat = 14
     static let drawCapsuleOverBar: CGFloat = 10
-    /// §7.4.1: the sheet's edge is 300 under the top of the screen.
     static let sheetTop: CGFloat = 300
-    /// §7.4.2–§7.4.3: the sheet's sides, where the summary, the description and the cards align.
-    static let sheetInset: CGFloat = 32
-    /// §8: the failed callout goes by itself after 5 s nobody touches the page.
+    static let sheetInset: CGFloat = 20
     static let calloutIdle = Duration.seconds(5)
 }
 
-/// Where the sheet of Review Each Item is on the screen. §7.4.1 puts its edge 300 under the top,
-/// but the system places a sheet of a given height a little higher on some versions, and the
-/// sheet moves when it is pulled: the sheet measures its own top edge here, and the scrim and
-/// the「locate」framing go by that. `extra` is what the system added on top of the requested
-/// height (0 where it does not), taken off the next time the sheet comes up.
+/// Tracks the live top edge of ReviewSheet so "Locate" frames items above the sheet cleanly.
 @Observable @MainActor
 final class SheetGeometry {
     static let shared = SheetGeometry()
 
-    /// The sheet's top edge on the screen, as last measured (the §7.4.1 value before any).
     var top: CGFloat = EditorLayout.sheetTop
-    /// How much lower the sheet has to be asked for so that its edge comes to `EditorLayout.sheetTop`.
     var extra: CGFloat = 0
 
-    /// What the system added on top of the height that was asked for, from where the sheet's edge
-    /// came out. That height already had `extraBefore` off, so it goes back on first: on a later
-    /// presentation the edge is measured on a sheet that is already lowered, and the difference
-    /// alone would read as nothing added and let the sheet come up high again.
     nonisolated static func addition(sheetTop: CGFloat, extraBefore: CGFloat, top: CGFloat) -> CGFloat {
         max(0, sheetTop + extraBefore - top)
-    }
-}
-
-/// What is above the sheet of Review Each Item (§7.4.1): black at 32%, and a tap on it closes the
-/// sheet. It covers the picture and the buttons, which are not to be reached while the sheet is up.
-private struct ReviewScrim: View {
-    var body: some View {
-        GeometryReader { proxy in
-            Color.black.opacity(0.32)
-                .frame(height: SheetGeometry.shared.top)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .contentShape(Rectangle())
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
     }
 }

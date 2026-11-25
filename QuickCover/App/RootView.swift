@@ -1,12 +1,17 @@
 import SwiftUI
 
-/// The whole app (design.md §5): one `NavigationStack` whose root is the primer, the picker or the
-/// editor; the picker and the export page are pushed; Review Each Item is a sheet. Always dark
-/// (§11.1), the accent colour is the one of §2.
+/// Root navigation shell following Apple HIG: respects system Light and Dark appearance across
+/// onboarding, image picker, inspector sheet, and export screens, while letting the editor own a
+/// focused dark photo-studio canvas.
 struct RootView: View {
     @State private var shell = ShellModel()
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var systemColorScheme
     @State private var showSelfCheck = false
+
+    private var showsDarkStudio: Bool {
+        shell.page == .editor && shell.path.isEmpty
+    }
 
     var body: some View {
         @Bindable var shell = shell
@@ -14,15 +19,17 @@ struct RootView: View {
             root
                 .navigationDestination(for: Route.self) { route in
                     switch route {
-                    case .picker: PickerScreen()
-                    case .export: ExportScreen()
+                    case .picker:
+                        PickerScreen()
+                    case .export:
+                        ExportScreen()
                     }
                 }
         }
         .environment(shell)
         .environment(shell.editor)
-        .sheet(isPresented: reviewShown) { ReviewSheet().environment(shell).environment(shell.editor) }
-        .preferredColorScheme(.dark)
+        .environment(\.systemColorScheme, systemColorScheme)
+        .preferredColorScheme(showsDarkStudio ? .dark : nil)
         .tint(Theme.accent)
         .task { await shell.start() }
         .onChange(of: scenePhase) { _, phase in
@@ -31,8 +38,6 @@ struct RootView: View {
         .selfCheckEntrance(isPresented: $showSelfCheck)
     }
 
-    /// The root page (design.md §5). Each picture gets its own editor, with none of the state of
-    /// the last one (§7.3.1).
     @ViewBuilder
     private var root: some View {
         switch shell.page {
@@ -41,27 +46,16 @@ struct RootView: View {
         case .picker:
             PickerScreen()
         case .editor:
-            // 标题给推上来的选图页、导出页当返回键的名字（「‹ 編輯」，design.md §5、§7.1）；编辑页自己的导航栏不显示。
-            EditorScreen().id(shell.editor.map { ObjectIdentifier($0) })
+            EditorScreen()
+                .id(shell.editor.map { ObjectIdentifier($0) })
                 .navigationTitle("4.1.1")
-                .toolbar(.hidden, for: .navigationBar)
         case nil:
-            Theme.page
+            Theme.page.ignoresSafeArea()
         }
-    }
-
-    /// The sheet of Review Each Item is the editor's to show (`EditorModel.reviewShown`).
-    private var reviewShown: Binding<Bool> {
-        Binding(
-            get: { shell.editor?.reviewShown ?? false },
-            set: { shown in if !shown { shell.hideReview() } }
-        )
     }
 }
 
 private extension View {
-    /// The way into the self-check page, only in the build made for the owner's phone
-    /// (`SelfCheck/SelfCheckView.swift`): hold the top edge of the screen for two seconds.
     #if SELF_CHECK
     func selfCheckEntrance(isPresented: Binding<Bool>) -> some View {
         self
@@ -73,7 +67,12 @@ private extension View {
     #endif
 }
 
-#Preview {
+#Preview("Light") {
+    RootView()
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark") {
     RootView()
         .preferredColorScheme(.dark)
 }

@@ -5,46 +5,58 @@
       "comment" : "The name under the icon (copy.md §1).",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "秒遮"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "秒遮"
-          }
-        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "QuickCover"
           }
-        }
-      }
-    },
-    "NSPhotoLibraryUsageDescription" : {
-      "comment" : "copy.md §3.3 系统弹窗里的说明 · 3.3.1 · the system prompt",
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "秒遮读你的截图，是为了打开就能把最近一张遮好。图片不离开手机。"
+            "value" : "秒遮"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "秒遮讀取你的螢幕快照，是為了打開時就能把最近一張遮好。圖片不離開手機。"
+            "value" : "秒遮"
           }
-        },
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "QuickCover"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "comment" : "Camera permission for VisionKit document & ID card scanning",
+      "extractionState" : "manual",
+      "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "QuickCover reads your screenshots so it can open with the latest one already covered. Images never leave your phone."
+            "value" : "QuickCover uses the camera to scan documents and ID cards for on-device privacy masking. Images never leave your phone."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮使用相机扫描证件或文稿并在本机遮挡隐私，图片不离开手机。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮使用相機掃描證件或文件並在本機遮擋隱私，圖片不離開手機。"
           }
         }
       }
@@ -53,6 +65,12 @@
       "comment" : "copy.md §3.3 系统弹窗里的说明 · 3.3.2 · the system prompt",
       "extractionState" : "manual",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickCover saves the covered image to Photos."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -64,11 +82,29 @@
             "state" : "translated",
             "value" : "秒遮把遮好的圖儲存到照片。"
           }
-        },
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "comment" : "copy.md §3.3 系统弹窗里的说明 · 3.3.1 · the system prompt",
+      "extractionState" : "manual",
+      "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "QuickCover saves the covered image to Photos."
+            "value" : "QuickCover reads your screenshots so it can open with the latest one already covered. Images never leave your phone."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮读你的截图，是为了打开就能把最近一张遮好。图片不离开手机。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒遮讀取你的螢幕快照，是為了打開時就能把最近一張遮好。圖片不離開手機。"
           }
         }
       }

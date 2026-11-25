@@ -9,67 +9,93 @@ struct CoverPatch: Identifiable {
     let image: CGImage
 }
 
-/// What has to be drawn again: the boxes that are on, and the style they are drawn in.
+/// What has to be drawn again: the enabled boxes and the mask appearance (excluding watermark,
+/// which is rendered as an independent real-time canvas layer in EditorPicture).
 struct CoverKey: Equatable {
     let items: [MaskItem]
-    let style: MaskStyle
+    let appearance: MaskAppearance
+
+    var style: MaskStyle { appearance.style }
 
     init(items: [MaskItem], style: MaskStyle) {
         self.items = items.filter(\.isOn)
-        self.style = style
+        self.appearance = MaskAppearance(style: style)
+    }
+
+    init(items: [MaskItem], appearance: MaskAppearance) {
+        self.items = items.filter(\.isOn)
+        var patchAppearance = appearance
+        patchAppearance.watermark = .off
+        self.appearance = patchAppearance
     }
 }
 
-/// Draws the covers the way the export will (design.md §7.3.2): the same `MaskRenderer`, on the
-/// preview's pixels, so what is on the screen is what the file gets. One patch per box, each made
-/// from a crop of the preview around its box; a crop holds the whole box, so the renderer's cell
-/// size and blur radius come out as they do for the whole picture.
+/// Draws per-box preview patches using the exact same `MaskRenderer` pipeline as full-resolution export.
 enum CoverPainter {
 
-    /// Pixels kept around a box, so a blur doesn't meet the crop's edge.
     static let margin: CGFloat = 4
 
     static func patches(for key: CoverKey, preview: CGImage, scale: CGSize) -> [CoverPatch] {
-        patches(items: key.items, style: key.style, preview: preview, scale: scale)
+        patches(items: key.items, appearance: key.appearance, preview: preview, scale: scale)
     }
 
     static func patches(items: [MaskItem], style: MaskStyle, preview: CGImage, scale: CGSize) -> [CoverPatch] {
+        patches(items: items, appearance: MaskAppearance(style: style), preview: preview, scale: scale)
+    }
+
+    static func patches(items: [MaskItem], appearance: MaskAppearance, preview: CGImage, scale: CGSize) -> [CoverPatch] {
         guard preview.width > 0, preview.height > 0, scale.width > 0, scale.height > 0 else { return [] }
         let imageRect = CGRect(x: 0, y: 0, width: preview.width, height: preview.height)
+        let invScale = CGSize(width: 1 / scale.width, height: 1 / scale.height)
+        let allPreviewFindings = items.filter(\.isOn).flatMap(\.findings).map { $0.scaled(by: invScale) }
+        let medianTextHeight = MaskRenderer.computeMedianTextHeight(in: allPreviewFindings)
+
+        var patchAppearance = appearance
+        patchAppearance.watermark = .off
+
         var patches: [CoverPatch] = []
         for item in items where item.isOn {
             for (index, finding) in item.findings.enumerated() {
-                let inPreview = finding.scaled(by: CGSize(width: 1 / scale.width, height: 1 / scale.height))
+                let inPreview = finding.scaled(by: invScale)
                 let box = inPreview.box.intersection(imageRect)
-                // Whole pixels only, and the margin where the picture has it.
                 let crop = box.insetBy(dx: -margin, dy: -margin)
                     .intersection(imageRect)
                     .integral
                 guard crop.width >= 2, crop.height >= 2, let pixels = preview.cropping(to: crop) else { continue }
-                // Sized as the export sizes it: `textHeight` and `drawnByHand` are what the cells
-                // and the blur's grains are cut by, so they go along with the box.
-                let moved = Finding(kind: inPreview.kind, rule: inPreview.rule,
-                                    quad: inPreview.quad.map { CGPoint(x: $0.x - crop.minX, y: $0.y - crop.minY) },
-                                    evidence: inPreview.evidence, tolerant: inPreview.tolerant,
-                                    textHeight: inPreview.textHeight, drawnByHand: inPreview.drawnByHand)
-                // The preview's pixels are the original's shrunk, so what is counted in pixels is too
-                // (`MaskRenderer.onShrunkPicture`): a small box is not cut coarser here than in the file.
+                let moved = Finding(
+                    kind: inPreview.kind,
+                    rule: inPreview.rule,
+                    quad: inPreview.quad.map { CGPoint(x: $0.x - crop.minX, y: $0.y - crop.minY) },
+                    evidence: inPreview.evidence,
+                    tolerant: inPreview.tolerant,
+                    textHeight: inPreview.textHeight,
+                    drawnByHand: inPreview.drawnByHand
+                )
                 let cut = MaskRenderer.onShrunkPicture(shrink: scale)
-                let drawn = MaskRenderer.flatten(pixels, findings: [moved], style: style,
-                                                 blurGrain: cut.blurGrain, floor: cut.floor)
-                patches.append(CoverPatch(id: "\(item.id).\(index)", frame: crop,
-                                          image: onlyCover(drawn, quad: moved.quad)))
+                let drawn = MaskRenderer.flatten(
+                    pixels,
+                    findings: [moved],
+                    appearance: patchAppearance,
+                    blurGrain: cut.blurGrain,
+                    floor: cut.floor,
+                    stripeOrigin: crop.origin,
+                    medianTextHeight: medianTextHeight
+                )
+                patches.append(CoverPatch(
+                    id: "\(item.id).\(index)",
+                    frame: crop,
+                    image: onlyCover(drawn, quad: moved.quad)
+                ))
             }
         }
         return patches
     }
 
-    /// Keeps the box's own cover and makes the rest of the crop transparent. `flatten` gives back
-    /// the whole crop with the cover pressed in; crops of neighbours overlap, and a later one
-    /// would repaint the picture over an earlier one's cover.
+    /// Keeps the box's own cover and makes the rest of the crop transparent.
     private static func onlyCover(_ image: CGImage, quad: [CGPoint]) -> CGImage {
-        guard let first = quad.first, let context = CGImage.rgbaContext(width: image.width, height: image.height) else { return image }
-        // Top-left pixel coordinates, as the quad is written.
+        guard let first = quad.first, let context = CGImage.rgbaContext(width: image.width, height: image.height) else {
+            return image
+        }
         context.translateBy(x: 0, y: CGFloat(image.height))
         context.scaleBy(x: 1, y: -1)
         let path = CGMutablePath()

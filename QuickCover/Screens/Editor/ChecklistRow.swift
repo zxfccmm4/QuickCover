@@ -1,12 +1,9 @@
 import SwiftUI
 
-/// One row of Review Each Item (design.md §7.4.3, §9.3): what the row is, with its footnote under
-/// it when copy.md gives it one (4.5.14), and a switch at the right. The switch covers or uncovers
-/// that item; a tap on the words shows the item in the picture (4.4.4). To VoiceOver the row is one
-/// element: its name,「已遮」or「沒遮」, the hint 7.2, and 4.4.4 as its one custom action.
+/// Native checklist row for ReviewSheet: tapping the label locates the item in the canvas; toggling
+/// the switch covers or uncovers it; VoiceOver combines the row with a custom "Show in Image" action.
 struct ChecklistRow: View {
     let item: MaskItem
-    ///「人臉 2」: which one of its kind, nil when it is the only one (`EditorModel.ordinal(of:)`).
     let number: Int?
     @Binding var isOn: Bool
     let locate: @MainActor () -> Void
@@ -16,15 +13,19 @@ struct ChecklistRow: View {
     }
 
     var body: some View {
-        RowContent(systemImage: item.rowKind.systemImage,
-                    title: Text(verbatim: title),
-                    footnote: item.rowKind.footnoteKey.map { Text(LocalizedStringKey($0)) }) {
+        RowContent(
+            systemImage: item.rowKind.systemImage,
+            title: Text(verbatim: title),
+            footnote: item.rowKind.footnoteKey.map { Text(LocalizedStringKey($0)) },
+            ground: isOn ? Theme.accent.opacity(0.14) : Theme.fill,
+            tint: isOn ? Theme.accent : Theme.tertiary
+        ) {
             Toggle("", isOn: $isOn)
                 .labelsHidden()
                 .tint(nil)
                 .accessibilityHidden(true)
         }
-        .contentShape(Rectangle())
+        .contentShape(.rect)
         .onTapGesture(perform: locate)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
@@ -35,15 +36,13 @@ struct ChecklistRow: View {
         .accessibilityAction(named: Text("4.4.4")) { locate() }
     }
 
-    /// The name, then the footnote when there is one (§9.3).
     private var label: Text {
         guard let footnote = item.rowKind.footnoteKey else { return Text(verbatim: title) }
         return Text("\(Text(verbatim: title)), \(Text(LocalizedStringKey(footnote)))")
     }
 }
 
-/// The row「遮住所有文字」(design.md §7.4.3): 4.6.1 with 4.6.2 under it and a switch. No tile, as
-/// the mockup has none. Read as one element: 4.6.1, 4.6.2, then the state.
+/// "Cover All Text" toggle row in ReviewSheet.
 struct CoverAllTextRow: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     let isOn: Bool
@@ -52,7 +51,6 @@ struct CoverAllTextRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                // Under the accessibility sizes both take every line they need (design.md §9.5).
                 Text("4.6.1")
                     .font(.body)
                     .foregroundStyle(Theme.body)
@@ -63,18 +61,15 @@ struct CoverAllTextRow: View {
                     .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            // A closure, not the method itself: a main-actor function reference as Binding's
-            // `@Sendable` setter crashes the Xcode 26.5 / 26.6 compiler in Release (see StylePicker).
+
             Toggle("", isOn: Binding(get: { isOn }, set: { setOn($0) }))
                 .labelsHidden()
                 .tint(nil)
-                .padding(.top, 3)
+                .padding(.top, 2)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 9)
-        .frame(minHeight: Metrics.rowMinHeight)
-        .contentShape(Rectangle())
+        .padding(.vertical, 3)
+        .contentShape(.rect)
         .onTapGesture { setOn(!isOn) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(Text("4.6.1")), \(Text("4.6.2"))"))
@@ -84,53 +79,54 @@ struct CoverAllTextRow: View {
     }
 }
 
-/// The reminder between the cards of text (design.md §7.4.3): 4.4.3 with a 15 pt
-/// `exclamationmark.triangle` in `#C86A00`, and the text button 4.8.3 at the right. It is a line,
-/// not a card (the mockup `7-4-review` has no ground under it). Read as 4.4.3, then the button.
+/// Adaptive inline reminder shown under "Cover All Text" when uncovered text remains.
+/// Uses `ViewThatFits` so narrow screens and large text stack cleanly without clipping.
 struct UncoveredTextReminder: View {
     let draw: @MainActor () -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Theme.blurNoticeIcon)
-                .accessibilityHidden(true)
-            Text("4.4.3")
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryLabel)
-                .lineLimit(3)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        Group {
+            if typeSize.isAccessibilitySize {
+                stacked
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center, spacing: 8) {
+                        icon
+                        Text("4.4.3")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.secondaryLabel)
+                            .fixedSize(horizontal: true, vertical: false)
+                        Spacer(minLength: 8)
+                        TextButton(title: "4.8.3", action: draw)
+                    }
+                    stacked
+                }
+            }
+        }
+        .textCase(nil)
+    }
+
+    private var stacked: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 8) {
+                icon
+                    .padding(.top, 1)
+                Text("4.4.3")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryLabel)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             TextButton(title: "4.8.3", action: draw)
-                // 36 high, but 44 to the touch (§9.5).
-                .frame(minHeight: Metrics.minimumTarget)
-                .contentShape(Rectangle())
+                .padding(.leading, 15)
         }
-        .padding(.horizontal, 16)
     }
-}
 
-/// A card of the sheet (design.md §4): corner 12, `#1C1C1E`, rows one under the other with a
-/// 0.5 pt line between them from 16 in to the right edge.
-struct ChecklistCard<Content: View>: View {
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        VStack(spacing: 0) {
-            content()
-        }
-        .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous).fill(Theme.card))
-    }
-}
-
-/// The line between two rows of a card (design.md §4).
-struct RowSeparator: View {
-    var body: some View {
-        Rectangle()
-            .fill(Theme.separator)
-            .frame(height: 0.5)
-            .padding(.leading, Metrics.pageInset)
+    private var icon: some View {
+        Image(systemName: "exclamationmark.triangle.fill")
+            .font(.footnote)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(Theme.blurNoticeIcon)
             .accessibilityHidden(true)
     }
 }

@@ -58,17 +58,42 @@ struct ExportFactsTests {
         #expect(facts.pictureMaxHeight == 380)
     }
 
-    /// 有没有提醒条只看模糊那条和马赛克那条，图的高度跟着它（design.md §7.5.2）。
-    /// 样式 × 这一次选的 × 图里有没有文字类遮罩，八种组合。
+    @Test
+    func stripesShowsItsNoticeWhenTextIsCoveredAndNoneForFacesOnly() {
+        let withText = ExportFacts(style: .stripes, stripMetadata: true, blurPickedThisTime: false, coversText: true)
+        #expect(withText.showsStripesNotice)
+        #expect(withText.showsNotice)
+        #expect(withText.noticeKey == "6.3.5")
+        #expect(!withText.showsCoveredLine)
+        #expect(withText.pictureMaxHeight == 285)
+
+        let facesOnly = ExportFacts(style: .stripes, stripMetadata: true, blurPickedThisTime: false, coversText: false)
+        #expect(!facesOnly.showsStripesNotice)
+        #expect(!facesOnly.showsNotice)
+        #expect(facesOnly.noticeKey == nil)
+        #expect(facesOnly.pictureMaxHeight == 380)
+    }
+
+    @Test(arguments: [MaskStyle.solid, .conceal, .emoji])
+    func zeroTraceStylesShowCoveredLineAndNoNotice(style: MaskStyle) {
+        let facts = ExportFacts(style: style, stripMetadata: true, blurPickedThisTime: false, coversText: true)
+        #expect(facts.showsCoveredLine)
+        #expect(!facts.showsNotice)
+        #expect(facts.noticeKey == nil)
+        #expect(facts.pictureMaxHeight == 380)
+    }
+
+    /// Every combination of style × blurPickedThisTime × coversText across all 6 mask styles.
     @Test(arguments: MaskStyle.allCases.flatMap { style in
         [false, true].flatMap { picked in [false, true].map { covers in (style, picked, covers) } }
     })
     func thePictureIsShorterOnlyUnderANotice(style: MaskStyle, blurPickedThisTime: Bool, coversText: Bool) {
         let facts = ExportFacts(style: style, stripMetadata: true, blurPickedThisTime: blurPickedThisTime, coversText: coversText)
-        #expect(facts.showsCoveredLine == (style == .solid))
+        #expect(facts.showsCoveredLine == style.leavesNoTrace)
         #expect(facts.showsBlurNotice == (style == .blur && !blurPickedThisTime))
         #expect(facts.showsMosaicNotice == (style == .mosaic && coversText))
-        #expect(facts.showsNotice == (facts.showsBlurNotice || facts.showsMosaicNotice))
+        #expect(facts.showsStripesNotice == (style == .stripes && coversText))
+        #expect(facts.showsNotice == (facts.showsBlurNotice || facts.showsMosaicNotice || facts.showsStripesNotice))
         #expect(facts.pictureMaxHeight == (facts.showsNotice ? 285 : 380))
     }
 

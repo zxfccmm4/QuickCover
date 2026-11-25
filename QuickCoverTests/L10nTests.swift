@@ -115,14 +115,26 @@ struct L10nTests {
 
     @Test
     func everySymbolTheSpecNamesExists() {
-        let names = RowKind.allCases.map(\.systemImage) + [
-            "camera.viewfinder", "photo", "folder", "clipboard", "chevron.right",
-            "photo.on.rectangle", "list.bullet", "arrow.uturn.backward", "arrow.uturn.forward",
-            "rectangle.dashed", "eye", "exclamationmark.triangle", "exclamationmark.circle",
-            "checkmark", "viewfinder", "square.and.arrow.up",
+        let names = RowKind.allCases.map(\.systemImage) + MaskStyle.allCases.map(\.systemImage) + [
+            "camera.viewfinder", "photo", "photo.on.rectangle.angled", "folder", "clipboard", "chevron.right",
+            "doc.viewfinder", "photo.on.rectangle", "list.bullet", "arrow.uturn.backward",
+            "arrow.uturn.forward", "rectangle.dashed", "eye", "exclamationmark.triangle",
+            "exclamationmark.circle", "checkmark", "checkmark.circle.fill", "checkmark.shield.fill",
+            "shield", "lock.shield.fill", "location.slash.fill", "sparkles", "viewfinder",
+            "square.and.arrow.up", "checkerboard.shield", "swatchpalette", "trash",
+            "person.crop.rectangle", "text.quote", "qrcode", "arrow.down.right.and.arrow.up.left",
         ]
         for name in names {
             #expect(UIImage(systemName: name) != nil, "\(name)")
         }
+    }
+
+    @Test
+    func coveredCountFormatsCleanlyInEveryLanguage() {
+        #expect(L10n.coveredCount(4, bundle: bundle("zh-Hans")) == "已遮 4 处")
+        #expect(L10n.coveredCount(0, bundle: bundle("zh-Hans")) == "未遮挡")
+        #expect(L10n.coveredCount(3, bundle: bundle("zh-Hant")) == "已遮 3 處")
+        #expect(L10n.coveredCount(2, bundle: bundle("en")) == "2 Covered")
+        #expect(L10n.coveredCount(0, bundle: bundle("en")) == "None Covered")
     }
 }

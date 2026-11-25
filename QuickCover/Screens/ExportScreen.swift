@@ -1,12 +1,9 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// 导出页（design.md §7.5，copy.md §6.1–§6.4）：「匯出」推过来，系统导航栏，标题 6.1.1、「‹ 編輯」。
-/// 页面从上到下能滚：导出样子的图（`CoveredPicture`）、6.1.2、位置信息开关那一行（6.2.1，`EditorModel.setStripMetadata`）、
-/// 6.2.4（只在纯色下有）。上次留下的模糊时，卡片下面是 6.3.1 加小按钮 6.3.2「改用純色」，字和按钮并排；样式是马赛克、
-/// 图里有文字类的遮罩时（这次自己选的也一样）是 6.3.3 加同一个小按钮，字两行占满宽、按钮在字下面 6（规格 1.6）。
-/// 两条一个位置、一个颜色。只有人脸、只有码或自己框的图在马赛克下两条都没有。有提醒条时图最高 285。
-/// 钉在底部的是主按钮 6.1.3 和并排的次按钮 6.1.4、6.1.5，上面一层 20 的渐变；存失败时按钮上面出 6.4.2 加 6.4.3；
-/// 存好、拷贝好，导航栏下面出 toast（6.4.1 / 6.4.4），人还在这一页。
+/// Native Apple Export & Share screen using adaptive Light/Dark grouped styling, concentric preview
+/// with hold-to-compare, glanceable privacy-status summary pills, export format & metadata controls,
+/// iOS 26 `.safeAreaBar(edge: .bottom)`, native SwiftUI `ShareLink`, and iOS 27 `.copyable`.
 struct ExportScreen: View {
     @Environment(ShellModel.self) private var shell
     @Environment(EditorModel.self) private var model
@@ -17,101 +14,234 @@ struct ExportScreen: View {
     @State private var toastTask: Task<Void, Never>?
     @State private var saveFailed = false
     @State private var isSaving = false
-    @State private var shareFile: ShareFile?
+    @State private var renderedPreview: CGImage?
+
+    @State private var successFeedbackCount = 0
+    @State private var errorFeedbackCount = 0
+    @State private var selectionFeedbackCount = 0
 
     private var facts: ExportFacts {
-        ExportFacts(style: model.preferences.style,
-                    stripMetadata: model.preferences.stripMetadata,
-                    blurPickedThisTime: shell.stylePickedThisTime == .blur,
-                    coversText: model.coversText)
+        ExportFacts(
+            style: model.preferences.style,
+            stripMetadata: model.preferences.stripMetadata,
+            blurPickedThisTime: shell.stylePickedThisTime == .blur,
+            coversText: model.coversText
+        )
     }
 
     private var stripMetadata: Binding<Bool> {
         Binding(get: { model.preferences.stripMetadata }, set: { model.setStripMetadata($0) })
     }
 
+    private var exportFormat: Binding<ExportFormat> {
+        Binding(get: { model.preferences.exportFormat }, set: {
+            model.setExportFormat($0)
+            selectionFeedbackCount += 1
+        })
+    }
+
+    private var shareItem: CoveredImageExport {
+        CoveredImageExport(
+            picture: model.picture,
+            findings: model.enabledItems.flatMap(\.findings),
+            options: model.exportOptions
+        )
+    }
+
+    private var sharePreviewImage: Image {
+        Image(decorative: renderedPreview ?? model.preview, scale: 1)
+    }
+
+    private var resolvedFormatBadge: String {
+        let target = model.preferences.exportFormat.utType(original: model.picture.fileType)
+        if target == .png { return "PNG" }
+        if target == .heic { return "HEIC" }
+        if target == .jpeg { return "JPEG" }
+        return target.preferredFilenameExtension?.uppercased() ?? "IMAGE"
+    }
+
     var body: some View {
-        // design.md §9.5: from AX1 on the text is taller than the screen, so the buttons stand at
-        // the end of it and scroll with it, and the text keeps the whole screen.
         let buttonsScroll = typeSize.isAccessibilitySize
         let facts = facts
+
         ZStack(alignment: .top) {
             ScrollView {
                 VStack(spacing: 0) {
                     page(facts)
                     if buttonsScroll {
                         buttons
+                            .padding(.top, 16)
                     }
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 20)
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if !buttonsScroll { bottomBar }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollEdgeEffectStyle(.soft, for: .all)
+            .safeAreaBar(edge: .bottom, spacing: 0) {
+                if !buttonsScroll {
+                    buttons
+                        .padding(.top, 6)
+                }
             }
+
             if let toastText {
-                // toast 本身不进读屏的顺序（design.md §9.4），念的那一句在 `showToast` 里发。
-                Toast(text: LocalizedStringKey(toastText), isShown: toastShown,
-                      fadeIn: ExportToastTiming.fadeIn, fadeOut: ExportToastTiming.fadeOut)
-                    .accessibilityHidden(true)
-                    .padding(.top, 11)
+                Toast(
+                    text: LocalizedStringKey(toastText),
+                    isShown: toastShown,
+                    fadeIn: ExportToastTiming.fadeIn,
+                    fadeOut: ExportToastTiming.fadeOut
+                )
+                .accessibilityHidden(true)
+                .padding(.top, 12)
             }
         }
         .background(Theme.page.ignoresSafeArea())
         .navigationTitle("6.1.1")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $shareFile) { ShareSheet(file: $0) }
+        .sensoryFeedback(.success, trigger: successFeedbackCount)
+        .sensoryFeedback(.error, trigger: errorFeedbackCount)
+        .sensoryFeedback(.selection, trigger: selectionFeedbackCount)
         .onChange(of: saveFailed) { _, failed in
             if failed { AccessibilityNotification.Announcement(L10n.text("6.4.2")).post() }
         }
     }
 
-    /// 从图到提醒条（design.md §7.5.1 第 1–4 条、§7.5.2）：按钮以外能滚的全部。
     @ViewBuilder
     private func page(_ facts: ExportFacts) -> some View {
-        CoveredPicture(editor: model,
-                       size: facts.pictureSize(aspect: Self.aspect(of: model.preview)))
-            .padding(.top, 12)
-        Text("6.1.2")
-            .font(.footnote)
-            .foregroundStyle(Theme.secondaryLabel)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 32)
-            .padding(.top, 10)
-            .padding(.bottom, 22)
-        ExportToggleRow(title: "6.2.1", footnote: facts.footnote, isOn: stripMetadata)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
-            .padding(.horizontal, 16)
+        CoveredPicture(
+            editor: model,
+            size: facts.pictureSize(aspect: Self.aspect(of: model.preview))
+        ) { rendered in
+            renderedPreview = rendered
+        }
+        .copyableTransferable([shareItem])
+        .padding(.top, 14)
+
+        VStack(spacing: 7) {
+            privacySummaryStrip
+
+            Text("6.1.2")
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryLabel)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
+        }
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+
+        VStack(spacing: 0) {
+            ExportToggleRow(title: "6.2.1", footnote: facts.footnote, isOn: stripMetadata)
+
+            Divider()
+                .padding(.leading, 16)
+
+            exportFormatRow
+        }
+        .background(
+            ConcentricRectangle(corners: .concentric(minimum: 18), isUniform: true)
+                .fill(Theme.card)
+        )
+        .padding(.horizontal, Metrics.pageInset)
+
         if facts.showsCoveredLine {
             coveredLine
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, 28)
                 .padding(.top, 10)
         }
-        // 两条提醒一个位置、一个样子，按钮都是 6.3.2，只有那句不同（copy.md §6.3）。6.3.3 一行放不下，
-        // 提醒条自己改成上下排（`NoticeBar.stacksWhenTooWide`）。
-        if facts.showsNotice {
-            NoticeBar(systemImage: "exclamationmark.triangle", tint: Theme.blurNoticeIcon,
-                      ground: Theme.blurNotice, text: facts.showsMosaicNotice ? "6.3.3" : "6.3.1",
-                      stacksWhenTooWide: true) {
+
+        if let noticeKey = facts.noticeKey {
+            NoticeBar(
+                systemImage: "exclamationmark.triangle.fill",
+                tint: Theme.blurNoticeIcon,
+                ground: Theme.blurNotice,
+                text: noticeKey,
+                stacksWhenTooWide: true
+            ) {
                 SmallButton(title: "6.3.2") { switchToSolid() }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
+            .padding(.horizontal, Metrics.pageInset)
+            .padding(.top, 12)
         }
     }
 
-    /// 6.3.2「改用純色」：换成纯色，给一次「选」的触感（design.md §8「换样式」）。
-    private func switchToSolid() {
-        UISelectionFeedbackGenerator().selectionChanged()
-        model.setStyle(.solid)
+    private var privacySummaryStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                Text("\(Int(model.size.width)) × \(Int(model.size.height)) · \(resolvedFormatBadge)")
+                    .font(.caption.weight(.medium).monospacedDigit())
+                    .foregroundStyle(Theme.secondaryLabel)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Theme.fill))
+
+                if !model.enabledItems.isEmpty {
+                    Label(L10n.coveredCount(model.enabledItems.count), systemImage: "checkmark.shield.fill")
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Theme.accent.opacity(0.12)))
+                }
+
+                if model.preferences.stripMetadata {
+                    Label("export.metadataStripped", systemImage: "location.slash.fill")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Theme.accent.opacity(0.12)))
+                }
+
+                if model.watermark.isActive {
+                    Label("wm.title", systemImage: "checkerboard.shield")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Theme.accent.opacity(0.12)))
+                        .accessibilityLabel("export.watermarkActive")
+                }
+            }
+            .padding(.horizontal, Metrics.pageInset)
+            .frame(minWidth: 0, maxWidth: .infinity)
+        }
     }
 
-    /// 6.2.4 那一行（design.md §7.5.1 第 4 条）：前面一个 15 pt 的 `checkmark`。
+    private var exportFormatRow: some View {
+        HStack(spacing: 12) {
+            Text("export.format")
+                .font(.body)
+                .foregroundStyle(Theme.body)
+
+            Spacer(minLength: 8)
+
+            Picker("export.format", selection: exportFormat) {
+                ForEach(ExportFormat.allCases) { format in
+                    Text(LocalizedStringKey(format.titleKey)).tag(format)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .tint(Theme.accent)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(minHeight: Metrics.rowMinHeight)
+    }
+
+    private func switchToSolid() {
+        selectionFeedbackCount += 1
+        withAnimation(.snappy(duration: 0.25)) {
+            model.setStyle(.solid)
+        }
+    }
+
     private var coveredLine: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: "checkmark")
-                .font(.system(size: 15, weight: .semibold))
-                .symbolRenderingMode(.monochrome)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.footnote.weight(.semibold))
+                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Theme.accent)
                 .accessibilityHidden(true)
             Text("6.2.4")
@@ -120,45 +250,66 @@ struct ExportScreen: View {
         }
     }
 
-    /// 钉在底部的按钮区（design.md §7.5.1 第 5 条）：上面 20 的渐变，再是按钮。辅助功能档下按钮滚进
-    /// 内容里（§9.5），渐变就不要了。
-    private var bottomBar: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [.clear, Theme.page], startPoint: .top, endPoint: .bottom)
-                .frame(height: 20)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-            buttons
-        }
-        .background(Theme.page.ignoresSafeArea(edges: .bottom))
-    }
-
-    /// 主按钮 6.1.3，下面 10 是并排的 6.1.4、6.1.5；左右 16、上 12、下 12 加离底部安全区 8。
-    /// 存失败时主按钮上面 12 先出提醒条（§7.5.3）。
     private var buttons: some View {
-        VStack(spacing: 12) {
-            if saveFailed {
-                NoticeBar(systemImage: "exclamationmark.circle", tint: Theme.errorIcon,
-                          ground: Theme.fillTwo, text: "6.4.2") {
-                    TextButton(title: "6.4.3") { save() }
+        GlassEffectContainer(spacing: 10) {
+            VStack(spacing: 12) {
+                if saveFailed {
+                    NoticeBar(
+                        systemImage: "exclamationmark.circle.fill",
+                        tint: Theme.errorIcon,
+                        ground: Theme.fillTwo,
+                        text: "6.4.2"
+                    ) {
+                        TextButton(title: "6.4.3") { save() }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+
+                VStack(spacing: 10) {
+                    PrimaryButton(
+                        title: "6.1.3",
+                        systemImage: "square.and.arrow.down",
+                        isBusy: isSaving
+                    ) {
+                        save()
+                    }
+
+                    HStack(spacing: 10) {
+                        ShareLink(
+                            item: shareItem,
+                            preview: SharePreview(L10n.text("6.1.1"), image: sharePreviewImage)
+                        ) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .fontWeight(.semibold)
+                                Text("6.1.4")
+                                    .font(.buttonText)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.center)
+                                    .minimumScaleFactor(0.85)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.glass)
+                        .buttonBorderShape(.capsule)
+                        .buttonSizing(.flexible)
+                        .controlSize(.large)
+
+                        SecondaryButton(title: "6.1.5", systemImage: "doc.on.doc") {
+                            copy()
+                        }
+                    }
                 }
             }
-            VStack(spacing: 10) {
-                PrimaryButton(title: "6.1.3") { save() }
-                HStack(spacing: 10) {
-                    SecondaryButton(title: "6.1.4") { share() }
-                    SecondaryButton(title: "6.1.5") { copy() }
-                }
-            }
+            .padding(.horizontal, Metrics.pageInset)
+            .padding(.bottom, 16)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 20)
+        .animation(.snappy(duration: 0.25), value: saveFailed)
     }
 
-    // MARK: - Doing it
+    // MARK: - Actions
 
-    /// 6.1.3「儲存到照片」：导出，存进图库。没存成就换成 6.4.2；存成了提醒收起，出 toast。存的时候不接第二下。
     private func save() {
         guard !isSaving else { return }
         isSaving = true
@@ -168,33 +319,26 @@ struct ExportScreen: View {
                 let data = try await model.exportData()
                 try await ExportActions.saveToPhotos(data)
                 saveFailed = false
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                successFeedbackCount += 1
                 showToast("6.4.1")
             } catch {
-                UINotificationFeedbackGenerator().notificationOccurred(.error)
+                errorFeedbackCount += 1
                 saveFailed = true
             }
         }
     }
 
-    /// 6.1.4「分享」：导出，交给系统的分享面板。
-    private func share() {
-        Task { @MainActor in
-            if let data = try? await model.exportData() { shareFile = ShareFile(data: data) }
-        }
-    }
-
-    /// 6.1.5「拷貝」：导出，原样放到剪贴板，出 toast。
     private func copy() {
         Task { @MainActor in
             if let data = try? await model.exportData() {
-                ExportActions.copy(data, fileType: model.picture.fileType)
+                let targetType = model.preferences.exportFormat.utType(original: model.picture.fileType)
+                ExportActions.copy(data, fileType: targetType)
+                successFeedbackCount += 1
                 showToast("6.4.4")
             }
         }
     }
 
-    /// toast（design.md §7.5.4）：淡入、停 1.6 秒、淡出，淡完从页面上拿掉；读屏同时念一遍（§9.4）。
     private func showToast(_ text: String) {
         toastTask?.cancel()
         toastText = text

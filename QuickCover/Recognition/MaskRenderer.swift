@@ -1,71 +1,265 @@
 import CoreGraphics
+import CoreText
 import Foundation
 import ImageIO
+import UIKit
 import UniformTypeIdentifiers
 
 /// How a covered area looks in the result.
-enum MaskStyle: String, CaseIterable, Codable, Sendable {
+enum MaskStyle: String, CaseIterable, Codable, Sendable, Identifiable {
     case mosaic
+    case stripes
+    case conceal
     case solid
     case blur
+    case emoji
+
+    var id: String { rawValue }
 
     /// Mosaic is the default: it hides well and still reads as "this was something".
     static let `default` = MaskStyle.mosaic
+
+    /// SF Symbol representing this style in the quick style tray and menus.
+    var systemImage: String {
+        switch self {
+        case .mosaic: "squareshape.split.3x3"
+        case .stripes: "line.diagonal"
+        case .conceal: "wand.and.stars"
+        case .solid: "rectangle.fill"
+        case .blur: "drop.halffull"
+        case .emoji: "face.smiling"
+        }
+    }
+
+    /// Localization key for the style's display name.
+    var titleKey: String {
+        switch self {
+        case .mosaic: "4.7.2"
+        case .stripes: "4.7.6"
+        case .conceal: "style.conceal"
+        case .solid: "4.7.3"
+        case .blur: "4.7.4"
+        case .emoji: "style.emoji"
+        }
+    }
+
+    /// Whether this style completely replaces covered pixels with flat/opaque content (no residual
+    /// luminance trace of underlying text).
+    var leavesNoTrace: Bool {
+        switch self {
+        case .solid, .conceal, .emoji: true
+        case .mosaic, .stripes, .blur: false
+        }
+    }
+
+    /// Whether mosaic/blur granularity controls apply to this style.
+    var supportsStrength: Bool {
+        switch self {
+        case .mosaic, .stripes, .blur: true
+        case .conceal, .solid, .emoji: false
+        }
+    }
 }
 
-/// Presses the masks into the pixels. Pure CoreGraphics, so a 48 MP picture costs about
-/// two copies of its pixels and nothing more.
+/// Curated Apple-inspired opaque fill colors for `.solid` style.
+enum SolidColorPreset: String, CaseIterable, Codable, Sendable, Identifiable {
+    case black
+    case white
+    case graphite
+    case teal
+    case sand
+
+    var id: String { rawValue }
+
+    var rgba: (r: CGFloat, g: CGFloat, b: CGFloat) {
+        switch self {
+        case .black: (0, 0, 0)
+        case .white: (1, 1, 1)
+        case .graphite: (0.173, 0.173, 0.180)
+        case .teal: (0.043, 0.478, 0.478)
+        case .sand: (0.910, 0.886, 0.839)
+        }
+    }
+
+    var cgColor: CGColor {
+        let c = rgba
+        return CGColor(colorSpace: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+                       components: [c.r, c.g, c.b, 1])!
+    }
+
+    var titleKey: String {
+        "color.\(rawValue)"
+    }
+}
+
+/// Adjustable mosaic/blur granularity while keeping `.standard` identical to the security baseline.
+enum MaskStrength: String, CaseIterable, Codable, Sendable, Identifiable {
+    case fine
+    case standard
+    case coarse
+
+    var id: String { rawValue }
+
+    var multiplier: CGFloat {
+        switch self {
+        case .fine: 0.75
+        case .standard: 1.0
+        case .coarse: 1.45
+        }
+    }
+
+    var titleKey: String {
+        "strength.\(rawValue)"
+    }
+}
+
+/// Export container format choice.
+enum ExportFormat: String, CaseIterable, Codable, Sendable, Identifiable {
+    case original
+    case jpeg
+    case png
+
+    var id: String { rawValue }
+
+    var titleKey: String {
+        "export.format.\(rawValue)"
+    }
+
+    func utType(original: UTType?) -> UTType {
+        switch self {
+        case .original: original ?? .jpeg
+        case .jpeg: .jpeg
+        case .png: .png
+        }
+    }
+}
+
+/// Curated emojis for `.emoji` sticker covering.
+enum EmojiPreset {
+    static let all = ["😎", "🙂", "🐱", "🐶", "🌸", "✨"]
+    static let `default` = "😎"
+}
+
+/// Anti-theft tiled diagonal watermark settings for ID cards, licenses, and documents.
+struct WatermarkOptions: Equatable, Codable, Sendable {
+    enum Density: String, CaseIterable, Codable, Sendable, Identifiable {
+        case sparse
+        case medium
+        case dense
+
+        var id: String { rawValue }
+
+        var titleKey: String { "wm.density.\(rawValue)" }
+
+        /// Vertical spacing in multiples of font size.
+        var rowSpacingFactor: CGFloat {
+            switch self {
+            case .sparse: 5.2
+            case .medium: 3.4
+            case .dense: 2.3
+            }
+        }
+
+        /// Horizontal gap between repeated labels in multiples of font size.
+        var columnGapFactor: CGFloat {
+            switch self {
+            case .sparse: 4.0
+            case .medium: 2.6
+            case .dense: 1.7
+            }
+        }
+    }
+
+    enum Tint: String, CaseIterable, Codable, Sendable, Identifiable {
+        case white
+        case slate
+        case red
+
+        var id: String { rawValue }
+
+        var titleKey: String { "wm.color.\(rawValue)" }
+
+        func uiColor(alpha: CGFloat) -> UIColor {
+            switch self {
+            case .white: UIColor.white.withAlphaComponent(alpha)
+            case .slate: UIColor(red: 0.16, green: 0.16, blue: 0.18, alpha: alpha)
+            case .red: UIColor(red: 0.85, green: 0.16, blue: 0.16, alpha: alpha)
+            }
+        }
+    }
+
+    var isEnabled: Bool = false
+    var text: String = ""
+    var opacity: Double = 0.28
+    var density: Density = .medium
+    var tint: Tint = .slate
+
+    var isActive: Bool {
+        isEnabled && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    static let off = WatermarkOptions()
+}
+
+/// Appearance bundle passed consistently to both preview (`CoverPainter`) and full-res export (`MaskRenderer`).
+struct MaskAppearance: Equatable, Codable, Sendable {
+    var style: MaskStyle = .default
+    var solidColor: SolidColorPreset = .black
+    var emoji: String = EmojiPreset.default
+    var strength: MaskStrength = .standard
+    var watermark: WatermarkOptions = .off
+
+    static let `default` = MaskAppearance()
+}
+
+/// Presses the masks (and optional anti-theft watermark) permanently into image pixels.
+/// Pure CoreGraphics, keeping peak memory bounded even on 48 MP photos.
 enum MaskRenderer {
 
     struct Options: Sendable {
         var style: MaskStyle = .default
+        var solidColor: SolidColorPreset = .black
+        var emoji: String = EmojiPreset.default
+        var strength: MaskStrength = .standard
+        var watermark: WatermarkOptions = .off
         /// The export leaves out location and other metadata of the original.
         var stripMetadata = true
+        var format: ExportFormat = .original
         var quality = 0.95
         /// How coarse the blur is. The app leaves it at the shipped grain; the probe tries others.
         var blurGrain: BlurGrain = .default
+
+        var appearance: MaskAppearance {
+            MaskAppearance(
+                style: style,
+                solidColor: solidColor,
+                emoji: emoji,
+                strength: strength,
+                watermark: watermark
+            )
+        }
     }
 
-    /// How coarse the blur is over a face: a face `height` pixels tall gets one blurred grain to
-    /// every `divisor`th of its height, but never one under `floor` pixels. Everything else is cut
-    /// by a base or, drawn by hand, by its own height, its blur the same way as its mosaic (`grid`).
     struct BlurGrain: Equatable, Sendable {
         var divisor: CGFloat
         var floor: CGFloat
 
         func cell(forHeight height: CGFloat) -> CGFloat { max(floor, height / divisor) }
 
-        /// The numbers a mosaic over a face is cut by. Measured on the fixtures
-        /// (`RenderProbeTests`) while text was still cut this way: with a tenth and a floor of 10,
-        /// Vision still read runs of 3–5 characters of card and ID numbers through the blur; with
-        /// these, no more than one character in a row.
         static let `default` = BlurGrain(divisor: 6, floor: 12)
     }
 
-    /// The grains one covered box is cut into: the mosaic's cells, or, for the blur, the pixels the
-    /// part of the picture under it is squeezed through. `columns` across and `rows` down, they
-    /// share the box exactly between them (`grain(in:)`), so a cover never reaches past its box.
     struct Grid: Equatable, Sendable {
         let columns: Int
         let rows: Int
 
-        /// One grain over `bounds`.
         func grain(in bounds: CGRect) -> CGSize {
             CGSize(width: bounds.width / CGFloat(columns), height: bounds.height / CGFloat(rows))
         }
     }
 
-    /// The smallest base, in pixels of the picture: no cell is under it but a single one over a
-    /// box narrower than it.
     static let mosaicFloor: CGFloat = 12
 
-    /// `blurGrain` and `floor` for `flatten` on a picture that is the original shrunk by `shrink`
-    /// (the editor's preview: one of its pixels is `shrink` of the original's). What is counted in
-    /// pixels — the floors of a cell and of a blur grain — is shrunk with it, so a box is cut over
-    /// the same part of the picture as in the file: with the floors as they stand, a box smaller
-    /// than twice a floor came out coarser on the screen than in the file. Shrunk by the way it is
-    /// shrunk less, so that, shrunk unevenly, it never comes out finer than in the file. Over the
-    /// file itself, shrunk by one, they stand as they are.
     static func onShrunkPicture(shrink: CGSize, blurGrain: BlurGrain = .default)
         -> (blurGrain: BlurGrain, floor: CGFloat) {
         let by = min(shrink.width, shrink.height)
@@ -77,20 +271,27 @@ enum MaskRenderer {
         case cannotEncode
     }
 
-    /// The encoded result file: same pixel size as the source, upright, masks pressed in.
+    /// The encoded result file: same pixel size as the source, upright, masks & optional watermark pressed in.
     static func encode(_ source: CGImageSource, orientation: CGImagePropertyOrientation,
                        findings: [Finding], options: Options = Options()) throws -> Data {
         let decode = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let raw = CGImageSourceCreateImageAtIndex(source, 0, decode) else { throw Failure.cannotDecode }
         let upright = raw.oriented(orientation)
-        let flat = flatten(upright, findings: findings, style: options.style, blurGrain: options.blurGrain)
+        let flat = flatten(
+            upright,
+            findings: findings,
+            appearance: options.appearance,
+            blurGrain: options.blurGrain
+        )
 
-        let fileType = (CGImageSourceGetType(source) as String?) ?? UTType.jpeg.identifier
+        let sourceType = (CGImageSourceGetType(source) as String?).flatMap(UTType.init)
+        let targetType = options.format.utType(original: sourceType)
         let data = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(data, fileType as CFString, 1, nil) else { throw Failure.cannotEncode }
+        guard let destination = CGImageDestinationCreateWithData(data, targetType.identifier as CFString, 1, nil) else {
+            throw Failure.cannotEncode
+        }
         var properties: [CFString: Any] = [kCGImageDestinationLossyCompressionQuality: options.quality]
         if !options.stripMetadata, let original = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
-            // The pixels are upright already, so the rotation tag must not be carried over.
             var tiff = original[kCGImagePropertyTIFFDictionary] as? [CFString: Any] ?? [:]
             tiff[kCGImagePropertyTIFFOrientation] = 1
             properties[kCGImagePropertyTIFFDictionary] = tiff
@@ -102,119 +303,153 @@ enum MaskRenderer {
         return data as Data
     }
 
-    /// `image` is upright; findings are in its pixels, top-left origin. So are `blurGrain` and
-    /// `floor`: over the original they stand as they are, over the editor's shrunk preview
-    /// `onShrunkPicture` gives them.
+    /// Convenience entry point keeping full source compatibility with existing callers and tests.
     static func flatten(_ image: CGImage, findings: [Finding], style: MaskStyle,
                         blurGrain: BlurGrain = .default, floor: CGFloat = mosaicFloor) -> CGImage {
-        guard !findings.isEmpty, let context = CGImage.rgbaContext(width: image.width, height: image.height) else { return image }
+        flatten(
+            image,
+            findings: findings,
+            appearance: MaskAppearance(style: style),
+            blurGrain: blurGrain,
+            floor: floor
+        )
+    }
+
+    /// Full-featured pixel flattening supporting all 6 masking styles, custom colors, granularity,
+    /// and diagonal anti-theft watermarks.
+    static func flatten(
+        _ image: CGImage,
+        findings: [Finding],
+        appearance: MaskAppearance,
+        blurGrain: BlurGrain = .default,
+        floor: CGFloat = mosaicFloor,
+        stripeOrigin: CGPoint = .zero,
+        medianTextHeight: CGFloat? = nil
+    ) -> CGImage {
+        let hasWatermark = appearance.watermark.isActive
+        guard (!findings.isEmpty || hasWatermark),
+              let context = CGImage.rgbaContext(width: image.width, height: image.height) else {
+            return image
+        }
         let width = CGFloat(image.width)
         let height = CGFloat(image.height)
         context.interpolationQuality = .high
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
 
-        // From here on the context works in top-left pixel coordinates, the same as findings.
+        let resolvedMedianTextHeight = medianTextHeight ?? computeMedianTextHeight(in: findings)
+
+        // Top-left pixel coordinates matching findings.
+        context.saveGState()
         context.translateBy(x: 0, y: height)
         context.scaleBy(x: 1, y: -1)
-        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+
         for finding in findings {
-            // Every box apart: a value wrapped onto two lines is two boxes, and what lies between
-            // them on the picture stays as it is.
             for quad in finding.quads {
                 let path = quadPath(quad)
-                switch style {
+                let rect = Geometry.bounds(of: quad)
+                switch appearance.style {
                 case .solid:
+                    context.setFillColor(appearance.solidColor.cgColor)
                     context.addPath(path)
                     context.fillPath()
+                case .conceal:
+                    conceal(from: image, rect: rect, path: path, into: context)
+                case .emoji:
+                    drawEmojiCover(
+                        from: image,
+                        rect: rect,
+                        path: path,
+                        emoji: appearance.emoji,
+                        into: context
+                    )
                 case .mosaic, .blur:
-                    cover(from: image, rect: Geometry.bounds(of: quad), path: path, finding: finding,
-                          into: context, style: style, blurGrain: blurGrain, floor: floor)
+                    cover(
+                        from: image,
+                        rect: rect,
+                        path: path,
+                        finding: finding,
+                        into: context,
+                        style: appearance.style,
+                        strength: appearance.strength,
+                        blurGrain: blurGrain,
+                        floor: floor
+                    )
+                case .stripes:
+                    drawStripes(
+                        from: image,
+                        rect: rect,
+                        path: path,
+                        finding: finding,
+                        into: context,
+                        strength: appearance.strength,
+                        blurGrain: blurGrain,
+                        floor: floor,
+                        stripeOrigin: stripeOrigin,
+                        medianTextHeight: resolvedMedianTextHeight
+                    )
                 }
             }
         }
+        context.restoreGState()
+
+        if hasWatermark {
+            drawWatermark(in: context, size: CGSize(width: width, height: height), options: appearance.watermark)
+        }
+
         return context.makeImage() ?? image
     }
 
-    /// How `bounds`, the cover over `finding`, is cut under `style` (`Grid`). Solid has no grains.
-    ///
-    /// Everything but a face is cut by a base, and the blur over it through the same grains as its
-    /// mosaic, so that it is as coarse. The box is one or two cells high, never more (`rows`), and
-    /// as many cells across as whole ones the base wide fit (`columns`); the cells share the box
-    /// exactly, so nothing is pasted over what was not to be hidden.
-    ///
-    /// Text the recognizer read has its base in the height of its letters. Ato looked at the
-    /// exported pictures pixel by pixel (2026-11-24, message 1930), when every text box was cut
-    /// into six rows whatever the size of its letters: no digit could be read, but each left its
-    /// own pattern of light and dark cells, the two 1s of a card number as two thin bright bars
-    /// one cell wide, the three 6s as one picture. So a cell is never smaller than a letter is
-    /// tall. The measure is the height of Vision's box for the tallest piece of the text, taken
-    /// before the padding and the widening (`Finding.textHeight`): a little more than the glyphs,
-    /// so the cell is a little more than the letter. The base is never less than half the box's
-    /// height either, so a block of three lines or more gets wider cells, nor under
-    /// `mosaicFloor`. When the height is missing, which nothing in the app produces, half the
-    /// box's height stands in for it.
-    ///
-    /// Codes have no letters to go by: their base is half the box's height, never under
-    /// `mosaicFloor`.
-    ///
-    /// A box drawn by hand gets one row of cells, each the box's height wide and tall. Nobody
-    /// knows what is under it: most likely a line of text the recognizer did not read, or a small
-    /// thing. Such a cover comes without the notice that a mosaic leaves traces (copy 6.3.3), so
-    /// it must not give more away than the covers over text that was read. Cut by half the box's
-    /// height, a box drawn round one line of text would get cells half a letter tall; in one row
-    /// a cell covers several letters, as coarse as the mosaic over read text or coarser (Ato,
-    /// message 1951).
-    ///
-    /// A face is cut by the height of what is hidden, as it always was: the mosaic in cells a
-    /// sixth of it, never under `mosaicFloor`; the blur in `blurGrain`.
+    // MARK: - Grid sizing
+
     static func grid(over bounds: CGRect, hiding finding: Finding, style: MaskStyle,
-                     blurGrain: BlurGrain = .default, floor: CGFloat = mosaicFloor) -> Grid {
-        guard style != .solid else { return Grid(columns: 1, rows: 1) }
+                     blurGrain: BlurGrain = .default, floor: CGFloat = mosaicFloor,
+                     strength: MaskStrength = .standard) -> Grid {
+        guard style != .solid, style != .conceal, style != .emoji else {
+            return Grid(columns: 1, rows: 1)
+        }
+        let scale = strength.multiplier
+        let scaledFloor = floor * scale
         if finding.kind == .face {
-            let cell = style == .mosaic ? max(floor, bounds.height / 6) : blurGrain.cell(forHeight: bounds.height)
+            let effectiveGrain = BlurGrain(divisor: blurGrain.divisor / scale, floor: blurGrain.floor * scale)
+            let cell = (style == .mosaic || style == .stripes)
+                ? max(scaledFloor, bounds.height / (6 / scale))
+                : effectiveGrain.cell(forHeight: bounds.height)
             return Grid(columns: max(1, Int((bounds.width / cell).rounded(.up))),
                         rows: max(1, Int((bounds.height / cell).rounded(.up))))
         }
         if finding.drawnByHand {
-            return Grid(columns: max(1, whole(bounds.width / max(bounds.height, floor))), rows: 1)
+            return Grid(columns: max(1, whole(bounds.width / max(bounds.height * scale, scaledFloor))), rows: 1)
         }
-        return grid(over: bounds, base: base(over: bounds, textHeight: finding.textHeight, floor: floor))
+        let baseSize = base(over: bounds, textHeight: finding.textHeight.map { $0 * scale }, floor: scaledFloor)
+        return grid(over: bounds, base: baseSize)
     }
 
-    /// The base text that was read and codes are cut by: the height of the tallest piece of text
-    /// read under the box (`textHeight`), half the box's height and `mosaicFloor`, whichever is
-    /// largest.
     static func base(over bounds: CGRect, textHeight: CGFloat?, floor: CGFloat = mosaicFloor) -> CGFloat {
         max(floor, bounds.height / 2, textHeight ?? 0)
     }
 
-    /// `grid` for a box cut by `base`: whole ones across, one row or two down.
     static func grid(over bounds: CGRect, base: CGFloat) -> Grid {
         Grid(columns: max(1, whole(bounds.width / base)),
              rows: max(1, min(2, whole(bounds.height / base))))
     }
 
-    /// `value` rounded down, a rounding error's hair under a whole number counted as that whole
-    /// number: the quotient of a box and half its height is two, not one and a hair short of it.
     private static func whole(_ value: CGFloat) -> Int {
         value.isFinite ? max(0, Int((value + 1e-9).rounded(.down))) : 0
     }
 
-    /// Redraws `rect` of the picture through a much smaller copy, clipped to `path`.
-    ///
-    /// The copy is cut out of `context`, which `flatten` has just drawn the picture into: each of its
-    /// pixels is the mean of the pixels under it and of nothing else (`fillGrains`). It is not the
-    /// picture drawn into the copy, shrunk to fit `bounds`: measured, CoreGraphics' filter wanders
-    /// by several pixels over the box when it shrinks (a 100 px box into 9 cells: the first cell's
-    /// centre read 1.6 px off, the last one's 4.3) and takes the picture's outermost pixel for all
-    /// that lies beyond its edge (55 % of a cell flush with the edge), which left such a cell with a
-    /// light or a dark rim.
+    static func computeMedianTextHeight(in findings: [Finding]) -> CGFloat? {
+        let heights = findings.compactMap(\.textHeight).sorted()
+        guard !heights.isEmpty else { return nil }
+        return heights[heights.count / 2]
+    }
+
+    // MARK: - Mosaic & Blur
+
     private static func cover(from image: CGImage, rect: CGRect, path: CGPath, finding: Finding, into context: CGContext,
-                              style: MaskStyle, blurGrain: BlurGrain, floor: CGFloat) {
+                              style: MaskStyle, strength: MaskStrength, blurGrain: BlurGrain, floor: CGFloat) {
         let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
         guard bounds.width >= 2, bounds.height >= 2 else { return }
-        // Mosaic cells and blur grain follow what is hidden and how tall it is (`grid`).
-        let cut = grid(over: bounds, hiding: finding, style: style, blurGrain: blurGrain, floor: floor)
+        let cut = grid(over: bounds, hiding: finding, style: style, blurGrain: blurGrain, floor: floor, strength: strength)
         guard let small = CGImage.rgbaContext(width: cut.columns, height: cut.rows), let grains = small.data,
               let picture = context.data else { return }
         fillGrains(grains.assumingMemoryBound(to: UInt8.self), grainStride: small.bytesPerRow,
@@ -226,27 +461,253 @@ enum MaskRenderer {
         context.addPath(path)
         context.clip()
         context.interpolationQuality = style == .mosaic ? .none : .high
-        // The context is flipped to top-left coordinates, and an image drawn into a flipped context
-        // comes out upside down. Turn this one back over the top edge of `bounds`, so every cell
-        // lands over the piece of the picture it was made from.
         context.translateBy(x: bounds.minX, y: bounds.maxY)
         context.scaleBy(x: 1, y: -1)
         context.draw(grainImage, in: CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height))
         context.restoreGState()
     }
 
-    /// The mean colour of the pixels under each cell of `bounds`, written into `grains` as
-    /// `columns × rows` pixels of RGBA8, four bytes a pixel, `stride` a row: the layout of
-    /// `rgbaContext`, whose first row is the top one whatever coordinate system the context was
-    /// flipped to. `bounds` is top-left like Vision's boxes, and lies inside the picture; a pixel
-    /// belongs to the cell its centre lies in, so a cover flush with the picture's edge is filled
-    /// with picture and nothing outside it. Both bitmaps are premultiplied, and so is their mean.
+    // MARK: - Diagonal Stripes (design.md §7.3.2)
+
+    /// Draws the exact same average-color cell grid as mosaic masked through 45° diagonal bars
+    /// aligned to the picture's top-left corner, alternating with solid black.
+    private static func drawStripes(
+        from image: CGImage,
+        rect: CGRect,
+        path: CGPath,
+        finding: Finding,
+        into context: CGContext,
+        strength: MaskStrength,
+        blurGrain: BlurGrain,
+        floor: CGFloat,
+        stripeOrigin: CGPoint,
+        medianTextHeight: CGFloat?
+    ) {
+        let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
+        guard bounds.width >= 2, bounds.height >= 2 else { return }
+        let cut = grid(over: bounds, hiding: finding, style: .stripes, blurGrain: blurGrain, floor: floor, strength: strength)
+        guard let small = CGImage.rgbaContext(width: cut.columns, height: cut.rows), let grains = small.data,
+              let picture = context.data else { return }
+        fillGrains(grains.assumingMemoryBound(to: UInt8.self), grainStride: small.bytesPerRow,
+                   from: picture.assumingMemoryBound(to: UInt8.self), stride: context.bytesPerRow,
+                   bounds: bounds, columns: cut.columns, rows: cut.rows)
+        guard let grainImage = small.makeImage() else { return }
+
+        let cellHeight = bounds.height / CGFloat(cut.rows)
+        let refTextHeight = finding.textHeight ?? medianTextHeight
+        let q: CGFloat = if let t = refTextHeight, t > 0 {
+            min(cellHeight, 1.75 * t)
+        } else {
+            cellHeight
+        }
+        let period = max(4, q / 2)
+        let stripeWidth = period / 2
+
+        context.saveGState()
+        context.addPath(path)
+        context.clip()
+
+        // Fill base black between stripes.
+        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+        context.fill(bounds)
+
+        // Build 45° diagonal stripe clip aligned to global (stripeOrigin + (x, y)).
+        let stripePath = CGMutablePath()
+        let gx0 = bounds.minX + stripeOrigin.x
+        let gx1 = bounds.maxX + stripeOrigin.x
+        let gy0 = bounds.minY + stripeOrigin.y
+        let gy1 = bounds.maxY + stripeOrigin.y
+        let minDiff = gx0 - gy1
+        let maxDiff = gx1 - gy0
+        let firstK = Int(((minDiff - stripeWidth) / period).rounded(.down))
+        let lastK = Int((maxDiff / period).rounded(.up))
+
+        for k in firstK...lastK {
+            let d0 = CGFloat(k) * period
+            let d1 = d0 + stripeWidth
+            // Line x - y = d in global coords -> local x = d + (y + originY) - originX
+            let yTop = bounds.minY - 2
+            let yBot = bounds.maxY + 2
+            let xTop0 = d0 + (yTop + stripeOrigin.y) - stripeOrigin.x
+            let xTop1 = d1 + (yTop + stripeOrigin.y) - stripeOrigin.x
+            let xBot1 = d1 + (yBot + stripeOrigin.y) - stripeOrigin.x
+            let xBot0 = d0 + (yBot + stripeOrigin.y) - stripeOrigin.x
+            stripePath.move(to: CGPoint(x: xTop0, y: yTop))
+            stripePath.addLine(to: CGPoint(x: xTop1, y: yTop))
+            stripePath.addLine(to: CGPoint(x: xBot1, y: yBot))
+            stripePath.addLine(to: CGPoint(x: xBot0, y: yBot))
+            stripePath.closeSubpath()
+        }
+
+        context.addPath(stripePath)
+        context.clip()
+        context.interpolationQuality = .none
+        context.translateBy(x: bounds.minX, y: bounds.maxY)
+        context.scaleBy(x: 1, y: -1)
+        context.draw(grainImage, in: CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height))
+        context.restoreGState()
+    }
+
+    // MARK: - Smart Conceal (Background-Matched Text Erasure)
+
+    /// Samples the perimeter right around `rect` and fills `path` with the median background color,
+    /// seamlessly erasing text on chat bubbles, receipts, and documents with zero visual clutter.
+    private static func conceal(from image: CGImage, rect: CGRect, path: CGPath, into context: CGContext) {
+        let color = sampledBackgroundColor(around: rect, in: context, width: image.width, height: image.height)
+        context.saveGState()
+        context.setFillColor(color)
+        context.addPath(path)
+        context.fillPath()
+        context.restoreGState()
+    }
+
+    static func sampledBackgroundColor(around rect: CGRect, in context: CGContext, width: Int, height: Int) -> CGColor {
+        let fallback = CGColor(colorSpace: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+                               components: [0.95, 0.95, 0.95, 1])!
+        guard let data = context.data, width > 0, height > 0 else { return fallback }
+        let pixels = data.assumingMemoryBound(to: UInt8.self)
+        let stride = context.bytesPerRow
+
+        let x0 = max(0, min(width - 1, Int(rect.minX.rounded(.down))))
+        let x1 = max(0, min(width - 1, Int(rect.maxX.rounded(.up))))
+        let y0 = max(0, min(height - 1, Int(rect.minY.rounded(.down))))
+        let y1 = max(0, min(height - 1, Int(rect.maxY.rounded(.up))))
+
+        let topY = max(0, y0 - 2)
+        let botY = min(height - 1, y1 + 2)
+        let leftX = max(0, x0 - 2)
+        let rightX = min(width - 1, x1 + 2)
+
+        var rs: [UInt8] = []
+        var gs: [UInt8] = []
+        var bs: [UInt8] = []
+
+        func sample(_ x: Int, _ y: Int) {
+            let p = pixels + y * stride + x * 4
+            rs.append(p[0]); gs.append(p[1]); bs.append(p[2])
+        }
+
+        let stepX = max(1, (x1 - x0) / 24)
+        for x in Swift.stride(from: x0, through: x1, by: stepX) {
+            sample(x, topY)
+            sample(x, botY)
+        }
+        let stepY = max(1, (y1 - y0) / 16)
+        for y in Swift.stride(from: y0, through: y1, by: stepY) {
+            sample(leftX, y)
+            sample(rightX, y)
+        }
+
+        guard !rs.isEmpty else { return fallback }
+        rs.sort(); gs.sort(); bs.sort()
+        let mid = rs.count / 2
+        let space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        return CGColor(
+            colorSpace: space,
+            components: [CGFloat(rs[mid]) / 255, CGFloat(gs[mid]) / 255, CGFloat(bs[mid]) / 255, 1]
+        ) ?? fallback
+    }
+
+    // MARK: - Emoji Sticker Cover
+
+    /// Permanently conceals underlying pixels with the surrounding background color first, then
+    /// stamps a crisp centered Emoji sticker so no sensitive strokes can ever peek past the edges.
+    private static func drawEmojiCover(
+        from image: CGImage,
+        rect: CGRect,
+        path: CGPath,
+        emoji: String,
+        into context: CGContext
+    ) {
+        let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
+        guard bounds.width >= 2, bounds.height >= 2 else { return }
+
+        // 1. Opaque background-matched fill guarantees zero pixel leakage.
+        let backing = sampledBackgroundColor(around: bounds, in: context, width: image.width, height: image.height)
+        context.saveGState()
+        context.addPath(path)
+        context.clip()
+        context.setFillColor(backing)
+        context.fill(bounds)
+
+        // 2. Render crisp emoji stamp(s) scaled cleanly to box height.
+        let symbol = emoji.isEmpty ? EmojiPreset.default : emoji
+        let fontSize = max(12, min(bounds.width, bounds.height) * 0.78)
+        let font = CTFontCreateWithName("AppleColorEmoji" as CFString, fontSize, nil)
+        let attr = NSAttributedString(string: symbol, attributes: [kCTFontAttributeName as NSAttributedString.Key: font])
+        let line = CTLineCreateWithAttributedString(attr)
+        let glyphBounds = CTLineGetBoundsWithOptions(line, .useOpticalBounds)
+
+        // Repeat cleanly across wide horizontal text bars; center single emoji on faces/squares.
+        let spacing = max(glyphBounds.width * 1.15, fontSize * 1.1)
+        let count = bounds.width > bounds.height * 1.9 ? max(1, Int((bounds.width / spacing).rounded(.down))) : 1
+        let step = bounds.width / CGFloat(count)
+
+        // Flip locally back to upright CoreText coordinate space (y-up).
+        context.translateBy(x: 0, y: bounds.minY + bounds.maxY)
+        context.scaleBy(x: 1, y: -1)
+        for index in 0..<count {
+            let cx = bounds.minX + (CGFloat(index) + 0.5) * step
+            let cy = bounds.midY
+            let x = cx - glyphBounds.width / 2 - glyphBounds.origin.x
+            let y = cy - glyphBounds.height / 2 - glyphBounds.origin.y
+            context.textPosition = CGPoint(x: x, y: y)
+            CTLineDraw(line, context)
+        }
+        context.restoreGState()
+    }
+
+    // MARK: - Anti-Theft Diagonal Watermark
+
+    /// Draws tiled diagonal anti-theft watermark text across the entire image in standard CG coordinates.
+    static func drawWatermark(in context: CGContext, size: CGSize, options: WatermarkOptions) {
+        let trimmed = options.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard options.isEnabled, !trimmed.isEmpty, size.width > 0, size.height > 0 else { return }
+
+        let shortSide = min(size.width, size.height)
+        let fontSize = max(14, (shortSide * 0.036).rounded())
+        let color = options.tint.uiColor(alpha: CGFloat(options.opacity))
+        let font = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color,
+        ]
+        let attrString = NSAttributedString(string: trimmed, attributes: attributes)
+        let line = CTLineCreateWithAttributedString(attrString)
+        let textBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        let textWidth = max(textBounds.width, fontSize * 2)
+
+        let stepX = textWidth + fontSize * options.density.columnGapFactor
+        let stepY = fontSize * options.density.rowSpacingFactor
+        let diagonal = hypot(size.width, size.height)
+
+        context.saveGState()
+        context.translateBy(x: size.width / 2, y: size.height / 2)
+        context.rotate(by: .pi / 6) // +30° in y-up CG space = visually -30° rising bottom-left to top-right
+
+        var row = 0
+        var y = -diagonal / 2
+        while y <= diagonal / 2 {
+            let stagger = (row % 2 == 0) ? 0 : stepX / 2
+            var x = -diagonal / 2 - stagger
+            while x <= diagonal / 2 {
+                context.textPosition = CGPoint(x: x, y: y)
+                CTLineDraw(line, context)
+                x += stepX
+            }
+            y += stepY
+            row += 1
+        }
+        context.restoreGState()
+    }
+
+    // MARK: - Cell Averaging
+
     private static func fillGrains(_ grains: UnsafeMutablePointer<UInt8>, grainStride: Int,
                                    from picture: UnsafePointer<UInt8>, stride: Int,
                                    bounds: CGRect, columns: Int, rows: Int) {
         let across = bounds.width / CGFloat(columns), up = bounds.height / CGFloat(rows)
         for row in 0..<rows {
-            // The rows of pixels whose centres (y + 0.5) lie in [top, bottom), and likewise across.
             let top = bounds.minY + CGFloat(row) * up
             let from = Int((top - 0.5).rounded(.up)), under = Int((top + up - 0.5).rounded(.up))
             for column in 0..<columns {
@@ -260,9 +721,6 @@ enum MaskRenderer {
                         pixel += 4
                     }
                 }
-                // Every cell holds pixels: at least half of what it is cut by across (6 pixels at least,
-                // the smallest measure being `mosaicFloor`), or, when it is the only one, the whole
-                // `bounds`, 2 at least. `max` only keeps the division safe.
                 let count = max(1, (under - from) * (past - first))
                 let grain = grains + row * grainStride + column * 4
                 for (component, sum) in [red, green, blue, alpha].enumerated() {

@@ -1,54 +1,54 @@
 import SwiftUI
 import UIKit
 
-/// The colours and type of design.md §2–§3. The app has one look, dark (§11.1), so each use has a
-/// single value. Six colours are the asset catalog's colour sets and carry the names the spec uses;
-/// Any and Dark hold the same value, so a screen that forgot to force dark shows nothing odd either.
+/// Apple HIG semantic design tokens for QuickCover across Light and Dark appearances.
+/// Standard pages adopt dynamic system surfaces and Liquid Glass; the editor canvas remains a dark
+/// studio backdrop so screenshots and photos stay the focal point.
 enum Theme {
-    /// `#6FE0DA`: what can be tapped and the selected tool. 13.3:1 on black, 10.8:1 on a card.
+    /// Adaptive brand teal (`#0A7E80` Light / `#5EDCD4` Dark).
     static let accent = Color("AccentColor")
-    /// `#6FE0DA`, on the picture and on glass: the drawn and located edges, the selected tool,
-    /// button text on the picture.
+    /// Luminous teal for overlays on the dark editor canvas (selection rings, drawn boxes).
     static let accentOnBlack = Color("AccentOnBlack")
-    /// `#0B7A7A`: the ground of the primary button, of「匯出」and of the picker's first icon tile. White
-    /// on it is 5.2:1.
+    /// Deep accessible teal for prominent white-on-tint actions (`#0B7A7A` Light / `#0D8A8B` Dark).
     static let accentButton = Color("AccentButton")
-    /// `#A5A5AA`: explanatory text. Not `.secondary`, which follows the appearance and the material.
-    static let secondaryLabel = Color("SecondaryLabel")
-    /// `#1C1C1E`: cards, and the callout at the bottom of the editor.
-    static let card = Color("CalloutBackground")
-    /// `#A5A5AA`: the body of the callout.
-    static let calloutText = Color("CalloutSecondaryText")
 
-    // The rest of the §2 table. The spec asks for six colour sets only, so these are made here.
-    /// `#FFFFFF`.
-    static let body = Color.white
-    /// `#6C6C70`: what is switched off and what is only decoration (the chevrons). Never text to read.
-    static let tertiary = Color(hex: 0x6C6C70)
-    /// `#545458` at 55%.
-    static let separator = Color(hex: 0x545458).opacity(0.55)
-    /// `#767680` at 24%: the track of the style picker, the ground of a leading icon tile.
+    /// Primary label color, adapting automatically to Light and Dark Mode.
+    static let body = Color.primary
+    /// Secondary descriptive text using system semantic contrast.
+    static let secondaryLabel = Color.secondary
+    /// Tertiary color for disabled controls and disclosure indicators.
+    static let tertiary = Color(.tertiaryLabel)
+    /// System separator tint.
+    static let separator = Color(.separator)
+
+    /// Standard grouped page canvas (`systemGroupedBackground`).
+    static let page = Color(.systemGroupedBackground)
+    /// Pure black studio backdrop used exclusively by the photo editor canvas.
+    static let studioCanvas = Color.black
+    /// Elevated card surface (`secondarySystemGroupedBackground`).
+    static let card = Color(.secondarySystemGroupedBackground)
+    /// Secondary text inside callouts.
+    static let calloutText = Color.secondary
+
+    /// System fills for icon badges and subtle tracks.
     static let fill = Color(.tertiarySystemFill)
-    /// `#787880` at 30%: secondary buttons, the track of a switch, the save-failed notice.
     static let fillTwo = Color(.quaternarySystemFill)
-    /// `#FF9F0A` at 16%: the blur notice. Its symbol is `#C86A00`, 3.3:1 on it.
-    static let blurNotice = Color(hex: 0xFF9F0A).opacity(0.16)
-    static let blurNoticeIcon = Color(hex: 0xC86A00)
-    /// `#0B3B3F`: the symbol on the selected tool, on `Theme.accent`. 7.8:1. The one place it is used,
-    /// so the spec asks for no colour set (§2).
+
+    /// Semantic warning surface and glyph tint (blur / mosaic / stripes advisories).
+    static let blurNotice = Color.orange.opacity(0.14)
+    static let blurNoticeIcon = Color.orange
+
+    /// High-contrast foreground on luminous teal in the dark editor studio.
     static let onAccent = Color(hex: 0x0B3B3F)
-    /// `#6FE0A0`: the checkmark of the「已存到照片」toast.
-    static let saved = Color(hex: 0x6FE0A0)
-    /// The symbol of a notice that failed: `#FF3B30` on the second fill, `#FF453A` on a card.
-    static let errorIcon = Color(hex: 0xFF3B30)
-    /// What can't be used is drawn at 42% (§2, §6).
+    /// Confirmation green for saved/copied toasts.
+    static let saved = Color.green
+    /// System destructive/error red.
+    static let errorIcon = Color.red
+
     static let disabledOpacity = 0.42
-    /// The page: pure black. The picture is the only bright thing (§1).
-    static let page = Color.black
 }
 
 extension Color {
-    /// sRGB, the way design.md writes its values.
     init(hex: UInt32) {
         self.init(.sRGB,
                   red: Double((hex >> 16) & 0xFF) / 255,
@@ -59,29 +59,139 @@ extension Color {
 }
 
 extension Font {
-    /// 21 pt semibold: the symbols on glass (§6, §10.3). Fixed: a symbol isn't text to read.
-    static let glassIcon = Font.system(size: 21, weight: .semibold)
-    /// 18 pt medium: the symbol in a leading icon tile (§4).
-    static let tileIcon = Font.system(size: 18, weight: .medium)
-    /// 20 pt: the symbol of a notice bar and of the toast (§4, §10.3).
-    static let noticeIcon = Font.system(size: 20, weight: .medium)
-    /// 17 pt semibold at the default size: the text of every button but the plain one (§3, §6). It
-    /// follows the text size like all text does.
-    static let buttonText = Font.system(.body).weight(.semibold)
-    /// 15 pt semibold at the default size: the small button and the text button (§6).
-    static let smallButtonText = Font.system(.subheadline).weight(.semibold)
+    static let glassIcon = Font.system(size: 19, weight: .semibold)
+    static let tileIcon = Font.system(size: 17, weight: .medium)
+    static let noticeIcon = Font.system(size: 19, weight: .medium)
+    static let buttonText = Font.body.weight(.semibold)
+    static let smallButtonText = Font.subheadline.weight(.semibold)
 }
 
-/// design.md §4, the sizes every page shares.
+/// Shared Apple HIG spacing & concentric corner metrics.
 enum Metrics {
-    /// 16: the page's sides, and the inside of a card.
     static let pageInset: CGFloat = 16
-    /// 12: the corner of a card (the system's own when `List` is used).
-    static let cardRadius: CGFloat = 12
-    /// 20: between two cards.
+    static let cardRadius: CGFloat = 20
+    static let innerRadius: CGFloat = 12
     static let cardSpacing: CGFloat = 20
-    /// 52: the least height of a row.
     static let rowMinHeight: CGFloat = 52
-    /// 44: the least thing that can be tapped (§9.5).
     static let minimumTarget: CGFloat = 44
+}
+
+// MARK: - iOS 26 / 27 Progressive Apple Design Helpers
+
+extension View {
+    /// Applies iOS 27 `toolbarMinimizationBehavior(.never, for: .bottomBar)` when compiled with
+    /// the iOS 27 SDK (Swift 6.4+) and running on iOS 27+, keeping editing controls reachable.
+    @ViewBuilder
+    func keepsBottomToolbarExpanded() -> some View {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) {
+            self.toolbarMinimizationBehavior(.never, for: .bottomBar)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+
+    /// Applies iOS 27 `navigationTransition(.crossFade)` when compiled with the iOS 27 SDK.
+    @ViewBuilder
+    func crossFadeTransitionIfAvailable() -> some View {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) {
+            self.navigationTransition(.crossFade)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+
+    /// Uses iOS 27 `alert(error:actions:)` when compiled with the iOS 27 SDK, falling back cleanly
+    /// to iOS 26 `alert(isPresented:error:actions:)`.
+    @ViewBuilder
+    func localizedErrorAlert<E: LocalizedError, A: View>(
+        error: Binding<E?>,
+        @ViewBuilder actions: () -> A
+    ) -> some View {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) {
+            self.alert(error: error, actions: actions)
+        } else {
+            self.alert(
+                isPresented: Binding(
+                    get: { error.wrappedValue != nil },
+                    set: { if !$0 { error.wrappedValue = nil } }
+                ),
+                error: error.wrappedValue,
+                actions: { _ in actions() },
+                message: { _ in EmptyView() }
+            )
+        }
+        #else
+        self.alert(
+            isPresented: Binding(
+                get: { error.wrappedValue != nil },
+                set: { if !$0 { error.wrappedValue = nil } }
+            ),
+            error: error.wrappedValue,
+            actions: { _ in actions() },
+            message: { _ in EmptyView() }
+        )
+        #endif
+    }
+
+    /// Supports iOS 27 `pasteDestination(for:)` for image payloads when compiled with the iOS 27 SDK.
+    @ViewBuilder
+    func imagePasteDestination(perform action: @escaping ([Data]) -> Void) -> some View {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) {
+            self.pasteDestination(for: Data.self, action: action)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+
+    /// Supports iOS 27 `copyable(_:)` on exported images when compiled with the iOS 27 SDK.
+    @ViewBuilder
+    func copyableTransferable<T: Transferable>(_ item: @autoclosure @escaping () -> [T]) -> some View {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) {
+            self.copyable(item())
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+}
+
+/// Resolves iOS 27 `ToolbarItemPlacement.topBarPinnedTrailing` on iOS 27+ and `.topBarTrailing` on iOS 26.
+enum AppleToolbarPlacement {
+    static var pinnedTrailing: ToolbarItemPlacement {
+        #if compiler(>=6.4)
+        if #available(iOS 27.0, *) {
+            return .topBarPinnedTrailing
+        }
+        #endif
+        return .topBarTrailing
+    }
+}
+
+/// Preserves the OS Light/Dark color scheme across dark-studio child subtrees so sheets follow
+/// the user's true system appearance.
+private struct SystemColorSchemeKey: EnvironmentKey {
+    static let defaultValue: ColorScheme = .light
+}
+
+extension EnvironmentValues {
+    var systemColorScheme: ColorScheme {
+        get { self[SystemColorSchemeKey.self] }
+        set { self[SystemColorSchemeKey.self] = newValue }
+    }
 }

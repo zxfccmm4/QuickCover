@@ -1,27 +1,12 @@
 import SwiftUI
 
-/// A notice bar (design.md §4「提醒条」): corner 12, 12 left, 8 right, 8 above and below, a 20 pt
-/// symbol, a `.footnote` in the body colour, and a small or a text button at the right end when
-/// there is one. The blur notice is this twice: in Review Each Item as 4.7.5 with nothing at the end
-/// (`trailing: { EmptyView() }`), on the export page as 6.3.1 with the small button 6.3.2「改用純色」
-/// and, when the style is mosaic, as 6.3.3 with the same button (design.md §7.4.4, §7.5). The
-/// save-failed notice (6.4.2) is it too.
-///
-/// With `stacksWhenTooWide` (spec 1.6, the export page's notice about the style) the words share a
-/// line with the button only when they fit whole beside it (6.3.1 in every language: 52 high);
-/// otherwise the words go over the full width and the button stands 6 under them, its left edge on
-/// theirs (6.3.3 in every language: two lines, 94 high). `ViewThatFits` measures it, so it follows
-/// the language and the size of the type, and the words are never cut. Without it the words wrap
-/// beside the button, up to three lines.
-/// From AX1 on the words are too wide to share a line with a button: the button goes under the
-/// text, 12 below and to the left (design.md §9.5, nothing cut to an ellipsis).
+/// Adaptive inline advisory banner using iOS 26 concentric geometry and `ViewThatFits` layout so
+/// short messages share a row with their action while longer warnings stack cleanly without clipping.
 struct NoticeBar<Trailing: View>: View {
     let systemImage: String
     let tint: Color
     let ground: Color
     let text: LocalizedStringKey
-    /// The words and the button stand one under the other whenever the words do not fit whole
-    /// beside the button; see the type.
     var stacksWhenTooWide = false
     @ViewBuilder let trailing: () -> Trailing
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -30,53 +15,57 @@ struct NoticeBar<Trailing: View>: View {
         Group {
             if typeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
                         symbol
                         words
                     }
                     trailing()
                 }
             } else if stacksWhenTooWide {
-                // The first that fits the width: the words on one line beside the button, or over
-                // the full width with the button under them.
                 ViewThatFits(in: .horizontal) {
-                    // The spacer, at least the spacing, keeps the words left and the button at the
-                    // right end and makes the option as wide as the bar; it fits when the least is enough.
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         symbol
                         words.fixedSize(horizontal: true, vertical: false)
                         Spacer(minLength: 0)
                         trailing()
                     }
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .top, spacing: 10) {
                             symbol
                             words
                         }
-                        // The invisible symbol keeps the button's left edge on the words'.
-                        HStack(spacing: 8) {
+                        HStack(spacing: 10) {
                             symbol.hidden()
                             trailing()
                         }
                     }
                 }
             } else {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     symbol
                     words
-                    // The button keeps its whole name; the text wraps instead, up to its three lines.
                     trailing()
                         .layoutPriority(1)
                 }
             }
         }
-        .padding(insets)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(ground))
+        .padding(.vertical, 10)
+        .padding(.leading, 14)
+        .padding(.trailing, 10)
+        .background(
+            ConcentricRectangle(corners: .concentric(minimum: 16), isUniform: true)
+                .fill(ground)
+        )
+        .overlay(
+            ConcentricRectangle(corners: .concentric(minimum: 16), isUniform: true)
+                .stroke(tint.opacity(0.22), lineWidth: 0.5)
+        )
     }
 
     private var symbol: some View {
         Image(systemName: systemImage)
             .font(.noticeIcon)
+            .symbolRenderingMode(.hierarchical)
             .foregroundStyle(tint)
             .accessibilityHidden(true)
     }
@@ -85,69 +74,52 @@ struct NoticeBar<Trailing: View>: View {
         Text(text)
             .font(.footnote)
             .foregroundStyle(Theme.body)
-            // Beside the button the text wraps instead of it, up to its three lines; from AX1 on,
-            // and wherever it has the full width (`stacksWhenTooWide`), it takes every line it needs.
             .lineLimit(typeSize.isAccessibilitySize || stacksWhenTooWide ? nil : 3)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
-
-    private var insets: EdgeInsets {
-        EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 8)
-    }
 }
 
-/// The card at the bottom of the editor (design.md §4「提示卡」): corner 16, 18 above, 16 left and
-/// right, 14 below, centred: a 40 pt symbol, a `.headline` white title, a `.footnote` `#A5A5AA`
-/// body 4 under it, a button 12 under that. Nothing Found (§7.3.4) and Hasn't Been Checked (§7.3.5).
+/// Liquid Glass studio callout built around Apple's native `ContentUnavailableView` for empty or
+/// failed recognition states on the editor canvas.
 struct CalloutCard<Action: View>: View {
     let systemImage: String
-    var tint: Color = Theme.accent
+    var tint: Color = Theme.accentOnBlack
     let title: LocalizedStringKey
     let message: LocalizedStringKey
-    /// Whether the title and the message are read as one static text (design.md §9.2, the editor's
-    /// card). Off by default: the two stay two texts.
     var readsTogether = false
     @ViewBuilder let action: () -> Action
 
     var body: some View {
-        VStack(spacing: 0) {
-            Image(systemName: systemImage)
-                .font(.system(size: 40))
-                .foregroundStyle(tint)
-                .accessibilityHidden(true)
-            if readsTogether {
-                VStack(spacing: 0) { words }
-                    .accessibilityElement(children: .combine)
-            } else {
-                words
+        VStack(spacing: 14) {
+            ContentUnavailableView {
+                Label {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                } icon: {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 36, weight: .regular))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(tint)
+                }
+            } description: {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
-            action()
-                .padding(.top, 12)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 18)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 14)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.card))
-    }
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: readsTogether ? .combine : .contain)
 
-    @ViewBuilder private var words: some View {
-        Text(title)
-            .font(.headline)
-            .foregroundStyle(Theme.body)
-            .multilineTextAlignment(.center)
-            .padding(.top, 10)
-        Text(message)
-            .font(.footnote)
-            .foregroundStyle(Theme.calloutText)
-            .multilineTextAlignment(.center)
-            .padding(.top, 4)
+            action()
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity)
+        .glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 24), isUniform: true))
     }
 }
 
-/// 「已存到照片」and「已拷貝」on the export page (design.md §7.5.4, §4): a capsule of glass, 40 high,
-/// corner 20, a 20 pt checkmark in `#6FE0A0`, white `.subheadline`, 12 left and 16 right. It fades
-/// in 0.25 s and out 0.3 s (design.md §8); where it stands and how long it stays is the page's business.
+/// Floating Liquid Glass confirmation toast ("Saved to Photos" / "Copied") with animated SF Symbol.
 struct Toast: View {
     let text: LocalizedStringKey
     let isShown: Bool
@@ -156,28 +128,30 @@ struct Toast: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "checkmark")
-                .font(.system(size: 20, weight: .semibold))
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 19, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Theme.saved)
+                .symbolEffect(.bounce, value: isShown)
             Text(text)
-                .font(.subheadline)
-                .foregroundStyle(Theme.body)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
                 .lineLimit(1)
         }
         .padding(.leading, 12)
         .padding(.trailing, 16)
-        .frame(height: 40)
+        .padding(.vertical, 10)
+        .frame(minHeight: 40)
         .glassEffect(.regular, in: .capsule)
         .opacity(isShown ? 1 : 0)
-        .offset(y: isShown ? 0 : 8)
-        .animation(.easeInOut(duration: isShown ? fadeIn : fadeOut), value: isShown)
+        .scaleEffect(isShown ? 1 : 0.94)
+        .offset(y: isShown ? 0 : -8)
+        .animation(.snappy(duration: isShown ? fadeIn : fadeOut), value: isShown)
         .allowsHitTesting(false)
     }
 }
 
-/// The summary at the top of Review Each Item (design.md §7.4.2): 4.3.1–4.3.4 in a fixed order with
-///「 · 」between, `.title2` bold; it wraps rather than shrinks. VoiceOver gets the sentence of
-/// copy.md §7 instead (`L10n.screenReaderSummary`).
+/// Summary headline at the top of Review Each Item.
 struct SummaryText: View {
     let found: FoundCounts
 
@@ -190,17 +164,26 @@ struct SummaryText: View {
     }
 }
 
-/// The app icon's picture on the primer (design.md §10.2): 132 pt, corners 29.5 continuous, a 1 pt
-/// white 14% edge so the dark square shows against the black page.
+/// Continuous-corner App Icon presentation for PrimerScreen, adapting smoothly to Light and Dark Mode.
 struct IconArtwork: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 29.5, style: .continuous)
         Image("IconArtwork")
             .resizable()
             .frame(width: 132, height: 132)
-            .clipShape(RoundedRectangle(cornerRadius: 29.5, style: .continuous))
+            .clipShape(shape)
             .overlay(
-                RoundedRectangle(cornerRadius: 29.5, style: .continuous)
-                    .strokeBorder(.white.opacity(0.14), lineWidth: 1)
+                shape.strokeBorder(
+                    colorScheme == .dark ? Color.white.opacity(0.16) : Color.black.opacity(0.08),
+                    lineWidth: 1
+                )
+            )
+            .shadow(
+                color: colorScheme == .dark ? .clear : .black.opacity(0.16),
+                radius: 20,
+                y: 10
             )
             .accessibilityHidden(true)
     }
