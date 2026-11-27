@@ -81,7 +81,32 @@ struct MaskItem: Identifiable, Equatable, Sendable {
     }
 }
 
-/// The picture being worked on: covers, style/color/emoji/granularity, anti-theft watermark, and export.
+/// Interactive magic animation burst emitted whenever covers are added, erased, removed, or restyled.
+struct MagicBurstEvent: Identifiable, Equatable, Sendable {
+    enum Kind: Equatable, Sendable {
+        case cover
+        case erase
+        case uncover
+        case styleMorph
+        case aiScan
+    }
+
+    let id: UUID
+    /// Bounding rects in upright full-size pixels where the particle/shimmer wave originates.
+    let rects: [CGRect]
+    let kind: Kind
+    let createdAt: TimeInterval
+
+    init(rects: [CGRect], kind: Kind, createdAt: TimeInterval = Date().timeIntervalSinceReferenceDate) {
+        self.id = UUID()
+        self.rects = rects
+        self.kind = kind
+        self.createdAt = createdAt
+    }
+}
+
+/// The picture being worked on: covers, Apple Intelligence semantic scan, style/color/emoji/granularity,
+/// interactive magic animation events, anti-theft watermark, and export.
 @MainActor
 @Observable
 final class EditorModel {
@@ -98,47 +123,75 @@ final class EditorModel {
         var style: MaskStyle
         var stripMetadata: Bool
         var solidColor: SolidColorPreset = .black
+        var customSolidColor: CustomColorRGB? = nil
+        var mosaicTint: MosaicTint = .original
         var emoji: String = EmojiPreset.default
+        var recentEmojis: [String] = []
         var strength: MaskStrength = .standard
         var exportFormat: ExportFormat = .original
+        var autoAppleIntelligence: Bool = true
 
         static let styleKey = "editor.style"
         static let stripMetadataKey = "editor.stripMetadata"
         static let solidColorKey = "editor.solidColor"
+        static let customSolidColorKey = "editor.customSolidColor"
+        static let mosaicTintKey = "editor.mosaicTint"
         static let emojiKey = "editor.emoji"
+        static let recentEmojisKey = "editor.recentEmojis"
         static let strengthKey = "editor.strength"
         static let exportFormatKey = "editor.exportFormat"
+        static let autoAppleIntelligenceKey = "editor.autoAppleIntelligence"
 
         init(
             style: MaskStyle,
             stripMetadata: Bool,
             solidColor: SolidColorPreset = .black,
+            customSolidColor: CustomColorRGB? = nil,
+            mosaicTint: MosaicTint = .original,
             emoji: String = EmojiPreset.default,
+            recentEmojis: [String] = [],
             strength: MaskStrength = .standard,
-            exportFormat: ExportFormat = .original
+            exportFormat: ExportFormat = .original,
+            autoAppleIntelligence: Bool = true
         ) {
             self.style = style
             self.stripMetadata = stripMetadata
             self.solidColor = solidColor
+            self.customSolidColor = customSolidColor
+            self.mosaicTint = mosaicTint
             self.emoji = emoji
+            self.recentEmojis = recentEmojis
             self.strength = strength
             self.exportFormat = exportFormat
+            self.autoAppleIntelligence = autoAppleIntelligence
         }
 
         static func load(from defaults: UserDefaults = .standard) -> Preferences {
             let style = defaults.string(forKey: styleKey).flatMap(MaskStyle.init(rawValue:)) ?? .default
             let strip = defaults.object(forKey: stripMetadataKey) == nil ? true : defaults.bool(forKey: stripMetadataKey)
             let solidColor = defaults.string(forKey: solidColorKey).flatMap(SolidColorPreset.init(rawValue:)) ?? .black
+            let customSolid = defaults.data(forKey: customSolidColorKey).flatMap {
+                try? JSONDecoder().decode(CustomColorRGB.self, from: $0)
+            }
+            let mosaicTint = defaults.data(forKey: mosaicTintKey).flatMap {
+                try? JSONDecoder().decode(MosaicTint.self, from: $0)
+            } ?? .original
             let emoji = defaults.string(forKey: emojiKey) ?? EmojiPreset.default
+            let recentEmojis = defaults.stringArray(forKey: recentEmojisKey) ?? []
             let strength = defaults.string(forKey: strengthKey).flatMap(MaskStrength.init(rawValue:)) ?? .standard
             let format = defaults.string(forKey: exportFormatKey).flatMap(ExportFormat.init(rawValue:)) ?? .original
+            let autoAI = defaults.object(forKey: autoAppleIntelligenceKey) == nil ? true : defaults.bool(forKey: autoAppleIntelligenceKey)
             return Preferences(
                 style: style,
                 stripMetadata: strip,
                 solidColor: solidColor,
+                customSolidColor: customSolid,
+                mosaicTint: mosaicTint,
                 emoji: emoji,
+                recentEmojis: recentEmojis,
                 strength: strength,
-                exportFormat: format
+                exportFormat: format,
+                autoAppleIntelligence: autoAI
             )
         }
 
@@ -146,9 +199,19 @@ final class EditorModel {
             defaults.set(style.rawValue, forKey: Self.styleKey)
             defaults.set(stripMetadata, forKey: Self.stripMetadataKey)
             defaults.set(solidColor.rawValue, forKey: Self.solidColorKey)
+            if let customSolidColor, let encoded = try? JSONEncoder().encode(customSolidColor) {
+                defaults.set(encoded, forKey: Self.customSolidColorKey)
+            } else {
+                defaults.removeObject(forKey: Self.customSolidColorKey)
+            }
+            if let encoded = try? JSONEncoder().encode(mosaicTint) {
+                defaults.set(encoded, forKey: Self.mosaicTintKey)
+            }
             defaults.set(emoji, forKey: Self.emojiKey)
+            defaults.set(recentEmojis, forKey: Self.recentEmojisKey)
             defaults.set(strength.rawValue, forKey: Self.strengthKey)
             defaults.set(exportFormat.rawValue, forKey: Self.exportFormatKey)
+            defaults.set(autoAppleIntelligence, forKey: Self.autoAppleIntelligenceKey)
         }
     }
 
@@ -166,6 +229,8 @@ final class EditorModel {
     var watermark: WatermarkOptions = .off
     /// Whether the watermark configuration sheet is presented.
     var watermarkShown = false
+    /// Whether the expanded emoji catalog picker sheet is presented.
+    var emojiPickerShown = false
     /// Whether the floating in-editor quick style tray is expanded.
     var styleTrayShown = false
     /// Selected hand-drawn box ID for quick reposition or delete on canvas.
@@ -178,6 +243,13 @@ final class EditorModel {
     var drawToolOn = false
     /// The item the picture should scroll to, set by "locate", cleared by the picture once there.
     var locateRequest: Int?
+
+    /// Live status for Apple Intelligence on-device semantic privacy detection.
+    private(set) var isRunningIntelligence = false
+    private(set) var lastIntelligenceAddedCount: Int?
+    private(set) var lastIntelligenceEngine: AppleIntelligenceAdvisor.Engine?
+    /// Latest interactive magic sparkle / shimmer burst for `EditorPicture` to render.
+    private(set) var magicBurst: MagicBurstEvent?
 
     private var nextID = 1
     private var undoStack: [[MaskItem]] = []
@@ -203,6 +275,8 @@ final class EditorModel {
         MaskAppearance(
             style: preferences.style,
             solidColor: preferences.solidColor,
+            customSolidColor: preferences.customSolidColor,
+            mosaicTint: preferences.mosaicTint,
             emoji: preferences.emoji,
             strength: preferences.strength,
             watermark: watermark
@@ -214,6 +288,8 @@ final class EditorModel {
         MaskRenderer.Options(
             style: preferences.style,
             solidColor: preferences.solidColor,
+            customSolidColor: preferences.customSolidColor,
+            mosaicTint: preferences.mosaicTint,
             emoji: preferences.emoji,
             strength: preferences.strength,
             watermark: watermark,
@@ -222,7 +298,18 @@ final class EditorModel {
         )
     }
 
-    // MARK: - Recognition
+    /// Quick-bar emojis merging recently picked custom emojis ahead of curated defaults.
+    var quickBarEmojis: [String] {
+        var combined: [String] = []
+        for symbol in ([preferences.emoji] + preferences.recentEmojis + EmojiPreset.quickBar) {
+            guard !symbol.isEmpty, !combined.contains(symbol) else { continue }
+            combined.append(symbol)
+            if combined.count >= 10 { break }
+        }
+        return combined
+    }
+
+    // MARK: - Recognition & Apple Intelligence
 
     func startRecognition() {
         guard recognitionTask == nil else { return }
@@ -245,6 +332,8 @@ final class EditorModel {
         selectedManualID = nil
         showsOriginal = false
         drawToolOn = false
+        lastIntelligenceAddedCount = nil
+        lastIntelligenceEngine = nil
         recognition = .running
         startRecognition()
     }
@@ -254,6 +343,7 @@ final class EditorModel {
         drawToolOn = false
         reviewShown = false
         watermarkShown = false
+        emojiPickerShown = false
         styleTrayShown = false
         selectedManualID = nil
     }
@@ -276,10 +366,62 @@ final class EditorModel {
         if let result = outcome {
             adopt(result)
             recognition = .done
+            let initialRects = enabledItems.map(\.bounds)
+            if !initialRects.isEmpty {
+                emitBurst(rects: initialRects, kind: preferences.style == .conceal ? .erase : .cover)
+            }
+            if preferences.autoAppleIntelligence && AppleIntelligenceAdvisor.isAppleIntelligenceAvailable {
+                await runAppleIntelligenceScan(applyMagicErase: false, silentWhenNone: true)
+            }
         } else {
             recognition = .failed
         }
         recognitionTask = nil
+    }
+
+    /// Runs on-device Apple Intelligence (`FoundationModels` / contextual privacy advisor) over
+    /// uncovered text lines to automatically detect personal names, addresses, handles, and order codes.
+    /// Optionally switches active masking style to seamless Magic Erase (`.conceal`).
+    @discardableResult
+    func runAppleIntelligenceScan(applyMagicErase: Bool = false, silentWhenNone: Bool = false) async -> Int {
+        guard !isRunningIntelligence else { return 0 }
+        isRunningIntelligence = true
+        defer { isRunningIntelligence = false }
+
+        let candidates = items.enumerated().filter { $0.element.origin == .textLine && !$0.element.isOn }
+        let candidateTexts = candidates.map(\.element.evidence)
+        let advice = await AppleIntelligenceAdvisor.detectSensitiveLines(candidateTexts)
+        guard !Task.isCancelled else { return 0 }
+
+        var newlyCoveredRects: [CGRect] = []
+        let targetIndices = advice.sensitiveLineIndices.compactMap { idx -> Int? in
+            guard idx >= 0, idx < candidates.count else { return nil }
+            return candidates[idx].offset
+        }
+
+        if !targetIndices.isEmpty {
+            pushUndo()
+            for itemIndex in targetIndices {
+                items[itemIndex].isOn = true
+                newlyCoveredRects.append(items[itemIndex].bounds)
+            }
+        }
+
+        if applyMagicErase && preferences.style != .conceal {
+            setStyle(.conceal)
+        }
+
+        lastIntelligenceEngine = advice.engine
+        if !silentWhenNone || !newlyCoveredRects.isEmpty {
+            lastIntelligenceAddedCount = newlyCoveredRects.count
+        }
+
+        let burstRects = !newlyCoveredRects.isEmpty ? newlyCoveredRects : enabledItems.map(\.bounds)
+        if !burstRects.isEmpty {
+            emitBurst(rects: burstRects, kind: applyMagicErase ? .erase : .aiScan)
+        }
+
+        return newlyCoveredRects.count
     }
 
     /// Turns a recognition of the preview picture into items in full-size pixels.
@@ -350,12 +492,17 @@ final class EditorModel {
 
     /// Batch toggles all auto-detected items in a category (`face`, sensitive `text`, or `code`).
     func setGroupCovered(_ group: MaskItem.Group, _ on: Bool) {
-        let changed = items.contains { $0.origin == .suggestion && $0.group == group && $0.isOn != on }
-        guard changed else { return }
-        pushUndo()
-        for index in items.indices where items[index].origin == .suggestion && items[index].group == group {
-            items[index].isOn = on
+        let changedIndices = items.indices.filter {
+            items[$0].origin == .suggestion && items[$0].group == group && items[$0].isOn != on
         }
+        guard !changedIndices.isEmpty else { return }
+        pushUndo()
+        var rects: [CGRect] = []
+        for index in changedIndices {
+            items[index].isOn = on
+            rects.append(items[index].bounds)
+        }
+        emitBurst(rects: rects, kind: on ? activeCoverBurstKind : .uncover)
     }
 
     // MARK: - Edits (each one undoable)
@@ -364,6 +511,7 @@ final class EditorModel {
         guard let index = items.firstIndex(where: { $0.id == id }), items[index].isOn != on else { return }
         pushUndo()
         items[index].isOn = on
+        emitBurst(rects: [items[index].bounds], kind: on ? activeCoverBurstKind : .uncover)
     }
 
     func toggle(_ id: Int) {
@@ -372,10 +520,11 @@ final class EditorModel {
     }
 
     func remove(_ id: Int) {
-        guard items.contains(where: { $0.id == id }) else { return }
+        guard let removed = items.first(where: { $0.id == id }) else { return }
         pushUndo()
         items.removeAll { $0.id == id }
         if selectedManualID == id { selectedManualID = nil }
+        emitBurst(rects: [removed.bounds], kind: .uncover)
     }
 
     /// Adds a box drawn by hand. `rect` is in full-size upright pixels.
@@ -387,6 +536,7 @@ final class EditorModel {
                                       CGPoint(x: rect.maxX, y: rect.maxY), CGPoint(x: rect.minX, y: rect.maxY)]],
                               isOn: true, evidence: ""))
         nextID += 1
+        emitBurst(rects: [rect], kind: activeCoverBurstKind)
     }
 
     /// Moves a hand-drawn box by `(dx, dy)` in full-size upright pixels, clamped within the image bounds.
@@ -403,12 +553,15 @@ final class EditorModel {
     }
 
     func setAllText(_ on: Bool) {
-        let changed = items.contains { $0.origin == .textLine && $0.isOn != on }
-        guard changed else { return }
+        let changedIndices = items.indices.filter { items[$0].origin == .textLine && items[$0].isOn != on }
+        guard !changedIndices.isEmpty else { return }
         pushUndo()
-        for index in items.indices where items[index].origin == .textLine {
+        var rects: [CGRect] = []
+        for index in changedIndices {
             items[index].isOn = on
+            rects.append(items[index].bounds)
         }
+        emitBurst(rects: rects, kind: on ? activeCoverBurstKind : .uncover)
     }
 
     func setStyle(_ style: MaskStyle) {
@@ -416,30 +569,82 @@ final class EditorModel {
         preferences.style = style
         preferences.save(to: defaults)
         onStyleChanged?(style)
+        let rects = enabledItems.map(\.bounds)
+        if !rects.isEmpty {
+            emitBurst(rects: rects, kind: style == .conceal ? .erase : .styleMorph)
+        }
     }
 
     func setSolidColor(_ preset: SolidColorPreset) {
-        guard preferences.solidColor != preset else { return }
+        guard preferences.solidColor != preset || preferences.customSolidColor != nil else { return }
         preferences.solidColor = preset
+        preferences.customSolidColor = nil
         preferences.save(to: defaults)
+        emitStyleMorphIfActive()
+    }
+
+    func setCustomSolidColor(_ color: CustomColorRGB) {
+        guard preferences.customSolidColor != color else { return }
+        preferences.customSolidColor = color
+        preferences.save(to: defaults)
+        emitStyleMorphIfActive()
+    }
+
+    func setMosaicTint(_ tint: MosaicTint) {
+        guard preferences.mosaicTint != tint else { return }
+        preferences.mosaicTint = tint
+        preferences.save(to: defaults)
+        emitStyleMorphIfActive()
     }
 
     func setEmoji(_ emoji: String) {
-        guard preferences.emoji != emoji else { return }
-        preferences.emoji = emoji
+        let cleaned = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+        let singleEmoji = String(cleaned.prefix(1))
+        var recents = preferences.recentEmojis.filter { $0 != singleEmoji }
+        recents.insert(singleEmoji, at: 0)
+        if recents.count > 12 { recents = Array(recents.prefix(12)) }
+        let changed = preferences.emoji != singleEmoji || preferences.recentEmojis != recents
+        guard changed else { return }
+        preferences.emoji = singleEmoji
+        preferences.recentEmojis = recents
         preferences.save(to: defaults)
+        emitStyleMorphIfActive()
     }
 
     func setStrength(_ strength: MaskStrength) {
         guard preferences.strength != strength else { return }
         preferences.strength = strength
         preferences.save(to: defaults)
+        emitStyleMorphIfActive()
     }
 
     func setExportFormat(_ format: ExportFormat) {
         guard preferences.exportFormat != format else { return }
         preferences.exportFormat = format
         preferences.save(to: defaults)
+    }
+
+    func setAutoAppleIntelligence(_ on: Bool) {
+        guard preferences.autoAppleIntelligence != on else { return }
+        preferences.autoAppleIntelligence = on
+        preferences.save(to: defaults)
+    }
+
+    private var activeCoverBurstKind: MagicBurstEvent.Kind {
+        preferences.style == .conceal ? .erase : .cover
+    }
+
+    private func emitStyleMorphIfActive() {
+        let rects = enabledItems.map(\.bounds)
+        if !rects.isEmpty {
+            emitBurst(rects: rects, kind: .styleMorph)
+        }
+    }
+
+    private func emitBurst(rects: [CGRect], kind: MagicBurstEvent.Kind) {
+        guard !rects.isEmpty else { return }
+        magicBurst = MagicBurstEvent(rects: rects, kind: kind)
     }
 
     /// Finds an uncovered item hit by a tap in upright full-size pixels.

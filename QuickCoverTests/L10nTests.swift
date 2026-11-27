@@ -120,13 +120,15 @@ struct L10nTests {
             "doc.viewfinder", "photo.on.rectangle", "list.bullet", "arrow.uturn.backward",
             "arrow.uturn.forward", "rectangle.dashed", "eye", "exclamationmark.triangle",
             "exclamationmark.circle", "checkmark", "checkmark.circle.fill", "checkmark.shield.fill",
-            "shield", "lock.shield.fill", "location.slash.fill", "sparkles", "viewfinder",
-            "square.and.arrow.up", "checkerboard.shield", "swatchpalette", "trash",
+            "shield", "lock.shield", "lock.shield.fill", "location.slash.fill", "sparkles", "viewfinder",
+            "square.and.arrow.up", "checkerboard.shield", "checkerboard.rectangle", "swatchpalette", "trash",
             "person.crop.rectangle", "text.quote", "qrcode", "arrow.down.right.and.arrow.up.left",
+            "pawprint", "plus", "wand.and.stars",
         ]
         for name in names {
             #expect(UIImage(systemName: name) != nil, "\(name)")
         }
+        #expect(EmojiPreset.all.count >= 48)
     }
 
     @Test
@@ -136,5 +138,7 @@ struct L10nTests {
         #expect(L10n.coveredCount(3, bundle: bundle("zh-Hant")) == "已遮 3 處")
         #expect(L10n.coveredCount(2, bundle: bundle("en")) == "2 Covered")
         #expect(L10n.coveredCount(0, bundle: bundle("en")) == "None Covered")
+        #expect(L10n.intelligenceAdded(2, bundle: bundle("zh-Hans")) == "已智能补充遮挡 2 处")
+        #expect(L10n.intelligenceAdded(2, bundle: bundle("en")) == "Smart-masked 2 more")
     }
 }

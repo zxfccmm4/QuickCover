@@ -36,7 +36,8 @@ struct PrimerScreen: View {
                     FeatureHighlightRow(
                         systemImage: "sparkles",
                         title: "primer.feat1.title",
-                        description: "primer.feat1.body"
+                        description: "primer.feat1.body",
+                        usesIntelligenceTint: true
                     )
                     FeatureHighlightRow(
                         systemImage: "swatchpalette",
@@ -117,13 +118,18 @@ private struct FeatureHighlightRow: View {
     let systemImage: String
     let title: LocalizedStringKey
     let description: LocalizedStringKey
+    var usesIntelligenceTint = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             Image(systemName: systemImage)
                 .font(.system(size: 25, weight: .medium))
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(
+                    usesIntelligenceTint
+                        ? AnyShapeStyle(AppleIntelligencePalette.linearGradient)
+                        : AnyShapeStyle(Theme.accent)
+                )
                 .frame(width: 34, height: 34, alignment: .center)
                 .padding(.top, 1)
                 .accessibilityHidden(true)

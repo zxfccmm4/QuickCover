@@ -34,8 +34,7 @@ struct StylePicker: View {
                                 HStack(spacing: 6) {
                                     StyleSwatch(
                                         style: option,
-                                        solidColor: model.preferences.solidColor,
-                                        emoji: model.preferences.emoji,
+                                        appearance: model.maskAppearance,
                                         size: CGSize(width: 22, height: 16),
                                         cornerRadius: 4.5
                                     )

@@ -1,13 +1,44 @@
 import SwiftUI
 
-/// Tactile miniature visual preview tile for each `MaskStyle`, echoing DAMA / Mosaic+ / Apple
-/// Markup's direct-manipulation swatches so users recognize every masking effect at a glance.
+/// Tactile miniature visual preview tile for each `MaskStyle`, live-reflecting colored mosaic,
+/// colored diagonal stripes, Apple Intelligence magic erase, custom solid colors, and chosen emoji.
 struct StyleSwatch: View {
     let style: MaskStyle
-    var solidColor: SolidColorPreset = .black
+    var solidColorOption: MaskColorOption = .preset(.black)
+    var mosaicTint: MosaicTint = .original
     var emoji: String = EmojiPreset.default
     var size: CGSize = CGSize(width: 30, height: 22)
     var cornerRadius: CGFloat = 6
+
+    init(
+        style: MaskStyle,
+        appearance: MaskAppearance,
+        size: CGSize = CGSize(width: 30, height: 22),
+        cornerRadius: CGFloat = 6
+    ) {
+        self.style = style
+        self.solidColorOption = appearance.resolvedSolidOption
+        self.mosaicTint = appearance.mosaicTint
+        self.emoji = appearance.emoji
+        self.size = size
+        self.cornerRadius = cornerRadius
+    }
+
+    init(
+        style: MaskStyle,
+        solidColor: SolidColorPreset = .black,
+        mosaicTint: MosaicTint = .original,
+        emoji: String = EmojiPreset.default,
+        size: CGSize = CGSize(width: 30, height: 22),
+        cornerRadius: CGFloat = 6
+    ) {
+        self.style = style
+        self.solidColorOption = .preset(solidColor)
+        self.mosaicTint = mosaicTint
+        self.emoji = emoji
+        self.size = size
+        self.cornerRadius = cornerRadius
+    }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -29,10 +60,7 @@ struct StyleSwatch: View {
                 let rows = 2
                 let cw = sz.width / CGFloat(cols)
                 let ch = sz.height / CGFloat(rows)
-                let palette: [Color] = [
-                    Color(white: 0.86), Color(white: 0.44), Color(red: 0.36, green: 0.72, blue: 0.71),
-                    Color(white: 0.32), Color(white: 0.78), Color(white: 0.54),
-                ]
+                let palette: [Color] = mosaicCellColors
                 for r in 0..<rows {
                     for c in 0..<cols {
                         let rect = CGRect(x: CGFloat(c) * cw, y: CGFloat(r) * ch, width: cw + 0.5, height: ch + 0.5)
@@ -43,7 +71,8 @@ struct StyleSwatch: View {
 
         case .stripes:
             Canvas { context, sz in
-                context.fill(Path(CGRect(origin: .zero, size: sz)), with: .color(.black))
+                let barColor = mosaicTint.resolvedColor.map { Color(cgColor: $0.cgColor) } ?? .black
+                context.fill(Path(CGRect(origin: .zero, size: sz)), with: .color(barColor))
                 let period: CGFloat = max(4.5, sz.height * 0.28)
                 let stripeW = period * 0.48
                 var d = -sz.height
@@ -54,7 +83,7 @@ struct StyleSwatch: View {
                     p.addLine(to: CGPoint(x: d + stripeW + sz.height, y: sz.height))
                     p.addLine(to: CGPoint(x: d + sz.height, y: sz.height))
                     p.closeSubpath()
-                    context.fill(p, with: .color(Color(white: 0.82)))
+                    context.fill(p, with: .color(Color(white: 0.86)))
                     d += period
                 }
             }
@@ -62,20 +91,24 @@ struct StyleSwatch: View {
         case .conceal:
             ZStack {
                 LinearGradient(
-                    colors: [Color(red: 0.94, green: 0.96, blue: 0.98), Color(red: 0.82, green: 0.88, blue: 0.91)],
+                    colors: [
+                        Color(red: 0.90, green: 0.95, blue: 0.98),
+                        Color(red: 0.89, green: 0.87, blue: 0.98),
+                        Color(red: 0.98, green: 0.90, blue: 0.94),
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 Image(systemName: "sparkles")
-                    .font(.system(size: min(size.height * 0.55, 12), weight: .semibold))
-                    .foregroundStyle(Theme.accent)
+                    .font(.system(size: min(size.height * 0.56, 13), weight: .semibold))
+                    .foregroundStyle(AppleIntelligencePalette.linearGradient)
             }
 
         case .solid:
             ZStack {
-                Color(cgColor: solidColor.cgColor)
+                Color(cgColor: solidColorOption.cgColor)
                 LinearGradient(
-                    colors: [Color.white.opacity(solidColor == .white ? 0 : 0.16), .clear],
+                    colors: [Color.white.opacity(0.16), .clear],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -110,6 +143,23 @@ struct StyleSwatch: View {
                 Text(emoji.isEmpty ? EmojiPreset.default : emoji)
                     .font(.system(size: min(size.height * 0.78, 16)))
             }
+        }
+    }
+
+    private var mosaicCellColors: [Color] {
+        guard let tint = mosaicTint.resolvedColor else {
+            return [
+                Color(white: 0.86), Color(white: 0.44), Color(red: 0.36, green: 0.72, blue: 0.71),
+                Color(white: 0.32), Color(white: 0.78), Color(white: 0.54),
+            ]
+        }
+        let c = tint.rgba
+        let factors: [Double] = [1.18, 0.78, 1.0, 0.68, 1.12, 0.88]
+        return factors.map { f in
+            let r = f <= 1 ? Double(c.r) * f : Double(c.r) + (1 - Double(c.r)) * (f - 1)
+            let g = f <= 1 ? Double(c.g) * f : Double(c.g) + (1 - Double(c.g)) * (f - 1)
+            let b = f <= 1 ? Double(c.b) * f : Double(c.b) + (1 - Double(c.b)) * (f - 1)
+            return Color(red: min(max(r, 0), 1), green: min(max(g, 0), 1), blue: min(max(b, 0), 1))
         }
     }
 }

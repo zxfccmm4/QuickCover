@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Full-bleed dark photo-editing studio inspired by Apple Photos and iOS 26/27 Screenshot Markup.
-/// Uses unified monochrome Liquid Glass toolbar controls (highlighting brand teal only for active
-/// tools and the primary Export action), a centered live coverage/zoom HUD pill, gallery-framed
-/// canvas, and harmonized dark-studio inspector sheets.
+/// Full-bleed dark photo-editing studio inspired by Apple Photos, Apple Intelligence Clean Up,
+/// and iOS 26/27 Screenshot Markup.
+/// Uses unified monochrome Liquid Glass toolbar controls (highlighting brand teal for active tools,
+/// Apple Intelligence iridescence for smart privacy scanning, and prominent Export CTA), a centered
+/// live coverage/zoom HUD pill, gallery-framed canvas, and harmonized dark-studio inspector sheets.
 struct EditorScreen: View {
     @Environment(EditorModel.self) private var model
     @Environment(ShellModel.self) private var shell
@@ -17,10 +18,12 @@ struct EditorScreen: View {
     @State private var announcedCallout: EditorCallout.Kind?
     @State private var canvasZoom: CGFloat = 1
     @State private var zoomResetTrigger = 0
+    @State private var aiToastMessage: String?
+    @State private var aiToastTask: Task<Void, Never>?
 
     private var isFinding: Bool { model.recognition == .running }
     private var enabledCount: Int { model.enabledItems.count }
-    private var isSheetOpen: Bool { model.reviewShown || model.watermarkShown }
+    private var isSheetOpen: Bool { model.reviewShown || model.watermarkShown || model.emojiPickerShown }
 
     private var callout: EditorCallout.Kind? {
         guard !calloutDismissed, !isSheetOpen else { return nil }
@@ -55,6 +58,13 @@ struct EditorScreen: View {
         )
     }
 
+    private var emojiPickerShown: Binding<Bool> {
+        Binding(
+            get: { model.emojiPickerShown },
+            set: { model.emojiPickerShown = $0 }
+        )
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let horizontalMat: CGFloat = 10
@@ -82,6 +92,30 @@ struct EditorScreen: View {
                 .padding(.horizontal, horizontalMat)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .animation(reduceMotion ? nil : .snappy(duration: 0.28), value: bottomOverlayHeight)
+
+                if let aiToastMessage, !isSheetOpen {
+                    VStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(AppleIntelligencePalette.linearGradient)
+                            Text(verbatim: aiToastMessage)
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(.white)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .glassEffect(.regular, in: .capsule)
+                        .overlay(
+                            Capsule()
+                                .stroke(AppleIntelligencePalette.linearGradient.opacity(0.55), lineWidth: 0.8)
+                        )
+                        .padding(.top, 8)
+                        Spacer()
+                    }
+                    .allowsHitTesting(false)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
 
                 if showsStyleTray || callout != nil || showsDrawHint {
                     GlassEffectContainer(spacing: 12) {
@@ -122,6 +156,7 @@ struct EditorScreen: View {
             .animation(.easeInOut(duration: 0.2), value: showsDrawHint)
             .animation(.snappy(duration: 0.28), value: callout)
             .animation(.snappy(duration: 0.26), value: showsStyleTray)
+            .animation(.snappy(duration: 0.24), value: aiToastMessage)
         }
         .environment(\.colorScheme, .dark)
         .navigationBarTitleDisplayMode(.inline)
@@ -215,6 +250,41 @@ struct EditorScreen: View {
                 .accessibilityAddTraits(model.styleTrayShown ? [.isSelected] : [])
             }
 
+            ToolbarItem(placement: .bottomBar) {
+                Menu {
+                    Button {
+                        triggerSmartScan(applyMagicErase: false)
+                    } label: {
+                        Label("ai.menuScan", systemImage: "sparkles")
+                    }
+
+                    Button {
+                        triggerSmartScan(applyMagicErase: true)
+                    } label: {
+                        Label("ai.menuMagicErase", systemImage: "wand.and.stars")
+                    }
+
+                    Divider()
+
+                    Toggle(
+                        "ai.autoToggle",
+                        isOn: Binding(
+                            get: { model.preferences.autoAppleIntelligence },
+                            set: { model.setAutoAppleIntelligence($0) }
+                        )
+                    )
+                } label: {
+                    Image(systemName: "sparkles")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppleIntelligencePalette.linearGradient)
+                        .symbolEffect(.pulse, isActive: model.isRunningIntelligence)
+                } primaryAction: {
+                    triggerSmartScan(applyMagicErase: false)
+                }
+                .disabled(isFinding || model.isRunningIntelligence)
+                .accessibilityLabel("ai.buttonLabel")
+            }
+
             ToolbarSpacer(.flexible, placement: .bottomBar)
 
             ToolbarItem(placement: .bottomBar) {
@@ -243,6 +313,11 @@ struct EditorScreen: View {
                 .environment(model)
                 .preferredColorScheme(.dark)
         }
+        .sheet(isPresented: emojiPickerShown) {
+            EmojiPickerSheet()
+                .environment(model)
+                .preferredColorScheme(.dark)
+        }
         .task(id: isFinding) {
             if isFinding { announce("4.2.1") }
         }
@@ -258,6 +333,9 @@ struct EditorScreen: View {
         }
         .onChange(of: manualBoxCount) { _, count in
             if model.drawToolOn, count > 0 { drawHintHidden = true }
+        }
+        .onDisappear {
+            aiToastTask?.cancel()
         }
     }
 
@@ -331,6 +409,30 @@ struct EditorScreen: View {
     }
 
     // MARK: - Actions
+
+    private func triggerSmartScan(applyMagicErase: Bool) {
+        Task { @MainActor in
+            let added = await model.runAppleIntelligenceScan(applyMagicErase: applyMagicErase)
+            let message: String = if added > 0 {
+                L10n.intelligenceAdded(added)
+            } else if applyMagicErase {
+                L10n.text("ai.magicEraseApplied")
+            } else {
+                L10n.text("ai.resultNone")
+            }
+            showAIToast(message)
+        }
+    }
+
+    private func showAIToast(_ message: String) {
+        aiToastTask?.cancel()
+        aiToastMessage = message
+        aiToastTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2.4))
+            guard !Task.isCancelled else { return }
+            aiToastMessage = nil
+        }
+    }
 
     private func startDrawing() {
         calloutDismissed = true

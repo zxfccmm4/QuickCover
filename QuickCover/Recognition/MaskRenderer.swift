@@ -43,8 +43,8 @@ enum MaskStyle: String, CaseIterable, Codable, Sendable, Identifiable {
         }
     }
 
-    /// Whether this style completely replaces covered pixels with flat/opaque content (no residual
-    /// luminance trace of underlying text).
+    /// Whether this style completely replaces covered pixels with flat/inpainted/opaque content
+    /// (zero residual luminance trace of underlying text).
     var leavesNoTrace: Bool {
         switch self {
         case .solid, .conceal, .emoji: true
@@ -59,36 +59,127 @@ enum MaskStyle: String, CaseIterable, Codable, Sendable, Identifiable {
         case .conceal, .solid, .emoji: false
         }
     }
+
+    /// Whether color palette customization applies to this style.
+    var supportsColor: Bool {
+        switch self {
+        case .mosaic, .stripes, .solid: true
+        case .conceal, .blur, .emoji: false
+        }
+    }
 }
 
-/// Curated Apple-inspired opaque fill colors for `.solid` style.
+/// Arbitrary sRGB color picked via native SwiftUI `ColorPicker`.
+struct CustomColorRGB: Equatable, Codable, Sendable, Hashable {
+    var red: Double
+    var green: Double
+    var blue: Double
+
+    init(red: Double, green: Double, blue: Double) {
+        self.red = min(max(red, 0), 1)
+        self.green = min(max(green, 0), 1)
+        self.blue = min(max(blue, 0), 1)
+    }
+
+    init?(cgColor: CGColor) {
+        guard let srgb = CGColorSpace(name: CGColorSpace.sRGB),
+              let converted = cgColor.converted(to: srgb, intent: .defaultIntent, options: nil),
+              let comps = converted.components, comps.count >= 3 else {
+            return nil
+        }
+        self.init(red: Double(comps[0]), green: Double(comps[1]), blue: Double(comps[2]))
+    }
+
+    var rgba: (r: CGFloat, g: CGFloat, b: CGFloat) {
+        (CGFloat(red), CGFloat(green), CGFloat(blue))
+    }
+
+    var cgColor: CGColor {
+        CGColor(
+            colorSpace: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+            components: [CGFloat(red), CGFloat(green), CGFloat(blue), 1]
+        )!
+    }
+}
+
+/// Curated Apple iOS 26/27 palette for solid blocks, colored mosaics, and colored diagonal stripes.
 enum SolidColorPreset: String, CaseIterable, Codable, Sendable, Identifiable {
     case black
     case white
     case graphite
     case teal
     case sand
+    case sky
+    case indigo
+    case lavender
+    case rose
+    case coral
+    case amber
+    case mint
 
     var id: String { rawValue }
 
     var rgba: (r: CGFloat, g: CGFloat, b: CGFloat) {
         switch self {
-        case .black: (0, 0, 0)
-        case .white: (1, 1, 1)
+        case .black: (0.0, 0.0, 0.0)
+        case .white: (1.0, 1.0, 1.0)
         case .graphite: (0.173, 0.173, 0.180)
         case .teal: (0.043, 0.478, 0.478)
         case .sand: (0.910, 0.886, 0.839)
+        case .sky: (0.039, 0.518, 1.0)
+        case .indigo: (0.369, 0.361, 0.902)
+        case .lavender: (0.749, 0.353, 0.949)
+        case .rose: (1.0, 0.216, 0.373)
+        case .coral: (1.0, 0.412, 0.380)
+        case .amber: (1.0, 0.800, 0.0)
+        case .mint: (0.188, 0.820, 0.345)
         }
     }
 
     var cgColor: CGColor {
         let c = rgba
-        return CGColor(colorSpace: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
-                       components: [c.r, c.g, c.b, 1])!
+        return CGColor(
+            colorSpace: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+            components: [c.r, c.g, c.b, 1]
+        )!
     }
 
     var titleKey: String {
         "color.\(rawValue)"
+    }
+}
+
+/// Color option supporting either a curated Apple preset or any custom `ColorPicker` RGB color.
+enum MaskColorOption: Equatable, Codable, Sendable, Hashable {
+    case preset(SolidColorPreset)
+    case custom(CustomColorRGB)
+
+    var rgba: (r: CGFloat, g: CGFloat, b: CGFloat) {
+        switch self {
+        case .preset(let preset): preset.rgba
+        case .custom(let custom): custom.rgba
+        }
+    }
+
+    var cgColor: CGColor {
+        switch self {
+        case .preset(let preset): preset.cgColor
+        case .custom(let custom): custom.cgColor
+        }
+    }
+}
+
+/// Color mode for `.mosaic` and `.stripes`: either original image cell tones (default) or a rich
+/// tinted palette chosen by the user.
+enum MosaicTint: Equatable, Codable, Sendable, Hashable {
+    case original
+    case color(MaskColorOption)
+
+    var resolvedColor: MaskColorOption? {
+        switch self {
+        case .original: nil
+        case .color(let option): option
+        }
     }
 }
 
@@ -134,10 +225,47 @@ enum ExportFormat: String, CaseIterable, Codable, Sendable, Identifiable {
     }
 }
 
-/// Curated emojis for `.emoji` sticker covering.
+/// Categorized emoji catalog for `.emoji` sticker covering.
+struct EmojiCategory: Identifiable, Sendable {
+    let id: String
+    let titleKey: String
+    let systemImage: String
+    let emojis: [String]
+}
+
+/// Curated emojis for `.emoji` sticker covering (48 presets across 4 categories + custom keyboard).
 enum EmojiPreset {
-    static let all = ["😎", "🙂", "🐱", "🐶", "🌸", "✨"]
+    static let quickBar = ["😎", "🙂", "🫣", "🐱", "🐶", "🦊", "🐼", "🌸", "✨", "🙈"]
     static let `default` = "😎"
+
+    static let categories: [EmojiCategory] = [
+        EmojiCategory(
+            id: "faces",
+            titleKey: "emoji.cat.faces",
+            systemImage: "face.smiling",
+            emojis: ["😎", "🙂", "😊", "🥳", "🤩", "🥹", "🤫", "🤭", "🫣", "😶‍🌫️", "🤖", "👽"]
+        ),
+        EmojiCategory(
+            id: "animals",
+            titleKey: "emoji.cat.animals",
+            systemImage: "pawprint",
+            emojis: ["🐱", "🐶", "🦊", "🐼", "🐨", "🐰", "🐻‍❄️", "🦄", "🐸", "🐧", "🦋", "🐥"]
+        ),
+        EmojiCategory(
+            id: "nature",
+            titleKey: "emoji.cat.nature",
+            systemImage: "sparkles",
+            emojis: ["🌸", "🌼", "🌻", "🍀", "🌈", "✨", "⭐️", "💫", "🔥", "💎", "🎀", "🫧"]
+        ),
+        EmojiCategory(
+            id: "privacy",
+            titleKey: "emoji.cat.privacy",
+            systemImage: "lock.shield",
+            emojis: ["🙈", "🙉", "🙊", "🔒", "🛡️", "🚫", "⛔️", "🪪", "🎭", "👾", "👀", "💯"]
+        ),
+    ]
+
+    static let all: [String] = categories.flatMap(\.emojis)
 }
 
 /// Anti-theft tiled diagonal watermark settings for ID cards, licenses, and documents.
@@ -205,9 +333,20 @@ struct WatermarkOptions: Equatable, Codable, Sendable {
 struct MaskAppearance: Equatable, Codable, Sendable {
     var style: MaskStyle = .default
     var solidColor: SolidColorPreset = .black
+    var customSolidColor: CustomColorRGB? = nil
+    var mosaicTint: MosaicTint = .original
     var emoji: String = EmojiPreset.default
     var strength: MaskStrength = .standard
     var watermark: WatermarkOptions = .off
+
+    var resolvedSolidOption: MaskColorOption {
+        if let customSolidColor { return .custom(customSolidColor) }
+        return .preset(solidColor)
+    }
+
+    var resolvedSolidCGColor: CGColor {
+        resolvedSolidOption.cgColor
+    }
 
     static let `default` = MaskAppearance()
 }
@@ -219,6 +358,8 @@ enum MaskRenderer {
     struct Options: Sendable {
         var style: MaskStyle = .default
         var solidColor: SolidColorPreset = .black
+        var customSolidColor: CustomColorRGB? = nil
+        var mosaicTint: MosaicTint = .original
         var emoji: String = EmojiPreset.default
         var strength: MaskStrength = .standard
         var watermark: WatermarkOptions = .off
@@ -233,6 +374,8 @@ enum MaskRenderer {
             MaskAppearance(
                 style: style,
                 solidColor: solidColor,
+                customSolidColor: customSolidColor,
+                mosaicTint: mosaicTint,
                 emoji: emoji,
                 strength: strength,
                 watermark: watermark
@@ -315,8 +458,8 @@ enum MaskRenderer {
         )
     }
 
-    /// Full-featured pixel flattening supporting all 6 masking styles, custom colors, granularity,
-    /// and diagonal anti-theft watermarks.
+    /// Full-featured pixel flattening supporting all 6 masking styles, Magic Erase multi-directional
+    /// inpainting, rich mosaic/stripe/solid colors, granularity, and diagonal anti-theft watermarks.
     static func flatten(
         _ image: CGImage,
         findings: [Finding],
@@ -349,11 +492,11 @@ enum MaskRenderer {
                 let rect = Geometry.bounds(of: quad)
                 switch appearance.style {
                 case .solid:
-                    context.setFillColor(appearance.solidColor.cgColor)
+                    context.setFillColor(appearance.resolvedSolidCGColor)
                     context.addPath(path)
                     context.fillPath()
                 case .conceal:
-                    conceal(from: image, rect: rect, path: path, into: context)
+                    magicErase(from: image, rect: rect, path: path, into: context)
                 case .emoji:
                     drawEmojiCover(
                         from: image,
@@ -370,6 +513,7 @@ enum MaskRenderer {
                         finding: finding,
                         into: context,
                         style: appearance.style,
+                        tint: appearance.style == .mosaic ? appearance.mosaicTint : .original,
                         strength: appearance.strength,
                         blurGrain: blurGrain,
                         floor: floor
@@ -381,6 +525,7 @@ enum MaskRenderer {
                         path: path,
                         finding: finding,
                         into: context,
+                        tint: appearance.mosaicTint,
                         strength: appearance.strength,
                         blurGrain: blurGrain,
                         floor: floor,
@@ -443,10 +588,11 @@ enum MaskRenderer {
         return heights[heights.count / 2]
     }
 
-    // MARK: - Mosaic & Blur
+    // MARK: - Mosaic & Blur (with Optional Rich Color Tinting)
 
     private static func cover(from image: CGImage, rect: CGRect, path: CGPath, finding: Finding, into context: CGContext,
-                              style: MaskStyle, strength: MaskStrength, blurGrain: BlurGrain, floor: CGFloat) {
+                              style: MaskStyle, tint: MosaicTint, strength: MaskStrength,
+                              blurGrain: BlurGrain, floor: CGFloat) {
         let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
         guard bounds.width >= 2, bounds.height >= 2 else { return }
         let cut = grid(over: bounds, hiding: finding, style: style, blurGrain: blurGrain, floor: floor, strength: strength)
@@ -455,6 +601,17 @@ enum MaskRenderer {
         fillGrains(grains.assumingMemoryBound(to: UInt8.self), grainStride: small.bytesPerRow,
                    from: picture.assumingMemoryBound(to: UInt8.self), stride: context.bytesPerRow,
                    bounds: bounds, columns: cut.columns, rows: cut.rows)
+
+        if let colorOption = tint.resolvedColor {
+            applyColorTint(
+                to: grains.assumingMemoryBound(to: UInt8.self),
+                grainStride: small.bytesPerRow,
+                columns: cut.columns,
+                rows: cut.rows,
+                color: colorOption
+            )
+        }
+
         guard let grainImage = small.makeImage() else { return }
 
         context.saveGState()
@@ -467,16 +624,72 @@ enum MaskRenderer {
         context.restoreGState()
     }
 
-    // MARK: - Diagonal Stripes (design.md §7.3.2)
+    /// Stylizes mosaic grains into a vibrant tonal mosaic of the selected color while maintaining
+    /// pixel-cell visual texture and obscuring underlying glyph contours.
+    private static func applyColorTint(
+        to grains: UnsafeMutablePointer<UInt8>,
+        grainStride: Int,
+        columns: Int,
+        rows: Int,
+        color: MaskColorOption
+    ) {
+        let base = color.rgba
+        let br = Double(base.r) * 255
+        let bg = Double(base.g) * 255
+        let bb = Double(base.b) * 255
+        let isNearBlack = (br + bg + bb) < 42
+        let isNearWhite = (br + bg + bb) > 720
+
+        for row in 0..<rows {
+            for col in 0..<columns {
+                let p = grains + row * grainStride + col * 4
+                let luma = (0.299 * Double(p[0]) + 0.587 * Double(p[1]) + 0.114 * Double(p[2])) / 255.0
+                // Deterministic micro-checker jitter ensures crisp visible mosaic blocks even on flat areas.
+                let hash = ((row &* 73856093) ^ (col &* 19349663)) & 7
+                let jitter = (Double(hash) / 7.0 - 0.5) * 0.14
+                let checker = ((row + col) % 2 == 0) ? 0.05 : -0.05
+
+                let nr: Double
+                let ng: Double
+                let nb: Double
+                if isNearBlack {
+                    let v = min(max(24 + luma * 38 + (jitter + checker) * 90, 8), 86)
+                    nr = v; ng = v; nb = v
+                } else if isNearWhite {
+                    let v = min(max(210 + luma * 34 + (jitter + checker) * 70, 185), 255)
+                    nr = v; ng = v; nb = v
+                } else {
+                    let tone = min(max(0.74 + luma * 0.34 + jitter + checker, 0.56), 1.24)
+                    if tone <= 1.0 {
+                        nr = br * tone
+                        ng = bg * tone
+                        nb = bb * tone
+                    } else {
+                        let lift = tone - 1.0
+                        nr = br + (255 - br) * lift
+                        ng = bg + (255 - bg) * lift
+                        nb = bb + (255 - bb) * lift
+                    }
+                }
+                p[0] = UInt8(min(max(Int(nr.rounded()), 0), 255))
+                p[1] = UInt8(min(max(Int(ng.rounded()), 0), 255))
+                p[2] = UInt8(min(max(Int(nb.rounded()), 0), 255))
+                p[3] = 255
+            }
+        }
+    }
+
+    // MARK: - Diagonal Stripes (design.md §7.3.2, with Optional Colored Bars)
 
     /// Draws the exact same average-color cell grid as mosaic masked through 45° diagonal bars
-    /// aligned to the picture's top-left corner, alternating with solid black.
+    /// aligned to the picture's top-left corner, alternating with solid black (or user-chosen tint).
     private static func drawStripes(
         from image: CGImage,
         rect: CGRect,
         path: CGPath,
         finding: Finding,
         into context: CGContext,
+        tint: MosaicTint,
         strength: MaskStrength,
         blurGrain: BlurGrain,
         floor: CGFloat,
@@ -507,8 +720,9 @@ enum MaskRenderer {
         context.addPath(path)
         context.clip()
 
-        // Fill base black between stripes.
-        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
+        // Fill base bar color between mosaic stripes (pure black by default, or user-chosen tint).
+        let barColor = tint.resolvedColor?.cgColor ?? CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        context.setFillColor(barColor)
         context.fill(bounds)
 
         // Build 45° diagonal stripe clip aligned to global (stripeOrigin + (x, y)).
@@ -525,7 +739,6 @@ enum MaskRenderer {
         for k in firstK...lastK {
             let d0 = CGFloat(k) * period
             let d1 = d0 + stripeWidth
-            // Line x - y = d in global coords -> local x = d + (y + originY) - originX
             let yTop = bounds.minY - 2
             let yBot = bounds.maxY + 2
             let xTop0 = d0 + (yTop + stripeOrigin.y) - stripeOrigin.x
@@ -548,16 +761,251 @@ enum MaskRenderer {
         context.restoreGState()
     }
 
-    // MARK: - Smart Conceal (Background-Matched Text Erasure)
+    // MARK: - Magic Erase (Multi-Directional Seamless Inpainting)
 
-    /// Samples the perimeter right around `rect` and fills `path` with the median background color,
-    /// seamlessly erasing text on chat bubbles, receipts, and documents with zero visual clutter.
-    private static func conceal(from image: CGImage, rect: CGRect, path: CGPath, into context: CGContext) {
-        let color = sampledBackgroundColor(around: rect, in: context, width: image.width, height: image.height)
+    /// Reconstructs covered pixels strictly from exterior boundary samples using inverse-distance
+    /// weighted multi-directional interpolation plus organic surface grain preservation.
+    /// Never reads a single pixel inside `rect`, guaranteeing zero residual text trace while
+    /// blending smoothly across gradients, chat bubbles, soft shadows, and paper textures.
+    private static func magicErase(from image: CGImage, rect: CGRect, path: CGPath, into context: CGContext) {
+        let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
+        guard bounds.width >= 2, bounds.height >= 2, let rawData = context.data else {
+            let color = sampledBackgroundColor(around: rect, in: context, width: image.width, height: image.height)
+            context.saveGState()
+            context.setFillColor(color)
+            context.addPath(path)
+            context.fillPath()
+            context.restoreGState()
+            return
+        }
+
+        let width = image.width
+        let height = image.height
+        let pixels = rawData.assumingMemoryBound(to: UInt8.self)
+        let stride = context.bytesPerRow
+
+        let x0 = max(0, min(width - 1, Int(bounds.minX.rounded(.down))))
+        let x1 = max(x0 + 1, min(width, Int(bounds.maxX.rounded(.up))))
+        let y0 = max(0, min(height - 1, Int(bounds.minY.rounded(.down))))
+        let y1 = max(y0 + 1, min(height, Int(bounds.maxY.rounded(.up))))
+        let patchW = x1 - x0
+        let patchH = y1 - y0
+
+        guard patchW >= 1, patchH >= 1,
+              let patchCtx = CGImage.rgbaContext(width: patchW, height: patchH),
+              let patchData = patchCtx.data else {
+            return
+        }
+
+        // Helper reading robust 3-sample median strictly outside the box to reject edge ink bleed.
+        func sampleRGB(_ sx: Int, _ sy: Int) -> (Double, Double, Double) {
+            let cx = max(0, min(width - 1, sx))
+            let cy = max(0, min(height - 1, sy))
+            let p = pixels + cy * stride + cx * 4
+            return (Double(p[0]), Double(p[1]), Double(p[2]))
+        }
+
+        func median3(_ a: Double, _ b: Double, _ c: Double) -> Double {
+            if a > b {
+                if b > c { return b }
+                return a > c ? c : a
+            } else {
+                if a > c { return a }
+                return b > c ? c : b
+            }
+        }
+
+        func robustEdgeSample(x: Int, y: Int, dx: Int, dy: Int) -> (Double, Double, Double) {
+            // Skip the immediate 1px fringe where anti-aliased adjacent glyphs can bleed into the boundary.
+            let s1 = sampleRGB(x + dx * 2, y + dy * 2)
+            let s2 = sampleRGB(x + dx * 3, y + dy * 3)
+            let s3 = sampleRGB(x + dx * 4, y + dy * 4)
+            return (
+                median3(s1.0, s2.0, s3.0),
+                median3(s1.1, s2.1, s3.1),
+                median3(s1.2, s2.2, s3.2)
+            )
+        }
+
+        let hasTop = y0 > 0
+        let hasBottom = y1 < height
+        let hasLeft = x0 > 0
+        let hasRight = x1 < width
+
+        var topEdge = [(Double, Double, Double)](repeating: (242, 242, 242), count: patchW)
+        var bottomEdge = [(Double, Double, Double)](repeating: (242, 242, 242), count: patchW)
+        var leftEdge = [(Double, Double, Double)](repeating: (242, 242, 242), count: patchH)
+        var rightEdge = [(Double, Double, Double)](repeating: (242, 242, 242), count: patchH)
+
+        for i in 0..<patchW {
+            let gx = x0 + i
+            if hasTop {
+                topEdge[i] = robustEdgeSample(x: gx, y: y0, dx: 0, dy: -1)
+            }
+            if hasBottom {
+                bottomEdge[i] = robustEdgeSample(x: gx, y: y1 - 1, dx: 0, dy: 1)
+            }
+        }
+        for j in 0..<patchH {
+            let gy = y0 + j
+            if hasLeft {
+                leftEdge[j] = robustEdgeSample(x: x0, y: gy, dx: -1, dy: 0)
+            }
+            if hasRight {
+                rightEdge[j] = robustEdgeSample(x: x1 - 1, y: gy, dx: 1, dy: 0)
+            }
+        }
+
+        // Remove adjacent foreground glyph bleed (e.g. a colon "：" right before a phone number)
+        // using a sliding median (which preserves linear gradients exactly) plus corner-consistent
+        // outlier rejection on narrow edges, followed by a light radius-2 smoothing pass.
+        func cleanEdge(
+            _ edge: [(Double, Double, Double)],
+            cornerStart: (Double, Double, Double)? = nil,
+            cornerEnd: (Double, Double, Double)? = nil
+        ) -> [(Double, Double, Double)] {
+            guard edge.count >= 5 else { return edge }
+            let radius = min(8, max(3, edge.count / 4))
+            var denoised = edge
+            var rs: [Double] = []
+            var gs: [Double] = []
+            var bs: [Double] = []
+            rs.reserveCapacity(radius * 2 + 1)
+            gs.reserveCapacity(radius * 2 + 1)
+            bs.reserveCapacity(radius * 2 + 1)
+
+            for i in 0..<edge.count {
+                rs.removeAll(keepingCapacity: true)
+                gs.removeAll(keepingCapacity: true)
+                bs.removeAll(keepingCapacity: true)
+                let lo = max(0, i - radius)
+                let hi = min(edge.count - 1, i + radius)
+                for k in lo...hi {
+                    rs.append(edge[k].0)
+                    gs.append(edge[k].1)
+                    bs.append(edge[k].2)
+                }
+                rs.sort()
+                gs.sort()
+                bs.sort()
+                let mid = rs.count / 2
+                var c = (rs[mid], gs[mid], bs[mid])
+
+                if let c0 = cornerStart, let c1 = cornerEnd {
+                    let cornerDelta = abs(c0.0 - c1.0) + abs(c0.1 - c1.1) + abs(c0.2 - c1.2)
+                    if cornerDelta < 75 {
+                        let t = Double(i) / Double(max(1, edge.count - 1))
+                        let expected = (
+                            c0.0 + (c1.0 - c0.0) * t,
+                            c0.1 + (c1.1 - c0.1) * t,
+                            c0.2 + (c1.2 - c0.2) * t
+                        )
+                        let diff = abs(c.0 - expected.0) + abs(c.1 - expected.1) + abs(c.2 - expected.2)
+                        if diff > 42 {
+                            c = expected
+                        }
+                    }
+                }
+                denoised[i] = c
+            }
+
+            var out = denoised
+            for i in 0..<denoised.count {
+                var sr = 0.0, sg = 0.0, sb = 0.0, count = 0.0
+                for k in max(0, i - 2)...min(denoised.count - 1, i + 2) {
+                    sr += denoised[k].0; sg += denoised[k].1; sb += denoised[k].2; count += 1
+                }
+                out[i] = (sr / count, sg / count, sb / count)
+            }
+            return out
+        }
+
+        if hasTop { topEdge = cleanEdge(topEdge) }
+        if hasBottom { bottomEdge = cleanEdge(bottomEdge) }
+        if hasLeft {
+            leftEdge = cleanEdge(
+                leftEdge,
+                cornerStart: hasTop ? topEdge.first : nil,
+                cornerEnd: hasBottom ? bottomEdge.first : nil
+            )
+        }
+        if hasRight {
+            rightEdge = cleanEdge(
+                rightEdge,
+                cornerStart: hasTop ? topEdge.last : nil,
+                cornerEnd: hasBottom ? bottomEdge.last : nil
+            )
+        }
+
+        // Estimate subtle natural exterior grain from cleaned edges (0 on flat digital cards; gentle 1..4 on photos).
+        var lumas: [Double] = []
+        lumas.reserveCapacity((patchW + patchH) * 2)
+        if hasTop { for c in topEdge { lumas.append(0.299 * c.0 + 0.587 * c.1 + 0.114 * c.2) } }
+        if hasBottom { for c in bottomEdge { lumas.append(0.299 * c.0 + 0.587 * c.1 + 0.114 * c.2) } }
+        if hasLeft { for c in leftEdge { lumas.append(0.299 * c.0 + 0.587 * c.1 + 0.114 * c.2) } }
+        if hasRight { for c in rightEdge { lumas.append(0.299 * c.0 + 0.587 * c.1 + 0.114 * c.2) } }
+
+        let grainAmplitude: Double = {
+            guard lumas.count >= 8 else { return 0 }
+            var diffSum = 0.0
+            for idx in 1..<lumas.count {
+                diffSum += min(abs(lumas[idx] - lumas[idx - 1]), 12.0)
+            }
+            let avgStep = diffSum / Double(lumas.count - 1)
+            return avgStep < 1.5 ? 0 : min(avgStep * 0.45, 4.5)
+        }()
+
+        let outBuf = patchData.assumingMemoryBound(to: UInt8.self)
+        let outStride = patchCtx.bytesPerRow
+
+        for j in 0..<patchH {
+            let dTop = Double(j + 1)
+            let dBot = Double(patchH - j)
+            let wTop = hasTop ? 1.0 / (dTop * dTop) : 0.0
+            let wBot = hasBottom ? 1.0 / (dBot * dBot) : 0.0
+            let lColor = leftEdge[j]
+            let rColor = rightEdge[j]
+
+            for i in 0..<patchW {
+                let dLeft = Double(i + 1)
+                let dRight = Double(patchW - i)
+                let wLeft = hasLeft ? 1.0 / (dLeft * dLeft) : 0.0
+                let wRight = hasRight ? 1.0 / (dRight * dRight) : 0.0
+                let wSum = wTop + wBot + wLeft + wRight
+
+                var r = 242.0, g = 242.0, b = 242.0
+                if wSum > 0 {
+                    let tColor = topEdge[i]
+                    let bColor = bottomEdge[i]
+                    r = (tColor.0 * wTop + bColor.0 * wBot + lColor.0 * wLeft + rColor.0 * wRight) / wSum
+                    g = (tColor.1 * wTop + bColor.1 * wBot + lColor.1 * wLeft + rColor.1 * wRight) / wSum
+                    b = (tColor.2 * wTop + bColor.2 * wBot + lColor.2 * wLeft + rColor.2 * wRight) / wSum
+                }
+
+                if grainAmplitude > 0 {
+                    let seed = ((x0 + i) &* 374761393) ^ ((y0 + j) &* 668265263)
+                    let mixed = (seed ^ (seed >> 13)) &* 1274126177
+                    let noise = (Double(mixed & 0xFF) / 255.0 - 0.5) * 2.0 * grainAmplitude
+                    r += noise; g += noise; b += noise
+                }
+
+                let dst = outBuf + j * outStride + i * 4
+                dst[0] = UInt8(min(max(Int(r.rounded()), 0), 255))
+                dst[1] = UInt8(min(max(Int(g.rounded()), 0), 255))
+                dst[2] = UInt8(min(max(Int(b.rounded()), 0), 255))
+                dst[3] = 255
+            }
+        }
+
+        guard let erasedImage = patchCtx.makeImage() else { return }
+
         context.saveGState()
-        context.setFillColor(color)
         context.addPath(path)
-        context.fillPath()
+        context.clip()
+        context.interpolationQuality = .high
+        context.translateBy(x: CGFloat(x0), y: CGFloat(y1))
+        context.scaleBy(x: 1, y: -1)
+        context.draw(erasedImage, in: CGRect(x: 0, y: 0, width: CGFloat(patchW), height: CGFloat(patchH)))
         context.restoreGState()
     }
 
@@ -611,7 +1059,7 @@ enum MaskRenderer {
     // MARK: - Emoji Sticker Cover
 
     /// Permanently conceals underlying pixels with the surrounding background color first, then
-    /// stamps a crisp centered Emoji sticker so no sensitive strokes can ever peek past the edges.
+    /// stamps crisp centered/tiled Emoji stickers so no sensitive strokes can ever peek past the edges.
     private static func drawEmojiCover(
         from image: CGImage,
         rect: CGRect,
@@ -622,13 +1070,12 @@ enum MaskRenderer {
         let bounds = rect.intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height)))
         guard bounds.width >= 2, bounds.height >= 2 else { return }
 
-        // 1. Opaque background-matched fill guarantees zero pixel leakage.
-        let backing = sampledBackgroundColor(around: bounds, in: context, width: image.width, height: image.height)
+        // 1. Seamless magic-erase backing guarantees zero pixel leakage AND smooth blending under emoji.
+        magicErase(from: image, rect: bounds, path: path, into: context)
+
         context.saveGState()
         context.addPath(path)
         context.clip()
-        context.setFillColor(backing)
-        context.fill(bounds)
 
         // 2. Render crisp emoji stamp(s) scaled cleanly to box height.
         let symbol = emoji.isEmpty ? EmojiPreset.default : emoji

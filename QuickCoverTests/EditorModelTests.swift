@@ -215,4 +215,51 @@ struct EditorModelTests {
         #expect(loaded.strength == .coarse)
         #expect(loaded.exportFormat == .png)
     }
+
+    @Test
+    @MainActor
+    func customColorsMosaicTintRecentEmojisAndAIPreferencePersist() throws {
+        let defaults = try #require(UserDefaults(suiteName: "EditorModelTests"))
+        let model = try makeModel()
+        let custom = CustomColorRGB(red: 0.25, green: 0.55, blue: 0.90)
+        model.setCustomSolidColor(custom)
+        model.setMosaicTint(.color(.preset(.rose)))
+        model.setEmoji("🦊")
+        model.setEmoji("🐼")
+        model.setAutoAppleIntelligence(false)
+
+        let loaded = EditorModel.Preferences.load(from: defaults)
+        #expect(loaded.customSolidColor == custom)
+        #expect(loaded.mosaicTint == .color(.preset(.rose)))
+        #expect(loaded.emoji == "🐼")
+        #expect(loaded.recentEmojis.prefix(2) == ["🐼", "🦊"])
+        #expect(!loaded.autoAppleIntelligence)
+    }
+
+    @Test
+    @MainActor
+    func appleIntelligenceContextualScanCoversSensitiveTextLinesAndEmitsMagicBurst() async throws {
+        let model = try makeModel()
+        model.adopt(
+            RecognitionResult(
+                size: CGSize(width: 300, height: 150),
+                findings: [Finding(kind: .face, quad: quad(10, 10, 80, 80))],
+                textLines: [
+                    TextLine(quad: quad(10, 95, 180, 16), text: "地址：上海市徐汇区漕河泾路 88 号"),
+                    TextLine(quad: quad(10, 115, 120, 16), text: "欢迎光临"),
+                    TextLine(quad: quad(10, 132, 160, 16), text: "订单号：QC-2026-8849102"),
+                ]
+            )
+        )
+        #expect(model.enabledItems.count == 1)
+
+        let added = await model.runAppleIntelligenceScan(applyMagicErase: true)
+        #expect(added == 2)
+        #expect(model.enabledItems.count == 3)
+        #expect(model.preferences.style == .conceal)
+        #expect(model.magicBurst?.kind == .erase)
+
+        model.undo()
+        #expect(model.enabledItems.count == 1)
+    }
 }

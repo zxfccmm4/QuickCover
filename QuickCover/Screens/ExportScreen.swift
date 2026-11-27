@@ -190,6 +190,22 @@ struct ExportScreen: View {
                 .background(Capsule().fill(Theme.fill))
 
             if !model.enabledItems.isEmpty {
+                HStack(spacing: 5) {
+                    StyleSwatch(
+                        style: model.preferences.style,
+                        appearance: model.maskAppearance,
+                        size: CGSize(width: 16, height: 12),
+                        cornerRadius: 3
+                    )
+                    Text(LocalizedStringKey(model.preferences.style.titleKey))
+                        .font(.caption.weight(.medium))
+                }
+                .foregroundStyle(Theme.body)
+                .fixedSize()
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(Theme.fill))
+
                 Label(L10n.coveredCount(model.enabledItems.count), systemImage: "checkmark.shield.fill")
                     .font(.caption.weight(.medium).monospacedDigit())
                     .foregroundStyle(Theme.accent)

@@ -716,6 +716,78 @@ struct MaskRendererTests {
         let pngSource = try #require(CGImageSourceCreateWithData(pngData as CFData, nil))
         #expect((CGImageSourceGetType(pngSource) as String?) == UTType.png.identifier)
     }
+
+    @Test
+    func magicEraseSmoothlyInterpolatesGradientBackgroundWithZeroTextTrace() {
+        // Vertical gradient from dark blue top (y=0) to light sky bottom (y=120), with a black bar in the middle.
+        let image = picture(size: CGSize(width: 120, height: 120)) { ctx in
+            let space = CGColorSpaceCreateDeviceRGB()
+            let colors = [UIColor(red: 0.1, green: 0.2, blue: 0.5, alpha: 1).cgColor,
+                          UIColor(red: 0.85, green: 0.92, blue: 0.98, alpha: 1).cgColor] as CFArray
+            let gradient = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1])!
+            ctx.cgContext.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 0, y: 120), options: [])
+            UIColor.black.setFill()
+            ctx.fill(CGRect(x: 35, y: 45, width: 50, height: 30))
+        }
+        let coverRect = CGRect(x: 30, y: 40, width: 60, height: 40)
+        let erased = MaskRenderer.flatten(
+            image,
+            findings: [Finding(kind: .text, quad: quad(coverRect))],
+            style: .conceal
+        )
+        let red = reds(erased)
+        // Top of erased region should be noticeably darker than bottom (smooth vertical gradient preserved!).
+        let topR = red[44][60]
+        let bottomR = red[75][60]
+        #expect(topR > 40, "black text inside box is completely erased")
+        #expect(bottomR > topR + 15, "vertical background gradient is reconstructed across erased region")
+    }
+
+    @Test
+    func coloredMosaicAndCustomSolidAndColoredStripesRenderDistinctColors() {
+        let image = Sample.solid(width: 160, height: 100, fill: Sample.white)
+        let box = CGRect(x: 20, y: 20, width: 120, height: 60)
+        let finding = Finding(kind: .face, quad: quad(box))
+
+        // Rose-tinted mosaic should be strongly reddish rather than neutral white/gray.
+        let roseMosaic = MaskRenderer.flatten(
+            image,
+            findings: [finding],
+            appearance: MaskAppearance(style: .mosaic, mosaicTint: .color(.preset(.rose)))
+        )
+        let roseBytes = bytes(roseMosaic)
+        let centerIdx = ((100 - 1 - 50) * 160 + 80) * 4
+        #expect(roseBytes[centerIdx] > 180, "rose mosaic has high red channel")
+        #expect(roseBytes[centerIdx + 1] < 130, "rose mosaic has lower green channel")
+
+        // Custom RGB solid fill renders the exact chosen RGB color.
+        let customGreen = CustomColorRGB(red: 0.12, green: 0.78, blue: 0.42)
+        let customSolid = MaskRenderer.flatten(
+            image,
+            findings: [finding],
+            appearance: MaskAppearance(style: .solid, customSolidColor: customGreen)
+        )
+        let solidBytes = bytes(customSolid)
+        #expect(solidBytes[centerIdx] < 45)
+        #expect(solidBytes[centerIdx + 1] > 180)
+
+        // Indigo-tinted diagonal stripes include indigo-colored bars (high blue, low red) instead of pure black.
+        let indigoStripes = MaskRenderer.flatten(
+            image,
+            findings: [finding],
+            appearance: MaskAppearance(style: .stripes, mosaicTint: .color(.preset(.indigo)))
+        )
+        let stripeBytes = bytes(indigoStripes)
+        var foundIndigoBarPixel = false
+        for x in 30..<130 {
+            let idx = ((100 - 1 - 50) * 160 + x) * 4
+            if Int(stripeBytes[idx + 2]) - Int(stripeBytes[idx]) > 80 {
+                foundIndigoBarPixel = true
+                break
+            }
+        }
+        #expect(foundIndigoBarPixel, "indigo stripes paint colored diagonal bars")
+    }
 }
 
 struct PictureSourceTests {

@@ -52,6 +52,11 @@ struct ReviewSheet: View {
                         hint: nil
                     )
                     .listRowBackground(sheetCardFill)
+
+                    if !textLines.isEmpty {
+                        intelligenceRow
+                            .listRowBackground(sheetCardFill)
+                    }
                 }
 
                 if !suggestions.isEmpty {
@@ -140,6 +145,50 @@ struct ReviewSheet: View {
 
     private var sheetCardFill: Color {
         Color(.secondarySystemGroupedBackground).opacity(0.86)
+    }
+
+    private var intelligenceRow: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                ConcentricRectangle(corners: .concentric(minimum: 8), isUniform: true)
+                    .fill(AppleIntelligencePalette.linearGradient.opacity(0.18))
+                    .frame(width: 30, height: 30)
+                Image(systemName: "sparkles")
+                    .font(.tileIcon)
+                    .foregroundStyle(AppleIntelligencePalette.linearGradient)
+            }
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("ai.reviewTitle")
+                    .font(.body)
+                    .foregroundStyle(Theme.body)
+                Text("ai.reviewHint")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                Task { await model.runAppleIntelligenceScan() }
+                batchFeedbackCount += 1
+            } label: {
+                if model.isRunningIntelligence {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Text("ai.scanNow")
+                        .font(.footnote.weight(.semibold))
+                }
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.capsule)
+            .controlSize(.small)
+            .tint(Theme.accentOnBlack)
+            .disabled(model.isRunningIntelligence)
+        }
+        .padding(.vertical, 3)
     }
 
     private var batchToggleStrip: some View {

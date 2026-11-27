@@ -6,6 +6,7 @@ struct PictureCapsule: View {
     let text: LocalizedStringKey
     var weight: Font.Weight = .medium
     var spins = false
+    var usesIntelligenceAccent = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -13,6 +14,11 @@ struct PictureCapsule: View {
                 ProgressView()
                     .controlSize(.small)
                     .tint(.white)
+                    .accessibilityHidden(true)
+            } else if usesIntelligenceAccent {
+                Image(systemName: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(AppleIntelligencePalette.linearGradient)
                     .accessibilityHidden(true)
             }
             Text(text)
@@ -25,6 +31,12 @@ struct PictureCapsule: View {
         .padding(.vertical, 8)
         .frame(minHeight: 36)
         .glassEffect(.regular, in: .capsule)
+        .overlay {
+            if usesIntelligenceAccent {
+                Capsule()
+                    .stroke(AppleIntelligencePalette.linearGradient.opacity(0.65), lineWidth: 1)
+            }
+        }
     }
 }
 
@@ -76,20 +88,47 @@ struct UncoveredSuggestionOutline: View {
     }
 }
 
-/// Rubber-band selection overlay while dragging a manual cover box.
+/// Interactive iridescent rubber-band overlay while dragging a manual cover or magic-erase box.
 struct DrawBoxOverlay: View {
     let rect: CGRect
+    var isMagicErase = false
+    var pixelSize: CGSize? = nil
 
     var body: some View {
         ZStack {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .inset(by: -1.5)
+                .strokeBorder(Color.black.opacity(0.75), lineWidth: 1.5)
+
             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .inset(by: -1)
-                .strokeBorder(Color.black.opacity(0.8), lineWidth: 1)
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .fill(Theme.accentOnBlack.opacity(0.14))
-                .strokeBorder(Theme.accentOnBlack, lineWidth: 1.5)
+                .fill(
+                    isMagicErase
+                        ? AnyShapeStyle(AppleIntelligencePalette.linearGradient.opacity(0.22))
+                        : AnyShapeStyle(Theme.accentOnBlack.opacity(0.16))
+                )
+                .strokeBorder(
+                    isMagicErase
+                        ? AnyShapeStyle(AppleIntelligencePalette.linearGradient)
+                        : AnyShapeStyle(Theme.accentOnBlack),
+                    lineWidth: 2
+                )
+                .shadow(
+                    color: (isMagicErase ? AppleIntelligencePalette.colors[3] : Theme.accentOnBlack).opacity(0.55),
+                    radius: 8
+                )
         }
         .frame(width: rect.width, height: rect.height)
+        .overlay(alignment: .top) {
+            if let pixelSize, pixelSize.width >= 10, pixelSize.height >= 10 {
+                Text(verbatim: "\(Int(pixelSize.width)) × \(Int(pixelSize.height))")
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.black.opacity(0.72)))
+                    .offset(y: rect.minY > 30 ? -24 : rect.height + 6)
+            }
+        }
         .position(x: rect.midX, y: rect.midY)
         .allowsHitTesting(false)
         .accessibilityHidden(true)

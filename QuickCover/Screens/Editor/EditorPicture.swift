@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Interactive photo canvas with covers, live anti-theft watermark, pinch & double-tap zoom, pan,
-/// hold-to-compare, direct tap-to-toggle on any detected area, subtle uncovered-suggestion hints,
-/// draggable/deletable Markup-style manual boxes, and Liquid Glass status capsules.
+/// Interactive photo canvas with covers, Clean Up-style magic sparkle & shimmer animations,
+/// Apple Intelligence scanning rim halo, live anti-theft watermark, pinch & double-tap zoom, pan,
+/// hold-to-compare, direct tap-to-toggle, uncovered-suggestion outlines, and draggable/deletable
+/// Apple Markup-style manual boxes.
 struct EditorPicture: View {
     let area: CGSize
     var reviewVisibleHeight: CGFloat = 0
@@ -19,6 +20,7 @@ struct EditorPicture: View {
     @State private var offset: CGSize = .zero
     @State private var patches: [CoverPatch] = []
     @State private var coversAppeared = false
+    @State private var activeBursts: [ActiveMagicBurst] = []
     @State private var drag: DragState?
     @State private var manualDrag: ManualDragState?
     @State private var pinch: PinchState?
@@ -34,6 +36,7 @@ struct EditorPicture: View {
     @State private var holdFeedbackCount = 0
     @State private var boxFeedbackCount = 0
     @State private var selectionFeedbackCount = 0
+    @State private var magicFeedbackCount = 0
 
     private struct DragState {
         var startOffset: CGSize
@@ -79,7 +82,8 @@ struct EditorPicture: View {
 
     private var appearanceIdentity: String {
         let p = model.preferences
-        return "\(p.style.rawValue).\(p.solidColor.rawValue).\(p.emoji).\(p.strength.rawValue)"
+        let custom = p.customSolidColor.map { "\($0.red),\($0.green),\($0.blue)" } ?? "nil"
+        return "\(p.style.rawValue).\(p.solidColor.rawValue).\(custom).\(p.mosaicTint.hashValue).\(p.emoji).\(p.strength.rawValue)"
     }
 
     private var selectedManualItem: MaskItem? {
@@ -97,7 +101,8 @@ struct EditorPicture: View {
     var body: some View {
         let fitted = fitted
         let shown = CGSize(width: fitted.width * zoom, height: fitted.height * zoom)
-        let pictureShape = RoundedRectangle(cornerRadius: zoom > 1.01 ? 0 : 14, style: .continuous)
+        let cornerRadius: CGFloat = zoom > 1.01 ? 0 : 14
+        let pictureShape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         let picture = ZStack(alignment: .topLeading) {
             Image(decorative: model.preview, scale: 1)
                 .resizable()
@@ -113,9 +118,16 @@ struct EditorPicture: View {
                     .animation(.easeInOut(duration: 0.15), value: model.showsOriginal)
             }
 
+            if !model.showsOriginal {
+                MagicBurstOverlay(bursts: activeBursts) { fullRect in
+                    scaled(fittedRect(for: fullRect))
+                }
+                .frame(width: shown.width, height: shown.height)
+            }
+
             ForEach(uncoveredSuggestions) { item in
                 UncoveredSuggestionOutline(rect: scaled(fittedRect(for: item.bounds)))
-                    .transition(.opacity)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
             }
 
             if let selected = selectedManualItem {
@@ -131,28 +143,39 @@ struct EditorPicture: View {
             }
 
             if let draft, let box = EditorGeometry.drawnBox(from: draft.start, to: draft.end) {
+                let inPicture = EditorGeometry.pictureRect(
+                    of: box,
+                    fitted: fitted,
+                    zoom: zoom,
+                    offset: offset,
+                    areaCentre: areaCentre
+                )
+                let pxSize = CGSize(
+                    width: inPicture.width * model.previewScale.width / max(pointsPerPixel, 0.001),
+                    height: inPicture.height * model.previewScale.height / max(pointsPerPixel, 0.001)
+                )
                 DrawBoxOverlay(
-                    rect: scaled(
-                        EditorGeometry.pictureRect(
-                            of: box,
-                            fitted: fitted,
-                            zoom: zoom,
-                            offset: offset,
-                            areaCentre: areaCentre
-                        )
-                    )
+                    rect: scaled(inPicture),
+                    isMagicErase: model.preferences.style == .conceal,
+                    pixelSize: pxSize
                 )
             }
         }
         .frame(width: shown.width, height: shown.height)
         .clipShape(pictureShape)
-        .overlay(
-            pictureShape.stroke(Color.white.opacity(zoom > 1.01 ? 0 : 0.14), lineWidth: 0.5)
-        )
+        .overlay {
+            if model.recognition == .running || model.isRunningIntelligence {
+                AppleIntelligenceRimGlow(cornerRadius: cornerRadius)
+                    .transition(.opacity)
+            } else {
+                pictureShape.stroke(Color.white.opacity(zoom > 1.01 ? 0 : 0.14), lineWidth: 0.5)
+            }
+        }
         .shadow(color: .black.opacity(zoom > 1.01 ? 0 : 0.5), radius: 22, y: 10)
         .position(x: fitted.midX + offset.width, y: fitted.midY + offset.height)
         .blur(radius: isBlurred ? 14 : 0)
         .animation(.easeInOut(duration: 0.25), value: isBlurred)
+        .animation(.easeInOut(duration: 0.3), value: model.isRunningIntelligence)
 
         ZStack {
             picture
@@ -164,10 +187,15 @@ struct EditorPicture: View {
         .gesture(dragGesture)
         .simultaneousGesture(magnifyGesture)
         .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.7), trigger: holdFeedbackCount)
-        .sensoryFeedback(.impact(flexibility: .rigid, intensity: 0.6), trigger: boxFeedbackCount)
+        .sensoryFeedback(.impact(flexibility: .rigid, intensity: 0.65), trigger: boxFeedbackCount)
         .sensoryFeedback(.selection, trigger: selectionFeedbackCount)
+        .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.55), trigger: magicFeedbackCount)
         .animation(.easeInOut(duration: 0.2), value: capsulesKey)
         .task(id: coverKey) { await renderCovers() }
+        .onChange(of: model.magicBurst) { _, event in
+            guard let event else { return }
+            triggerMagicBurst(event)
+        }
         .onChange(of: zoom) { _, newZoom in
             onZoomChanged?(newZoom)
         }
@@ -188,6 +216,27 @@ struct EditorPicture: View {
             if state == .done, !model.found.isEmpty, HoldHint.isDue() { showHint() }
         }
         .onDisappear { cancelEverything() }
+    }
+
+    // MARK: - Magic Sparkle / Shimmer Burst Lifecycle
+
+    private func triggerMagicBurst(_ event: MagicBurstEvent) {
+        guard !reduceMotion, !event.rects.isEmpty else { return }
+        let active = ActiveMagicBurst(
+            id: event.id,
+            fullRects: event.rects,
+            kind: event.kind,
+            startedAt: Date().timeIntervalSinceReferenceDate
+        )
+        activeBursts.append(active)
+        if event.kind == .erase || event.kind == .aiScan {
+            magicFeedbackCount += 1
+        }
+        let lifetime = active.duration + 0.1
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(lifetime))
+            activeBursts.removeAll { $0.id == active.id }
+        }
     }
 
     // MARK: - Selected Manual Box Delete Control
@@ -231,27 +280,36 @@ struct EditorPicture: View {
             ForEach(patches) { patch in
                 CoverPatchView(patch: patch, pointsPerPixel: pointsPerPixel)
                     .id("\(patch.id).\(appearanceID)")
-                    .transition(.opacity)
-                    .scaleEffect(coversAppeared || reduceMotion ? 1 : 0.6)
+                    .transition(
+                        reduceMotion
+                            ? .opacity
+                            : .asymmetric(
+                                insertion: .scale(scale: 0.88).combined(with: .opacity),
+                                removal: .scale(scale: 1.05).combined(with: .opacity)
+                            )
+                    )
+                    .scaleEffect(coversAppeared || reduceMotion ? 1 : 0.72)
                     .opacity(coversAppeared || reduceMotion ? 1 : 0)
             }
         }
         .opacity(model.showsOriginal ? 0 : 1)
-        .animation(.easeInOut(duration: 0.15), value: model.showsOriginal)
+        .animation(.easeInOut(duration: 0.16), value: model.showsOriginal)
     }
 
     private func renderCovers() async {
         let key = coverKey
         let drawn = CoverPainter.patches(for: key, preview: model.preview, scale: model.previewScale)
-        withAnimation(.easeInOut(duration: 0.2)) { patches = drawn }
+        withAnimation(reduceMotion ? .easeInOut(duration: 0.15) : .spring(duration: 0.30, bounce: 0.22)) {
+            patches = drawn
+        }
         guard !drawn.isEmpty, !coversAppeared else { return }
         if reduceMotion {
             coversAppeared = true
             return
         }
-        try? await Task.sleep(for: .milliseconds(32))
+        try? await Task.sleep(for: .milliseconds(28))
         guard !Task.isCancelled else { return }
-        withAnimation(.spring(duration: 0.26, bounce: 0.2)) { coversAppeared = true }
+        withAnimation(.spring(duration: 0.32, bounce: 0.24)) { coversAppeared = true }
     }
 
     // MARK: - Gestures
@@ -340,9 +398,6 @@ struct EditorPicture: View {
         }
         self.draft = nil
 
-        // Quick tap without drag, pinch, or hold-to-original:
-        // dismiss ReviewSheet if open, select/deselect manual boxes, toggle any detected area,
-        // or double-tap empty canvas to smoothly zoom in/out (Apple Photos muscle memory).
         if let state, !state.moved, !state.magnified, !wasHolding,
            state.startedAt.duration(to: .now) < EditorGeometry.holdDelay {
             if model.reviewShown {
@@ -383,7 +438,6 @@ struct EditorPicture: View {
                 lastEmptyTap = nil
                 return
             }
-            // Double-tap empty area toggles 1× ↔ 2.2× centered on the finger.
             let now = ContinuousClock.now
             if let prev = lastEmptyTap,
                prev.time.duration(to: now) < .milliseconds(320),
@@ -577,6 +631,7 @@ struct EditorPicture: View {
 
     private struct CapsulesKey: Equatable {
         var isFinding: Bool
+        var isRunningAI: Bool
         var showsOriginal: Bool
         var hint: Bool
     }
@@ -584,6 +639,7 @@ struct EditorPicture: View {
     private var capsulesKey: CapsulesKey {
         CapsulesKey(
             isFinding: model.recognition == .running,
+            isRunningAI: model.isRunningIntelligence,
             showsOriginal: model.showsOriginal,
             hint: hintShown && !model.showsOriginal
         )
@@ -593,21 +649,26 @@ struct EditorPicture: View {
         GlassEffectContainer(spacing: 8) {
             ZStack {
                 if model.recognition == .running {
-                    PictureCapsule(text: "4.2.1", spins: true)
+                    PictureCapsule(text: "4.2.1", spins: true, usesIntelligenceAccent: true)
                         .glassEffectID("statusCapsule", in: capsuleNamespace)
                         .glassEffectTransition(.matchedGeometry)
                         .transition(.opacity)
-                }
-                if hintShown, !model.showsOriginal {
-                    PictureCapsule(text: "4.8.4")
+                } else if model.isRunningIntelligence {
+                    PictureCapsule(text: "ai.scanning", spins: true, usesIntelligenceAccent: true)
                         .glassEffectID("statusCapsule", in: capsuleNamespace)
                         .glassEffectTransition(.matchedGeometry)
                         .transition(.opacity)
                         .frame(maxHeight: .infinity, alignment: .top)
                         .padding(.top, pictureTop + 10)
-                }
-                if model.showsOriginal {
+                } else if model.showsOriginal {
                     PictureCapsule(text: "4.8.6", weight: .semibold)
+                        .glassEffectID("statusCapsule", in: capsuleNamespace)
+                        .glassEffectTransition(.matchedGeometry)
+                        .transition(.opacity)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .padding(.top, pictureTop + 10)
+                } else if hintShown {
+                    PictureCapsule(text: "4.8.4")
                         .glassEffectID("statusCapsule", in: capsuleNamespace)
                         .glassEffectTransition(.matchedGeometry)
                         .transition(.opacity)
@@ -650,6 +711,7 @@ struct EditorPicture: View {
         holdTask?.cancel()
         ringTask?.cancel()
         hintTask?.cancel()
+        activeBursts.removeAll()
         if isHolding { model.showsOriginal = false }
         isHolding = false
     }

@@ -8,9 +8,9 @@ struct SelfCheckHold: View {
     let topSafeArea: CGFloat
     let action: () -> Void
 
-    static let stripWidth: CGFloat = 156
-    static let maxStripHeight: CGFloat = 44
-    static let clearanceAboveNavigationBar: CGFloat = 10
+    nonisolated static let stripWidth: CGFloat = 156
+    nonisolated static let maxStripHeight: CGFloat = 44
+    nonisolated static let clearanceAboveNavigationBar: CGFloat = 10
 
     /// Exact vertical height allocated inside the status-bar safe area. Returns `0` in landscape or
     /// when there isn't enough safe-area clearance above the navigation bar.

@@ -94,6 +94,13 @@ enum L10n {
         return String(format: format, locale: locale, count)
     }
 
+    /// Toast message when Apple Intelligence smart scan adds extra covered items.
+    static func intelligenceAdded(_ count: Int, bundle: Bundle? = nil) -> String {
+        let format = text("ai.addedFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
     /// The app's strings in one language ("en", "zh-Hans", "zh-Hant"), for tests and previews.
     static func bundle(for language: String) -> Bundle {
         if let path = Bundle.main.path(forResource: language, ofType: "lproj"), let bundle = Bundle(path: path) {

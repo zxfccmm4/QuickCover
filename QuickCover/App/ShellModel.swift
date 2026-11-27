@@ -90,6 +90,7 @@ final class ShellModel {
         editor?.drawToolOn = false
         editor?.styleTrayShown = false
         editor?.watermarkShown = false
+        editor?.emojiPickerShown = false
         editor?.selectedManualID = nil
         editor?.reviewShown = true
     }
