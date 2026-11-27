@@ -123,10 +123,15 @@ struct L10nTests {
             "shield", "lock.shield", "lock.shield.fill", "location.slash.fill", "sparkles", "viewfinder",
             "square.and.arrow.up", "checkerboard.shield", "checkerboard.rectangle", "swatchpalette", "trash",
             "person.crop.rectangle", "text.quote", "qrcode", "arrow.down.right.and.arrow.up.left",
-            "pawprint", "plus", "wand.and.stars",
+            "pawprint", "plus", "wand.and.stars", "info.circle", "hand.raised.fill", "doc.text.fill",
+            "heart.fill", "doc.on.doc", "arrow.up.right", "safari.fill", "person.2.fill", "eye.fill",
+            "swift", "hammer.fill", "iphone", "photo.badge.checkmark", "shippingbox.fill", "swatchpalette.fill",
         ]
         for name in names {
             #expect(UIImage(systemName: name) != nil, "\(name)")
+        }
+        for asset in ["IconArtwork", "symbol.twitter.icon", "Telegramicon", "Mail", "github-mark", "github-mark-white"] {
+            #expect(UIImage(named: asset) != nil, "Missing image asset \(asset)")
         }
         #expect(EmojiPreset.all.count >= 48)
     }
@@ -140,5 +145,8 @@ struct L10nTests {
         #expect(L10n.coveredCount(0, bundle: bundle("en")) == "None Covered")
         #expect(L10n.intelligenceAdded(2, bundle: bundle("zh-Hans")) == "已智能补充遮挡 2 处")
         #expect(L10n.intelligenceAdded(2, bundle: bundle("en")) == "Smart-masked 2 more")
+        #expect(L10n.aboutVersion("1.0", build: "3", bundle: bundle("zh-Hans")) == "版本 1.0 (3)")
+        #expect(L10n.aboutVersion("1.0", build: "3", bundle: bundle("en")) == "Version 1.0 (3)")
+        #expect(L10n.aboutVersion("1.0", build: "3", bundle: bundle("zh-Hant")) == "版本 1.0 (3)")
     }
 }

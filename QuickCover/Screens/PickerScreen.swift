@@ -43,6 +43,16 @@ struct PickerScreen: View {
         .navigationTitle("3.1.1")
         .navigationSubtitle("3.1.2")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    AboutScreen()
+                } label: {
+                    Label("about.title", systemImage: "info.circle")
+                }
+                .accessibilityLabel("about.title")
+            }
+        }
         .overlay {
             if isOpening {
                 ProgressView()

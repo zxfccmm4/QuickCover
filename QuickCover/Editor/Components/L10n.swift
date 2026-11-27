@@ -101,6 +101,13 @@ enum L10n {
         return String(format: format, locale: locale, count)
     }
 
+    /// Formatted app version string for the About screen header (e.g. "Version 1.0 (3)" / "版本 1.0 (3)").
+    static func aboutVersion(_ version: String, build: String, bundle: Bundle? = nil) -> String {
+        let format = text("about.versionFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, version, build)
+    }
+
     /// The app's strings in one language ("en", "zh-Hans", "zh-Hant"), for tests and previews.
     static func bundle(for language: String) -> Bundle {
         if let path = Bundle.main.path(forResource: language, ofType: "lproj"), let bundle = Bundle(path: path) {

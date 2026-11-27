@@ -2199,6 +2199,1662 @@
     "Made with AirBuild": {
       "comment": "Credit at the bottom of Settings. Keep the name AirBuild as is."
     },
+    "about.appName": {
+      "comment": "About header app title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QuickCover"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮 · QuickCover"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮 · QuickCover"
+          }
+        }
+      }
+    },
+    "about.cap.ai.detail": {
+      "comment": "Capability detail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses iOS 26+ FoundationModels directly on-device to catch contextual private text lines that deterministic regex rules miss—such as personal names, street addresses, workplaces, order codes, license plates, and balances."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "基于 iOS 26+ 端侧 FoundationModels 模型，对截图中的 OCR 文本做本地语义判别，自动补全常规规则容易遗漏的姓名、收货地址、单位/学校、订单号、车牌与金额等隐私信息。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "基於 iOS 26+ 端側 FoundationModels 模型，對截圖中的 OCR 文字進行本地語意判別，自動補齊常規規則容易遺漏的姓名、收貨地址、單位/學校、訂單號、車牌與金額等隱私資訊。"
+          }
+        }
+      }
+    },
+    "about.cap.ai.h1": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "100% on-device inference with zero cloud uploads"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "100% 端侧离线推理，文本与图片永不上传云端"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "100% 端側離線推論，文字與圖片永不上傳雲端"
+          }
+        }
+      }
+    },
+    "about.cap.ai.h2": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic local contextual fallback when Apple Intelligence is off"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未开启 Apple Intelligence 时自动回退至本机上下文引擎"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未開啟 Apple Intelligence 時自動回退至本機上下文引擎"
+          }
+        }
+      }
+    },
+    "about.cap.ai.sub": {
+      "comment": "Capability subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-device semantic detection for names, addresses & orders"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端侧语义识别姓名、住址、公司与订单号"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端側語意識別姓名、地址、公司與訂單號"
+          }
+        }
+      }
+    },
+    "about.cap.ai.title": {
+      "comment": "Capability title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence Scan"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence 语义识别"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence 語意識別"
+          }
+        }
+      }
+    },
+    "about.cap.magic.detail": {
+      "comment": "Capability detail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconstructs masked areas strictly from exterior boundary samples using inverse-distance interpolation and sliding-median anti-bleed filtering—leaving zero residual text trace while blending smoothly across gradients, cards, and chat bubbles."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "严格仅从遮挡区外缘四向采样，结合滑动中值去渗色与逆距离插值重建背景，不读取内部任何像素，既保证零字迹残留，又能在渐变卡片、聊天气泡与文档背景上平滑过渡。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "嚴格僅從遮擋區外緣四向取樣，結合滑動中值去滲色與逆距離插值重建背景，不讀取內部任何像素，既保證零字跡殘留，又能在漸層卡片、聊天氣泡與文件背景上平滑過渡。"
+          }
+        }
+      }
+    },
+    "about.cap.magic.h1": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zero interior pixel reads ensure complete redaction"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "绝不读取遮挡区内部像素，彻底杜绝字迹残留"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絕不讀取遮擋區內部像素，徹底杜絕字跡殘留"
+          }
+        }
+      }
+    },
+    "about.cap.magic.h2": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "60fps iridescent shimmer & particle effects honoring Reduce Motion"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "60fps 虹彩扫光与粒子动画，完整遵循「减弱动态效果」"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "60fps 虹彩掃光與粒子動畫，完整遵循「減少動態效果」"
+          }
+        }
+      }
+    },
+    "about.cap.magic.sub": {
+      "comment": "Capability subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seamless boundary interpolation & starlight particle dissolves"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "四向边界插值无痕消除与星光粒子消散动效"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "四向邊界插值無痕消除與星光粒子消散動效"
+          }
+        }
+      }
+    },
+    "about.cap.magic.title": {
+      "comment": "Capability title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magic Erase & Effects"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "魔术消除与交互动画"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "魔術消除與互動動畫"
+          }
+        }
+      }
+    },
+    "about.cap.privacy.detail": {
+      "comment": "Capability detail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QuickCover has no accounts, no analytics, and no network calls. Exporting generates a fresh PNG or JPEG copy with GPS coordinates and camera metadata stripped by default, leaving your original photo untouched."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮不设账号、不连服务器、不收集任何统计与崩溃数据。导出时生成全新 PNG 或 JPEG 图片，默认剥离 GPS 拍摄地点与设备型号等元数据，绝不改动相册原图。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮不設帳號、不連伺服器、不收集任何統計與當機資料。匯出時產生全新 PNG 或 JPEG 圖片，預設剝離 GPS 拍攝地點與裝置型號等中繼資料，絕不改動相簿原圖。"
+          }
+        }
+      }
+    },
+    "about.cap.privacy.h1": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Works completely offline—even in Airplane Mode"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完全离线运行，开启飞行模式也可正常识别与导出"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完全離線運作，開啟飛航模式也能正常識別與匯出"
+          }
+        }
+      }
+    },
+    "about.cap.privacy.h2": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non-destructive export preserves your original photo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非破坏性导出，始终保留你的原始照片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非破壞性匯出，始終保留你的原始照片"
+          }
+        }
+      }
+    },
+    "about.cap.privacy.sub": {
+      "comment": "Capability subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zero servers, lossless PNG/JPEG & automatic EXIF stripping"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无服务器零上传，默认剥离位置与设备 EXIF 信息"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無伺服器零上傳，預設剝離位置與裝置 EXIF 資訊"
+          }
+        }
+      }
+    },
+    "about.cap.privacy.title": {
+      "comment": "Capability title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline & EXIF Removal"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "纯离线与去定位导出"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "純離線與去定位匯出"
+          }
+        }
+      }
+    },
+    "about.cap.styles.detail": {
+      "comment": "Capability detail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch effortlessly between Mosaic, 45° Stripes, Magic Erase, Solid, Blur, and Emoji with Liquid Glass matched-geometry controls. Customize mosaic, stripe, and solid colors with 12 presets or the native iOS ColorPicker, or pick from 48+ curated stickers and any system emoji."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在马赛克、45° 斜条、魔术消除、纯色、模糊与表情贴纸间无缝切换。支持给马赛克、斜条与纯色自定义 12 款精选色或原生全色谱颜色，并内置 4 大分类 48+ 精选表情及系统键盘任意输入。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在馬賽克、45° 斜條、魔術消除、純色、模糊與表情貼紙間無縫切換。支援為馬賽克、斜條與純色自訂 12 款精選色或原生全色譜顏色，並內建 4 大分類 48+ 精選表情及系統鍵盤任意輸入。"
+          }
+        }
+      }
+    },
+    "about.cap.styles.h1": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live texture swatches update in real time as you tint"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "样式预览徽章随颜色、粒度与表情实时联动更新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "樣式預覽徽章隨顏色、粒度與表情即時聯動更新"
+          }
+        }
+      }
+    },
+    "about.cap.styles.h2": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recents strip & custom system emoji keyboard support"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持最近使用记录与系统表情键盘自由输入"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援最近使用紀錄與系統表情鍵盤自由輸入"
+          }
+        }
+      }
+    },
+    "about.cap.styles.sub": {
+      "comment": "Capability subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 mask styles, 12 Apple colors, ColorPicker & categorized stickers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 种遮挡样式、12 款配色、全色谱取色器与分类贴纸"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 種遮擋樣式、12 款配色、全色譜取色器與分類貼紙"
+          }
+        }
+      }
+    },
+    "about.cap.styles.title": {
+      "comment": "Capability title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Styles, Colors & 48+ Emojis"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "多彩样式与 48+ 表情库"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "多彩樣式與 48+ 表情庫"
+          }
+        }
+      }
+    },
+    "about.cap.tools.detail": {
+      "comment": "Capability detail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overlay customizable diagonal anti-theft watermarks with live preview of text, opacity, and density. Import images from Screenshots, Photos, Files, Clipboard, or the native VisionKit document scanner for ID cards and receipts."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可叠加自定义斜向防盗水印，实时预览文字、透明度与密度；支持最近截图快速导入、相册、文件、剪贴板粘贴，以及原生 VisionKit 文档扫描仪拍摄证件和票据。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可疊加自訂斜向防盜浮水印，即時預覽文字、透明度與密度；支援最近截圖快速匯入、相簿、檔案、剪貼簿貼上，以及原生 VisionKit 文件掃描器拍攝證件與票據。"
+          }
+        }
+      }
+    },
+    "about.cap.tools.h1": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Real-time watermark preview without cluttering the canvas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "水印实时预览叠加，轻松防范证件与截图被盗用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮水印即時預覽疊加，輕鬆防範證件與截圖遭盜用"
+          }
+        }
+      }
+    },
+    "about.cap.tools.h2": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press and hold the canvas anytime to compare with the original"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑与导出页均可长按图片随时对比原图"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯與匯出頁皆可長按圖片隨時對比原圖"
+          }
+        }
+      }
+    },
+    "about.cap.tools.sub": {
+      "comment": "Capability subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiled diagonal watermarks, VisionKit scanner & clipboard paste"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义斜向水印、相机文档扫描与剪贴板快捷导入"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂斜向浮水印、相機文件掃描與剪貼簿快速匯入"
+          }
+        }
+      }
+    },
+    "about.cap.tools.title": {
+      "comment": "Capability title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watermark & Scanner"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防盗水印与文档扫描"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防盜浮水印與文件掃描"
+          }
+        }
+      }
+    },
+    "about.cap.vision.detail": {
+      "comment": "Capability detail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powered by Apple Vision across Simplified Chinese, Traditional Chinese, and English to automatically locate faces, phone numbers, ID cards, bank cards, emails, URLs, IP addresses, QR codes, and barcodes the moment a screenshot opens."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "采用系统原生 Vision 框架，支持简体中文、繁体中文与英文混合识别，打开截图即可自动框出人脸、手机号、身份证号、银行卡号、邮箱、网址、IP 地址、二维码与条形码。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "採用系統原生 Vision 框架，支援簡體中文、繁體中文與英文混合識別，開啟截圖即可自動框出人臉、手機號碼、身分證字號、銀行卡號、Email、網址、IP 位址、QR Code 與條碼。"
+          }
+        }
+      }
+    },
+    "about.cap.vision.h1": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens directly on your latest screenshot already covered"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开即加载最近一张截图并自动完成遮挡"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟即載入最近一張截圖並自動完成遮擋"
+          }
+        }
+      }
+    },
+    "about.cap.vision.h2": {
+      "comment": "Capability highlight",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap any uncovered text line or draw boxes with live pixel size"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持点击未遮文字快速加遮与带尺寸提示的手动拉框"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援點擊未遮文字快速加遮與帶尺寸提示的手動拉框"
+          }
+        }
+      }
+    },
+    "about.cap.vision.sub": {
+      "comment": "Capability subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instant detection of faces, numbers, QR codes & barcodes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开屏自动找人脸、敏感号码、二维码与条形码"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開屏自動找人臉、敏感號碼、QR Code 與條碼"
+          }
+        }
+      }
+    },
+    "about.cap.vision.title": {
+      "comment": "Capability title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vision Auto-Detection"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vision 自动识别"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vision 自動識別"
+          }
+        }
+      }
+    },
+    "about.learnMore": {
+      "comment": "Resource link title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learn More"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "了解更多"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "了解更多"
+          }
+        }
+      }
+    },
+    "about.legal.footer": {
+      "comment": "Legal section footer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your photos stay strictly on your iPhone. All detection, Apple Intelligence scanning, and masking run locally—even in Airplane Mode."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的所有图片严格留在本地手机上。视觉识别、Apple Intelligence 语义扫描与打码渲染全部在端侧完成，飞行模式也能正常使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的所有圖片嚴格留在本地手機上。視覺識別、Apple Intelligence 語意掃描與打碼算圖全部在端側完成，飛航模式也能正常使用。"
+          }
+        }
+      }
+    },
+    "about.legal.license": {
+      "comment": "Legal row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Source & Notice"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开源与技术说明"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開源與技術說明"
+          }
+        }
+      }
+    },
+    "about.legal.privacy": {
+      "comment": "Legal row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私政策"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱私權政策"
+          }
+        }
+      }
+    },
+    "about.license.depsBody": {
+      "comment": "Notice deps body",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QuickCover is built exclusively with Apple system frameworks (SwiftUI, Vision, FoundationModels, VisionKit, PhotosUI, CoreGraphics) and contains zero third-party runtime dependencies."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮完全基于 Apple 原生系统框架（SwiftUI、Vision、FoundationModels、VisionKit、PhotosUI、CoreGraphics）构建，不包含任何第三方运行时依赖。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮完全基於 Apple 原生系統框架（SwiftUI、Vision、FoundationModels、VisionKit、PhotosUI、CoreGraphics）建構，不包含任何第三方執行階段依賴。"
+          }
+        }
+      }
+    },
+    "about.license.releases": {
+      "comment": "Notice releases row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Releases & Changelog"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本发布与更新日志"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本發佈與更新日誌"
+          }
+        }
+      }
+    },
+    "about.license.releasesSub": {
+      "comment": "Notice releases row sub",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download builds and read full release notes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看历史版本更新说明与最新安装包"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看歷史版本更新說明與最新安裝包"
+          }
+        }
+      }
+    },
+    "about.license.sdkBody": {
+      "comment": "Notice SDK body",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Photos' generative Clean Up pixel model is currently not exposed as a public third-party API in iOS 26/27. QuickCover's Magic Erase uses pure on-device four-edge inverse-distance interpolation with anti-bleed filtering—never reading interior pixels—so masked text leaves zero trace."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 26/27 尚未向第三方开放系统「照片」Clean Up 生成式像素补图模型。秒遮的「魔术消除」采用端侧四向边界逆距离插值与防渗色中值滤波，绝不读取遮挡区内部像素，确保无字迹残留。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 26/27 尚未向第三方開放系統「照片」Clean Up 生成式像素補圖模型。秒遮的「魔術消除」採用端側四向邊界逆距離插值與防滲色中值濾波，絕不讀取遮擋區內部像素，確保無字跡殘留。"
+          }
+        }
+      }
+    },
+    "about.license.section.deps": {
+      "comment": "Notice section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Architecture & Dependencies"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "架构与依赖"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "架構與依賴"
+          }
+        }
+      }
+    },
+    "about.license.section.sdk": {
+      "comment": "Notice section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-Device Magic Erase Note"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "魔术消除技术说明"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "魔術消除技術說明"
+          }
+        }
+      }
+    },
+    "about.madeWithLove": {
+      "comment": "Footer credit",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made with love by Steve"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made with love by Steve"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made with love by Steve"
+          }
+        }
+      }
+    },
+    "about.overview.primary": {
+      "comment": "About overview paragraph 1",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QuickCover is a native iOS privacy redaction app built with Liquid Glass—combining Vision detection, on-device Apple Intelligence semantic scanning, six mask styles with custom colors and 48+ emoji stickers, Magic Erase, tiled watermarks, and metadata-free export."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮是一款基于 iOS 原生 Liquid Glass 打造的端侧隐私打码应用，结合 Vision 视觉识别、Apple Intelligence 端侧语义扫描、6 种可配色遮挡样式与 48+ 表情贴纸、魔术消除、防盗水印及无痕隐私导出。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮是一款基於 iOS 原生 Liquid Glass 打造的端側隱私打碼應用，結合 Vision 視覺識別、Apple Intelligence 端側語意掃描、6 種可配色遮擋樣式與 48+ 表情貼紙、魔術消除、防盜浮水印及無痕隱私匯出。"
+          }
+        }
+      }
+    },
+    "about.overview.secondary": {
+      "comment": "About overview paragraph 2",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built with pure Swift 6 and SwiftUI with zero third-party dependencies. Your photos stay strictly on your iPhone, even in Airplane Mode."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "采用纯 Swift 6 与 SwiftUI 构建，零第三方依赖。识别与渲染全程在手机本地完成，飞行模式也能放心使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "採用純 Swift 6 與 SwiftUI 建構，零第三方依賴。識別與算圖全程在手機本地完成，飛航模式也能放心使用。"
+          }
+        }
+      }
+    },
+    "about.privacy.p1": {
+      "comment": "Privacy commitment 1",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All image inspection, face/text/barcode recognition, and mask rendering happen 100% on your device. QuickCover never uploads your screenshots or photos to any server."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有图片读取、人脸/文字/二维码识别与遮挡渲染 100% 在本机完成，秒遮绝不将任何截图或照片上传至外部服务器。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有圖片讀取、人臉/文字/條碼識別與遮擋算圖 100% 在本機完成，秒遮絕不將任何截圖或照片上傳至外部伺服器。"
+          }
+        }
+      }
+    },
+    "about.privacy.p2": {
+      "comment": "Privacy commitment 2",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When Apple Intelligence semantic scanning is triggered, text analysis runs strictly through Apple's on-device FoundationModels or the local contextual engine—with zero cloud network requests."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "触发 Apple Intelligence 语义扫描时，文本分析严格通过本机端侧 FoundationModels 或本地规则引擎完成，全程零网络请求。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "觸發 Apple Intelligence 語意掃描時，文字分析嚴格透過本機端側 FoundationModels 或本地規則引擎完成，全程零網路請求。"
+          }
+        }
+      }
+    },
+    "about.privacy.p3": {
+      "comment": "Privacy commitment 3",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QuickCover only reads the image you choose to redact and writes a brand-new image on export. Your original photo in Photos is never modified or overwritten."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮仅读取你选择处理的图片，并在导出时生成一张全新图片，绝不修改或覆盖相册中的原始照片。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮僅讀取你選擇處理的圖片，並在匯出時產生一張全新圖片，絕不修改或覆寫相簿中的原始照片。"
+          }
+        }
+      }
+    },
+    "about.privacy.p4": {
+      "comment": "Privacy commitment 4",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location and camera metadata stripping is enabled by default on export so shared screenshots and photos do not leak GPS coordinates or device details."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出时默认开启「去掉位置信息」，自动清除 GPS 拍摄地点与设备元数据，防止分享图片时意外泄露定位隐私。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出時預設開啟「移除位置資訊」，自動清除 GPS 拍攝地點與裝置中繼資料，防止分享圖片時意外洩露定位隱私。"
+          }
+        }
+      }
+    },
+    "about.privacy.p5": {
+      "comment": "Privacy commitment 5",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QuickCover collects zero analytics, zero crash tracking, zero advertising identifiers, and requires no account or sign-in."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮不收集任何行为统计、崩溃追踪或广告标识符，无需注册登录，真正开箱即用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秒遮不收集任何行為統計、當機追蹤或廣告識別碼，無需註冊登入，真正開箱即用。"
+          }
+        }
+      }
+    },
+    "about.section.capabilities": {
+      "comment": "Section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Core Capabilities"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核心能力"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核心能力"
+          }
+        }
+      }
+    },
+    "about.section.connect": {
+      "comment": "Section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "联系与关注"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聯繫與關注"
+          }
+        }
+      }
+    },
+    "about.section.highlights": {
+      "comment": "Section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlights"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "亮点"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "亮點"
+          }
+        }
+      }
+    },
+    "about.section.legal": {
+      "comment": "Section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legal"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私与许可"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱私與許可"
+          }
+        }
+      }
+    },
+    "about.section.overview": {
+      "comment": "Section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overview"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "简介"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "簡介"
+          }
+        }
+      }
+    },
+    "about.section.resources": {
+      "comment": "Section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resources"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相关链接"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相關連結"
+          }
+        }
+      }
+    },
+    "about.section.thanks": {
+      "comment": "Section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Special Thanks"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "特别鸣谢"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "特別鳴謝"
+          }
+        }
+      }
+    },
+    "about.social.feedback": {
+      "comment": "Connect row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Feedback"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送反馈"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳送意見回饋"
+          }
+        }
+      }
+    },
+    "about.social.feedbackSub": {
+      "comment": "Connect row subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send us an email"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过邮件联系开发者"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過電子郵件聯繫開發者"
+          }
+        }
+      }
+    },
+    "about.social.github": {
+      "comment": "Connect row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub Repository"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub 仓库"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub 儲存庫"
+          }
+        }
+      }
+    },
+    "about.social.telegram": {
+      "comment": "Connect row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join Telegram"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入 Telegram"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入 Telegram"
+          }
+        }
+      }
+    },
+    "about.social.x": {
+      "comment": "Connect row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow on X"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 X 上关注"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 X 上追蹤"
+          }
+        }
+      }
+    },
+    "about.tagline": {
+      "comment": "About header subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-Device Privacy Redaction & Magic Erase"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端侧隐私打码与魔术消除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端側隱私打碼與魔術消除"
+          }
+        }
+      }
+    },
+    "about.thanks.aiSub": {
+      "comment": "Special thanks subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-device Apple Intelligence semantic privacy detection"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端侧 Apple Intelligence 语义隐私识别引擎"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端側 Apple Intelligence 語意隱私識別引擎"
+          }
+        }
+      }
+    },
+    "about.thanks.airbuildSub": {
+      "comment": "Special thanks subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initial scaffolding & synthetic baseline test harness"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "项目初始脚手架与合成基线测试框架"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "專案初始鷹架與合成基線測試框架"
+          }
+        }
+      }
+    },
+    "about.thanks.contributors": {
+      "comment": "Special thanks row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contributors"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "项目贡献者"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "專案貢獻者"
+          }
+        }
+      }
+    },
+    "about.thanks.swiftuiSub": {
+      "comment": "Special thanks subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Native iOS 26/27 interface & CoreGraphics rendering"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 26/27 原生液态玻璃界面与图像渲染"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 26/27 原生液態玻璃介面與圖像算圖"
+          }
+        }
+      }
+    },
+    "about.thanks.visionSub": {
+      "comment": "Special thanks subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-device face, OCR, barcode & document scanning"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端侧人脸、文字、码识别与文档扫描"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端側人臉、文字、條碼識別與文件掃描"
+          }
+        }
+      }
+    },
+    "about.title": {
+      "comment": "About screen title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於"
+          }
+        }
+      }
+    },
+    "about.versionFormat": {
+      "comment": "Version format string",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@ (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 %@ (%@)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 %@ (%@)"
+          }
+        }
+      }
+    },
     "ai.addedFormat": {
       "extractionState": "manual",
       "localizations": {

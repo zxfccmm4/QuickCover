@@ -76,6 +76,16 @@ struct PrimerScreen: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    AboutScreen()
+                } label: {
+                    Label("about.title", systemImage: "info.circle")
+                }
+                .accessibilityLabel("about.title")
+            }
+        }
     }
 
     private var limitedAccessNote: some View {

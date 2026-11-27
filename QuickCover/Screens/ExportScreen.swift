@@ -99,6 +99,16 @@ struct ExportScreen: View {
         .background(Theme.page.ignoresSafeArea())
         .navigationTitle("6.1.1")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    AboutScreen()
+                } label: {
+                    Label("about.title", systemImage: "info.circle")
+                }
+                .accessibilityLabel("about.title")
+            }
+        }
         .sensoryFeedback(.success, trigger: successFeedbackCount)
         .sensoryFeedback(.error, trigger: errorFeedbackCount)
         .sensoryFeedback(.selection, trigger: selectionFeedbackCount)
