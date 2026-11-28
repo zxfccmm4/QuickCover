@@ -123,10 +123,11 @@ struct DrawBoxOverlay: View {
                 Text(verbatim: "\(Int(pixelSize.width)) × \(Int(pixelSize.height))")
                     .font(.caption2.weight(.semibold).monospacedDigit())
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.black.opacity(0.72)))
-                    .offset(y: rect.minY > 30 ? -24 : rect.height + 6)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .glassEffect(.regular, in: .capsule)
+                    .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 0.5))
+                    .offset(y: rect.minY > 34 ? -28 : rect.height + 8)
             }
         }
         .position(x: rect.midX, y: rect.midY)

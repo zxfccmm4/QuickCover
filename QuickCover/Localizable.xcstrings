@@ -12,6 +12,9 @@
         }
       }
     },
+    "%@×": {},
+    "%lld": {},
+    "%lld%%": {},
     "3.1.1": {
       "comment": "copy.md §3.1 选图页 · 3.1.1 · 标题",
       "extractionState": "manual",
@@ -2196,6 +2199,7 @@
         }
       }
     },
+    "Clear": {},
     "Made with AirBuild": {
       "comment": "Credit at the bottom of Settings. Keep the name AirBuild as is."
     },
@@ -2590,19 +2594,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Switch effortlessly between Mosaic, 45° Stripes, Magic Erase, Solid, Blur, and Emoji with Liquid Glass matched-geometry controls. Customize mosaic, stripe, and solid colors with 12 presets or the native iOS ColorPicker, or pick from 48+ curated stickers and any system emoji."
+            "value": "Switch effortlessly between Mosaic, 45° Stripes, Magic Erase, Solid, Blur, and Emoji with Liquid Glass matched-geometry controls. Customize mosaic, stripe, and solid colors with 12 presets or the native iOS ColorPicker, or search and pick from the entire 1,900+ Unicode Emoji library across all 9 categories."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在马赛克、45° 斜条、魔术消除、纯色、模糊与表情贴纸间无缝切换。支持给马赛克、斜条与纯色自定义 12 款精选色或原生全色谱颜色，并内置 4 大分类 48+ 精选表情及系统键盘任意输入。"
+            "value": "在马赛克、45° 斜条、魔术消除、纯色、模糊与表情贴纸间无缝切换。支持给马赛克、斜条与纯色自定义 12 款精选色或原生全色谱颜色，并内置完整 Unicode 16.0 共 1900+ 表情库，支持全部 9 大分类浏览与中英文实时搜索。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在馬賽克、45° 斜條、魔術消除、純色、模糊與表情貼紙間無縫切換。支援為馬賽克、斜條與純色自訂 12 款精選色或原生全色譜顏色，並內建 4 大分類 48+ 精選表情及系統鍵盤任意輸入。"
+            "value": "在馬賽克、45° 斜條、魔術消除、純色、模糊與表情貼紙間無縫切換。支援為馬賽克、斜條與純色自訂 12 款精選色或原生全色譜顏色，並內建完整 Unicode 16.0 共 1900+ 表情庫，支援全部 9 大分類瀏覽與中英文即時搜尋。"
           }
         }
       }
@@ -2662,19 +2666,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "6 mask styles, 12 Apple colors, ColorPicker & categorized stickers"
+            "value": "6 mask styles, 12 Apple colors, ColorPicker & 1,900+ searchable emojis"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "6 种遮挡样式、12 款配色、全色谱取色器与分类贴纸"
+            "value": "6 种遮挡样式、12 款配色、全色谱取色器与 1900+ 可搜索表情"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "6 種遮擋樣式、12 款配色、全色譜取色器與分類貼紙"
+            "value": "6 種遮擋樣式、12 款配色、全色譜取色器與 1900+ 可搜尋表情"
           }
         }
       }
@@ -2686,19 +2690,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Styles, Colors & 48+ Emojis"
+            "value": "Styles, Colors & All Emojis"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "多彩样式与 48+ 表情库"
+            "value": "多彩样式与全套表情库"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "多彩樣式與 48+ 表情庫"
+            "value": "多彩樣式與全套表情庫"
           }
         }
       }
@@ -3214,19 +3218,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "QuickCover is a native iOS privacy redaction app built with Liquid Glass—combining Vision detection, on-device Apple Intelligence semantic scanning, six mask styles with custom colors and 48+ emoji stickers, Magic Erase, tiled watermarks, and metadata-free export."
+            "value": "QuickCover is a native iOS privacy redaction app built with Liquid Glass—combining Vision detection, on-device Apple Intelligence semantic scanning, six mask styles with custom colors and the full 1,900+ Emoji library, Magic Erase, tiled watermarks, and metadata-free export."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "秒遮是一款基于 iOS 原生 Liquid Glass 打造的端侧隐私打码应用，结合 Vision 视觉识别、Apple Intelligence 端侧语义扫描、6 种可配色遮挡样式与 48+ 表情贴纸、魔术消除、防盗水印及无痕隐私导出。"
+            "value": "秒遮是一款基于 iOS 原生 Liquid Glass 打造的端侧隐私打码应用，结合 Vision 视觉识别、Apple Intelligence 端侧语义扫描、6 种可配色遮挡样式与 1900+ 全套表情库、魔术消除、防盗水印及无痕隐私导出。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "秒遮是一款基於 iOS 原生 Liquid Glass 打造的端側隱私打碼應用，結合 Vision 視覺識別、Apple Intelligence 端側語意掃描、6 種可配色遮擋樣式與 48+ 表情貼紙、魔術消除、防盜浮水印及無痕隱私匯出。"
+            "value": "秒遮是一款基於 iOS 原生 Liquid Glass 打造的端側隱私打碼應用，結合 Vision 視覺識別、Apple Intelligence 端側語意掃描、6 種可配色遮擋樣式與 1900+ 全套表情庫、魔術消除、防盜浮水印及無痕隱私匯出。"
           }
         }
       }
@@ -4623,25 +4627,50 @@
         }
       }
     },
-    "emoji.cat.animals": {
+    "emoji.cat.activities": {
+      "comment": "Full category title",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Animals"
+            "value": "Activities"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "可爱动物"
+            "value": "活动与运动"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "可愛動物"
+            "value": "活動與運動"
+          }
+        }
+      }
+    },
+    "emoji.cat.animals": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animals & Nature"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "动物与自然"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動物與自然"
           }
         }
       }
@@ -4669,6 +4698,78 @@
         }
       }
     },
+    "emoji.cat.featured": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Featured"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私精选"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱私精選"
+          }
+        }
+      }
+    },
+    "emoji.cat.flags": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flags"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗帜"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗幟"
+          }
+        }
+      }
+    },
+    "emoji.cat.food": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Food & Drink"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "美食与饮品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "美食與飲品"
+          }
+        }
+      }
+    },
     "emoji.cat.nature": {
       "extractionState": "manual",
       "localizations": {
@@ -4692,6 +4793,54 @@
         }
       }
     },
+    "emoji.cat.objects": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objects"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日常物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日常物品"
+          }
+        }
+      }
+    },
+    "emoji.cat.people": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People & Body"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人物与手势"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人物與手勢"
+          }
+        }
+      }
+    },
     "emoji.cat.privacy": {
       "extractionState": "manual",
       "localizations": {
@@ -4711,6 +4860,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "隱私與符號"
+          }
+        }
+      }
+    },
+    "emoji.cat.smileys": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smileys & Emotion"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表情与情绪"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表情與情緒"
+          }
+        }
+      }
+    },
+    "emoji.cat.symbols": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbols"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "符号与标志"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "符號與標誌"
+          }
+        }
+      }
+    },
+    "emoji.cat.travel": {
+      "comment": "Full category title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Travel & Places"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行与地点"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行與地點"
           }
         }
       }
@@ -4761,6 +4982,30 @@
         }
       }
     },
+    "emoji.noResults": {
+      "comment": "No emoji search results",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching emojis found. You can still apply your input directly."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到匹配的表情，也可以直接使用输入内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到符合的表情，也可以直接使用輸入內容。"
+          }
+        }
+      }
+    },
     "emoji.pickerTitle": {
       "extractionState": "manual",
       "localizations": {
@@ -4803,6 +5048,294 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近使用"
+          }
+        }
+      }
+    },
+    "emoji.searchCountFormat": {
+      "comment": "Emoji search result count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d matches"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找到 %d 个表情"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找到 %d 個表情"
+          }
+        }
+      }
+    },
+    "emoji.searchPlaceholder": {
+      "comment": "Emoji search & direct input placeholder",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search 1,900+ emojis or type one..."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索 1900+ 表情，或直接输入..."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋 1900+ 表情，或直接輸入..."
+          }
+        }
+      }
+    },
+    "emoji.tab.activities": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活動"
+          }
+        }
+      }
+    },
+    "emoji.tab.animals": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animals"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "动物"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動物"
+          }
+        }
+      }
+    },
+    "emoji.tab.featured": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Featured"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精选"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精選"
+          }
+        }
+      }
+    },
+    "emoji.tab.flags": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flags"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗帜"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗幟"
+          }
+        }
+      }
+    },
+    "emoji.tab.food": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Food"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "美食"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "美食"
+          }
+        }
+      }
+    },
+    "emoji.tab.objects": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objects"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "物品"
+          }
+        }
+      }
+    },
+    "emoji.tab.people": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人物"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人物"
+          }
+        }
+      }
+    },
+    "emoji.tab.smileys": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smileys"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表情"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表情"
+          }
+        }
+      }
+    },
+    "emoji.tab.symbols": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbols"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "符号"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "符號"
+          }
+        }
+      }
+    },
+    "emoji.tab.travel": {
+      "comment": "Short tab title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Travel"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行"
           }
         }
       }
@@ -4973,6 +5506,414 @@
         }
       }
     },
+    "library.emptyAll.body": {
+      "comment": "Empty photo library description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a photo, scan a document, or paste from your clipboard."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以从相册挑选、扫描文稿，或粘贴剪贴板图片。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以從相簿挑選、掃描文件，或貼上剪貼簿圖片。"
+          }
+        }
+      }
+    },
+    "library.emptyAll.title": {
+      "comment": "Empty photo library title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Photos Yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无照片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫無照片"
+          }
+        }
+      }
+    },
+    "library.emptyScreenshots.body": {
+      "comment": "Empty screenshots description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screenshots you capture will appear here automatically."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新截取的屏幕截图会自动显示在这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新擷取的螢幕截圖會自動顯示在這裡。"
+          }
+        }
+      }
+    },
+    "library.emptyScreenshots.title": {
+      "comment": "Empty screenshots title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Screenshots"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无截图"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫無截圖"
+          }
+        }
+      }
+    },
+    "library.filter.all": {
+      "comment": "Library filter pill",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Photos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部照片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部照片"
+          }
+        }
+      }
+    },
+    "library.filter.screenshots": {
+      "comment": "Library filter pill",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screenshots"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截图"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截圖"
+          }
+        }
+      }
+    },
+    "library.importMenu": {
+      "comment": "Top-right import menu button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入"
+          }
+        }
+      }
+    },
+    "library.importPhotos": {
+      "comment": "Import from system Photos picker",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose from Photos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从相册选择"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從相簿選擇"
+          }
+        }
+      }
+    },
+    "library.limitedBanner": {
+      "comment": "Limited library compact banner",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Showing selected photos only"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅显示已选照片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅顯示已選照片"
+          }
+        }
+      }
+    },
+    "library.noAccess.body": {
+      "comment": "No photo access description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow photo access to browse your library right away, or pick a single photo without full access."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许访问照片后即可像系统图库一样直接浏览并点击打码，也可以不授权直接挑一张。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許取用照片後即可像系統圖庫一樣直接瀏覽並點擊打碼，也可以不授權直接挑一張。"
+          }
+        }
+      }
+    },
+    "library.noAccess.title": {
+      "comment": "No photo access title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse Your Photos Here"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这里直接浏览照片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這裡直接瀏覽照片"
+          }
+        }
+      }
+    },
+    "library.openSettings": {
+      "comment": "Open iOS Settings CTA",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前往系统设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前往系統設定"
+          }
+        }
+      }
+    },
+    "library.photoCountFormat": {
+      "comment": "Library subtitle photo count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d Photos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 张照片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 張照片"
+          }
+        }
+      }
+    },
+    "library.screenshotCountFormat": {
+      "comment": "Library subtitle screenshot count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d Screenshots"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 张截图"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 張截圖"
+          }
+        }
+      }
+    },
+    "library.selectMore": {
+      "comment": "Limited photo library button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select More"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择更多"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇更多"
+          }
+        }
+      }
+    },
+    "library.showAllPhotos": {
+      "comment": "Switch filter CTA",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show All Photos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看全部照片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檢視全部照片"
+          }
+        }
+      }
+    },
+    "library.title": {
+      "comment": "Apple Photos-style library navigation title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Library"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图库"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "圖庫"
+          }
+        }
+      }
+    },
     "mosaic.colorOriginal": {
       "extractionState": "manual",
       "localizations": {
@@ -5016,6 +5957,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "剪貼簿有可用圖片"
+          }
+        }
+      }
+    },
+    "picker.latestBadge": {
+      "comment": "Latest screenshot thumbnail badge",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latest"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新"
           }
         }
       }
@@ -5208,24 +6173,25 @@
       }
     },
     "primer.feat2.body": {
+      "comment": "Primer feature 2 description",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mosaic, stripes, background conceal, emoji, and tiled watermarks."
+            "value": "Choose from colored mosaic, stripes, Magic Erase, the full 1,900+ Emoji library, and custom watermarks."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "支持马赛克、斜条、隐身擦除、表情与证件水印。"
+            "value": "支持多彩马赛克、斜条、魔术消除、1900+ 全套表情与防盗水印。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "支援馬賽克、斜條、隱身擦除、表情與證件浮水印。"
+            "value": "支援多彩馬賽克、斜條、魔術消除、1900+ 全套表情與防盜浮水印。"
           }
         }
       }

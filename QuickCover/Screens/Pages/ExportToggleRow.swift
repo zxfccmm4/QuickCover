@@ -1,13 +1,25 @@
 import SwiftUI
 
-/// Location-metadata toggle row for ExportScreen with native switch and combined VoiceOver semantics.
+/// Location-metadata toggle row for ExportScreen with semantic leading icon badge, native switch,
+/// and combined VoiceOver semantics.
 struct ExportToggleRow: View {
     let title: LocalizedStringKey
     let footnote: LocalizedStringKey
     @Binding var isOn: Bool
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
+            IconTile(
+                systemImage: "location.slash.fill",
+                ground: isOn
+                    ? Theme.accent.opacity(colorScheme == .dark ? 0.22 : 0.13)
+                    : Theme.fill,
+                tint: isOn ? Theme.accent : Theme.tertiary
+            )
+            .padding(.top, 2)
+
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.body)

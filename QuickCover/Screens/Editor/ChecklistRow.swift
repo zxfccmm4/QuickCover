@@ -12,13 +12,23 @@ struct ChecklistRow: View {
         L10n.rowTitle(item.rowKind, number: number)
     }
 
+    private var activeTint: Color {
+        switch item.rowKind {
+        case .face: Theme.accentOnBlack
+        case .qrCode, .barcode: .cyan
+        case .manual: .purple
+        case .text: .mint
+        default: Theme.accentOnBlack
+        }
+    }
+
     var body: some View {
         RowContent(
             systemImage: item.rowKind.systemImage,
             title: Text(verbatim: title),
             footnote: item.rowKind.footnoteKey.map { Text(LocalizedStringKey($0)) },
-            ground: isOn ? Theme.accent.opacity(0.14) : Theme.fill,
-            tint: isOn ? Theme.accent : Theme.tertiary
+            ground: isOn ? activeTint.opacity(0.18) : Theme.fill,
+            tint: isOn ? activeTint : Theme.tertiary
         ) {
             Toggle("", isOn: $isOn)
                 .labelsHidden()
@@ -27,6 +37,7 @@ struct ChecklistRow: View {
         }
         .contentShape(.rect)
         .onTapGesture(perform: locate)
+        .sensoryFeedback(.selection, trigger: isOn)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityValue(Text(isOn ? "4.5.15" : "4.5.16"))
@@ -42,7 +53,7 @@ struct ChecklistRow: View {
     }
 }
 
-/// "Cover All Text" toggle row in ReviewSheet.
+/// "Cover All Text" toggle row in ReviewSheet, aligned on the same leading icon axis as every checklist row.
 struct CoverAllTextRow: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     let isOn: Bool
@@ -50,6 +61,13 @@ struct CoverAllTextRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
+            IconTile(
+                systemImage: "text.alignleft",
+                ground: isOn ? Theme.accentOnBlack.opacity(0.18) : Theme.fill,
+                tint: isOn ? Theme.accentOnBlack : Theme.tertiary
+            )
+            .padding(.top, 2)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text("4.6.1")
                     .font(.body)
@@ -71,6 +89,7 @@ struct CoverAllTextRow: View {
         .padding(.vertical, 3)
         .contentShape(.rect)
         .onTapGesture { setOn(!isOn) }
+        .sensoryFeedback(.selection, trigger: isOn)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(Text("4.6.1")), \(Text("4.6.2"))"))
         .accessibilityValue(Text(isOn ? "4.5.15" : "4.5.16"))

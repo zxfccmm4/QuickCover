@@ -164,15 +164,17 @@ struct EditorScreen: View {
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .toolbarBackgroundVisibility(.hidden, for: .bottomBar)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    shell.showPickerFromEditor()
-                } label: {
-                    Label("3.1.8", systemImage: "photo.on.rectangle")
+            if shell.page != .picker || shell.path.isEmpty {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        shell.showPickerFromEditor()
+                    } label: {
+                        Label("3.1.8", systemImage: "photo.on.rectangle")
+                    }
+                    .tint(.primary)
+                    .disabled(isFinding)
+                    .accessibilityLabel("3.1.8")
                 }
-                .tint(.primary)
-                .disabled(isFinding)
-                .accessibilityLabel("3.1.8")
             }
 
             ToolbarItem(placement: .principal) {
@@ -373,13 +375,16 @@ struct EditorScreen: View {
                     Image(systemName: enabledCount > 0 ? "checkmark.shield.fill" : "shield")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(enabledCount > 0 ? Theme.accentOnBlack : .white.opacity(0.5))
+                        .symbolEffect(.bounce, value: enabledCount)
                     Text(L10n.coveredCount(enabledCount))
                         .font(.footnote.weight(.medium).monospacedDigit())
                         .foregroundStyle(.white.opacity(enabledCount > 0 ? 0.95 : 0.72))
+                        .contentTransition(.numericText())
                 }
                 .padding(.horizontal, 12)
                 .frame(height: 32)
                 .glassEffect(.regular.interactive(), in: .capsule)
+                .animation(.snappy(duration: 0.22), value: enabledCount)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L10n.coveredCount(enabledCount))

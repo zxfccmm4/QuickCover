@@ -1,50 +1,117 @@
+import Photos
 import PhotosUI
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
-/// Native Apple iOS 26/27 Import Hub inspired by Apple Files, Photos, and Shortcuts:
-/// features an optional recent-screenshots shelf, two balanced concentric hero cards for
-/// Screenshots & Photo Library, a grouped secondary sources card (VisionKit Document Scanner,
-/// Files, Clipboard) with tactile row press highlights, and a quiet Apple Privacy footer.
+/// Native Apple Photos (iOS 26/27) inspired Library screen:
+/// displays your real photo library edge-to-edge immediately on launch in a tight 3-column grid,
+/// floats a translucent Liquid Glass All/Screenshots pill over the scrolling photos, keeps secondary
+/// import sources (System Picker, Document Scanner, Files, Clipboard) tucked cleanly in a `+` menu,
+/// and transitions directly into the dark photo studio with tools the moment you tap any photo.
 struct PickerScreen: View {
     @Environment(ShellModel.self) private var shell
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    @Namespace private var filterNamespace
 
+    @State private var store = PhotoLibraryStore()
+    @State private var showsPhotosPicker = false
+    @State private var pickedPhotoItem: PhotosPickerItem?
     @State private var showsFileImporter = false
     @State private var showsScanner = false
     @State private var openError: PickerOpenError?
     @State private var hasClipboardImage = false
-    @State private var recentScreenshots: [RecentScreenshot] = []
-    @State private var isOpening = false
+    @State private var openingAssetID: String?
+    @State private var isOpeningExternal = false
+    @State private var selectionFeedbackCount = 0
+
+    private var gridColumns: [GridItem] {
+        let count = sizeClass == .regular ? 5 : 3
+        return Array(repeating: GridItem(.flexible(), spacing: 2), count: count)
+    }
+
+    private var activeCountText: String {
+        guard store.canBrowseGrid else {
+            return L10n.text("3.1.2")
+        }
+        switch store.filter {
+        case .all:
+            return L10n.libraryPhotoCount(store.totalPhotoCount)
+        case .screenshots:
+            return L10n.libraryScreenshotCount(store.screenshotCount)
+        }
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                if !recentScreenshots.isEmpty {
-                    recentScreenshotsSection
+        ZStack {
+            Color(.systemBackground)
+                .ignoresSafeArea()
+
+            if store.canBrowseGrid {
+                if store.items.isEmpty && store.hasLoadedOnce {
+                    emptyFilterView
+                } else {
+                    photoGridView
                 }
-
-                heroBentoSection
-
-                secondarySourcesSection
-
-                privacyFooter
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 10)
+            } else {
+                permissionFallbackView
             }
-            .padding(.top, 8)
-            .padding(.bottom, 28)
+
+            if isOpeningExternal {
+                ProgressView()
+                    .controlSize(.regular)
+                    .padding(20)
+                    .glassEffect(.regular, in: .circle)
+            }
         }
-        .background(Theme.page.ignoresSafeArea())
-        .scrollBounceBehavior(.basedOnSize)
-        .scrollEdgeEffectStyle(.soft, for: .all)
-        .navigationTitle("3.1.1")
-        .navigationSubtitle("3.1.2")
+        .navigationTitle("library.title")
+        .navigationSubtitle(activeCountText)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showsPhotosPicker = true
+                    } label: {
+                        Label("library.importPhotos", systemImage: "photo.on.rectangle.angled")
+                    }
+
+                    if DocumentScannerView.isSupported {
+                        Button {
+                            showsScanner = true
+                        } label: {
+                            Label("picker.scanDocument", systemImage: "doc.viewfinder")
+                        }
+                    }
+
+                    Button {
+                        showsFileImporter = true
+                    } label: {
+                        Label("3.1.4", systemImage: "folder")
+                    }
+
+                    Button {
+                        openExternal { Intake.pictureFromPasteboard() }
+                    } label: {
+                        Label("3.1.5", systemImage: "clipboard")
+                    }
+                    .disabled(!hasClipboardImage)
+
+                    if store.authorization == .limited {
+                        Divider()
+                        Button {
+                            presentLimitedLibraryPicker()
+                        } label: {
+                            Label("library.selectMore", systemImage: "photo.badge.plus")
+                        }
+                    }
+                } label: {
+                    Label("library.importMenu", systemImage: "plus")
+                }
+                .accessibilityLabel("library.importMenu")
+
                 NavigationLink {
                     AboutScreen()
                 } label: {
@@ -53,13 +120,20 @@ struct PickerScreen: View {
                 .accessibilityLabel("about.title")
             }
         }
-        .overlay {
-            if isOpening {
-                ProgressView()
-                    .controlSize(.regular)
-                    .padding(20)
-                    .glassEffect(.regular, in: .circle)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if store.canBrowseGrid {
+                floatingBottomDock
             }
+        }
+        .photosPicker(
+            isPresented: $showsPhotosPicker,
+            selection: $pickedPhotoItem,
+            matching: .images
+        )
+        .onChange(of: pickedPhotoItem) { _, picked in
+            guard let picked else { return }
+            pickedPhotoItem = nil
+            openExternal { await Intake.picture(from: picked) }
         }
         .fileImporter(
             isPresented: $showsFileImporter,
@@ -67,7 +141,7 @@ struct PickerScreen: View {
             allowsMultipleSelection: false
         ) { result in
             if case .success(let urls) = result, let url = urls.first {
-                open {
+                openExternal {
                     await Task.detached(priority: .userInitiated) { Intake.picture(at: url) }.value
                 }
             }
@@ -75,7 +149,7 @@ struct PickerScreen: View {
         .fullScreenCover(isPresented: $showsScanner) {
             DocumentScannerView { scannedImage in
                 showsScanner = false
-                open {
+                openExternal {
                     await Task.detached(priority: .userInitiated) { Intake.picture(from: scannedImage) }.value
                 }
             } onCancel: {
@@ -85,179 +159,323 @@ struct PickerScreen: View {
         }
         .imagePasteDestination { payloads in
             guard let data = payloads.first else { return }
-            open { try? PictureSource(data: data) }
+            openExternal { try? PictureSource(data: data) }
         }
         .localizedErrorAlert(error: $openError) {
             Button("3.1.8", role: .cancel) {}
         }
-        .task { await refreshSources() }
+        .sensoryFeedback(.selection, trigger: selectionFeedbackCount)
+        .task {
+            hasClipboardImage = PasteboardImage.isPresent
+            store.startObservingAndLoad()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                Task { await refreshSources() }
+                hasClipboardImage = PasteboardImage.isPresent
+                store.refreshAuthorizationAndLoad()
             }
         }
     }
 
-    // MARK: - Recent Screenshots Shelf
+    // MARK: - Edge-to-Edge Apple Photos Grid
 
-    private var recentScreenshotsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("picker.recentScreenshots")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Theme.secondaryLabel)
-                .textCase(.uppercase)
-                .padding(.horizontal, Metrics.pageInset + 4)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 10) {
-                    ForEach(recentScreenshots) { shot in
-                        let shape = ConcentricRectangle(corners: .concentric(minimum: 14), isUniform: true)
-                        Button {
-                            open { await Intake.picture(localIdentifier: shot.id) }
-                        } label: {
-                            Image(decorative: shot.thumbnail, scale: 1)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 88, height: 124)
-                                .clipShape(shape)
-                                .overlay(
-                                    shape.stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5)
-                                )
-                                .shadow(
-                                    color: .black.opacity(colorScheme == .dark ? 0.35 : 0.08),
-                                    radius: 8,
-                                    y: 3
-                                )
-                        }
-                        .buttonStyle(PressStyle(scale: 0.96))
-                        .accessibilityLabel("3.1.9")
-                    }
-                }
-                .padding(.horizontal, Metrics.pageInset)
-                .padding(.vertical, 2)
-            }
-        }
-    }
-
-    // MARK: - Balanced Apple Bento Hero Cards
-
-    private var heroBentoSection: some View {
-        let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(spacing: 12))
-            : AnyLayout(HStackLayout(spacing: 12))
-
-        return layout {
-            LibraryHeroCard(
-                systemImage: "camera.viewfinder",
-                title: "3.1.9",
-                subtitle: "picker.screenshotsSub",
-                isPrimary: true,
-                screenshotsOnly: true
-            ) { picked($0) }
-
-            LibraryHeroCard(
-                systemImage: "photo.on.rectangle.angled",
-                title: "3.1.3",
-                subtitle: "picker.librarySub",
-                isPrimary: false,
-                screenshotsOnly: false
-            ) { picked($0) }
-        }
-        .padding(.horizontal, Metrics.pageInset)
-    }
-
-    // MARK: - Grouped Secondary Sources Card
-
-    private var secondarySourcesSection: some View {
-        let shape = ConcentricRectangle(corners: .concentric(minimum: 20), isUniform: true)
-        return VStack(alignment: .leading, spacing: 8) {
-            Text("picker.sources")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Theme.secondaryLabel)
-                .textCase(.uppercase)
-                .padding(.horizontal, 4)
-
+    private var photoGridView: some View {
+        ScrollView {
             VStack(spacing: 0) {
-                if DocumentScannerView.isSupported {
-                    PickerRow(systemImage: "doc.viewfinder", title: "picker.scanDocument") {
-                        showsScanner = true
+                if store.authorization == .limited {
+                    limitedAccessStrip
+                        .padding(.horizontal, Metrics.pageInset)
+                        .padding(.top, 4)
+                        .padding(.bottom, 10)
+                }
+
+                LazyVGrid(columns: gridColumns, spacing: 2) {
+                    ForEach(store.items) { item in
+                        LibraryPhotoCell(
+                            item: item,
+                            store: store,
+                            showsScreenshotGlyph: store.filter == .all && item.isScreenshot,
+                            isOpening: openingAssetID == item.id
+                        ) {
+                            openLibraryAsset(item.id)
+                        }
                     }
-
-                    Divider().padding(.leading, 58)
-                }
-
-                PickerRow(systemImage: "folder", title: "3.1.4") {
-                    showsFileImporter = true
-                }
-
-                Divider().padding(.leading, 58)
-
-                PickerRow(
-                    systemImage: "clipboard",
-                    title: "3.1.5",
-                    footnote: hasClipboardImage ? "picker.clipboardReady" : nil,
-                    footnoteTint: Theme.accent,
-                    isEnabled: hasClipboardImage
-                ) {
-                    open { Intake.pictureFromPasteboard() }
                 }
             }
-            .background(Theme.card)
-            .clipShape(shape)
-            .overlay(
-                shape.stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5)
-            )
-
-            if !hasClipboardImage {
-                Text("3.1.6")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.secondaryLabel)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 2)
-            }
+            .padding(.bottom, 24)
         }
-        .padding(.horizontal, Metrics.pageInset)
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollEdgeEffectStyle(.soft, for: .all)
     }
 
-    // MARK: - Quiet Apple Privacy Footer
-
-    private var privacyFooter: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "lock.shield.fill")
-                .font(.footnote.weight(.medium))
-                .symbolRenderingMode(.hierarchical)
+    private var limitedAccessStrip: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "photo.stack.fill")
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.accent)
                 .accessibilityHidden(true)
-            Text("picker.privacyBadge")
+
+            Text("library.limitedBanner")
                 .font(.footnote)
-                .foregroundStyle(Theme.secondaryLabel)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Spacer(minLength: 6)
+
+            Button("library.selectMore") {
+                presentLimitedLibraryPicker()
+            }
+            .font(.footnote.weight(.semibold))
+            .tint(Theme.accent)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(Theme.card, in: Capsule())
+        .overlay(Capsule().stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5))
+    }
+
+    // MARK: - Signature Apple Photos Floating Liquid Glass Bottom Pill
+
+    private var floatingBottomDock: some View {
+        GlassEffectContainer(spacing: 10) {
+            HStack(spacing: 10) {
+                HStack(spacing: 3) {
+                    ForEach(PhotoLibraryFilter.allCases) { option in
+                        let isSelected = store.filter == option
+                        Button {
+                            guard store.filter != option else { return }
+                            withAnimation(.snappy(duration: 0.24)) {
+                                store.filter = option
+                            }
+                            selectionFeedbackCount += 1
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: option.systemImage)
+                                    .font(.caption.weight(.semibold))
+                                Text(LocalizedStringKey(option.titleKey))
+                                    .font(.subheadline.weight(isSelected ? .semibold : .medium))
+                            }
+                            .foregroundStyle(isSelected ? .white : .primary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 9)
+                            .background {
+                                if isSelected {
+                                    Capsule()
+                                        .fill(Theme.accentButton)
+                                        .matchedGeometryEffect(id: "libraryFilterPill", in: filterNamespace)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                    }
+                }
+                .padding(4)
+                .glassEffect(.regular.interactive(), in: .capsule)
+
+                if hasClipboardImage {
+                    Button {
+                        openExternal { Intake.pictureFromPasteboard() }
+                    } label: {
+                        Image(systemName: "clipboard.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: 44, height: 44)
+                            .glassEffect(.regular.interactive(), in: .circle)
+                    }
+                    .buttonStyle(PressStyle(scale: 0.94))
+                    .accessibilityLabel("3.1.5")
+                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+                }
+            }
         }
         .padding(.horizontal, Metrics.pageInset)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .animation(.snappy(duration: 0.24), value: hasClipboardImage)
+    }
+
+    // MARK: - Minimal Empty & Permission States
+
+    private var emptyFilterView: some View {
+        ContentUnavailableView {
+            Label(
+                store.filter == .screenshots ? "library.emptyScreenshots.title" : "library.emptyAll.title",
+                systemImage: store.filter == .screenshots ? "camera.viewfinder" : "photo.on.rectangle.angled"
+            )
+        } description: {
+            Text(store.filter == .screenshots ? "library.emptyScreenshots.body" : "library.emptyAll.body")
+        } actions: {
+            if store.filter == .screenshots && store.totalPhotoCount > 0 {
+                Button("library.showAllPhotos") {
+                    withAnimation(.snappy(duration: 0.24)) {
+                        store.filter = .all
+                    }
+                }
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
+                .tint(Theme.accentButton)
+            } else {
+                Button("library.importPhotos") {
+                    showsPhotosPicker = true
+                }
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
+                .tint(Theme.accentButton)
+            }
+        }
+        .padding(.bottom, 64)
+    }
+
+    private var permissionFallbackView: some View {
+        ContentUnavailableView {
+            Label("library.noAccess.title", systemImage: "photo.stack")
+        } description: {
+            Text("library.noAccess.body")
+        } actions: {
+            VStack(spacing: 10) {
+                Button {
+                    showsPhotosPicker = true
+                } label: {
+                    Label("library.importPhotos", systemImage: "photo.on.rectangle.angled")
+                        .font(.buttonText)
+                        .padding(.horizontal, 8)
+                }
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .tint(Theme.accentButton)
+
+                if store.authorization == .denied || store.authorization == .restricted {
+                    Button("library.openSettings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .tint(Theme.accent)
+                } else {
+                    Button("3.2.3") {
+                        Task { await store.requestAccess() }
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .tint(Theme.accent)
+                }
+            }
+        }
     }
 
     // MARK: - Actions
 
-    private func refreshSources() async {
-        hasClipboardImage = PasteboardImage.isPresent
-        recentScreenshots = await Intake.recentScreenshots(limit: 10)
-    }
-
-    private func picked(_ item: PhotosPickerItem) {
-        open { await Intake.picture(from: item) }
-    }
-
-    private func open(_ candidate: @escaping @MainActor () async -> PictureSource?) {
-        guard !isOpening else { return }
-        isOpening = true
+    private func openLibraryAsset(_ id: String) {
+        guard openingAssetID == nil, !isOpeningExternal else { return }
+        openingAssetID = id
+        selectionFeedbackCount += 1
         Task { @MainActor in
-            defer { isOpening = false }
-            if let picture = await candidate() {
+            defer { openingAssetID = nil }
+            let picture: PictureSource? = if let asset = store.asset(for: id) {
+                await Intake.picture(asset: asset)
+            } else {
+                await Intake.picture(localIdentifier: id)
+            }
+            if let picture {
                 shell.open(picture)
             } else {
-                try? await Task.sleep(for: .milliseconds(500))
                 openError = .cannotOpen
             }
         }
+    }
+
+    private func openExternal(_ candidate: @escaping @MainActor () async -> PictureSource?) {
+        guard !isOpeningExternal, openingAssetID == nil else { return }
+        isOpeningExternal = true
+        Task { @MainActor in
+            defer { isOpeningExternal = false }
+            if let picture = await candidate() {
+                shell.open(picture)
+            } else {
+                try? await Task.sleep(for: .milliseconds(350))
+                openError = .cannotOpen
+            }
+        }
+    }
+
+    private func presentLimitedLibraryPicker() {
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
+              let root = scene.keyWindow?.rootViewController else {
+            return
+        }
+        var top = root
+        while let presented = top.presentedViewController {
+            top = presented
+        }
+        PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: top)
+    }
+}
+
+// MARK: - Edge-to-Edge Square Photo Tile
+
+private struct LibraryPhotoCell: View {
+    let item: LibraryAssetItem
+    let store: PhotoLibraryStore
+    let showsScreenshotGlyph: Bool
+    let isOpening: Bool
+    let onTap: () -> Void
+
+    @Environment(\.displayScale) private var displayScale
+    @State private var thumbnail: UIImage?
+    @State private var requestID: PHImageRequestID = PHInvalidImageRequestID
+
+    var body: some View {
+        Button(action: onTap) {
+            Color(.secondarySystemFill)
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    if let thumbnail {
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .scaledToFill()
+                    }
+                }
+                .clipped()
+                .overlay(alignment: .bottomTrailing) {
+                    if showsScreenshotGlyph && !isOpening {
+                        Image(systemName: "camera.viewfinder")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(5)
+                            .background(Color.black.opacity(0.45), in: Circle())
+                            .padding(5)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .overlay {
+                    if isOpening {
+                        Color.black.opacity(0.32)
+                        ProgressView()
+                            .tint(.white)
+                    }
+                }
+                .contentShape(.rect)
+        }
+        .buttonStyle(PressStyle(scale: 0.97))
+        .onAppear {
+            guard thumbnail == nil else { return }
+            let px = 140 * max(displayScale, 2)
+            requestID = store.requestThumbnail(
+                for: item.id,
+                pixelSize: CGSize(width: px, height: px)
+            ) { image in
+                if let image {
+                    thumbnail = image
+                }
+            }
+        }
+        .onDisappear {
+            store.cancelThumbnailRequest(requestID)
+            requestID = PHInvalidImageRequestID
+        }
+        .accessibilityLabel(item.isScreenshot ? "3.1.9" : "3.1.3")
     }
 }
 
@@ -270,110 +488,7 @@ private enum PickerOpenError: LocalizedError {
     }
 }
 
-/// Balanced Apple HIG concentric card backed by an isolated `PhotosPicker` presentation.
-/// Emphasizes Screenshots subtly via a solid brand-teal icon badge and gentle tinted wash while
-/// maintaining visual equilibrium with Photo Library across Light and Dark Mode.
-private struct LibraryHeroCard: View {
-    let systemImage: String
-    let title: LocalizedStringKey
-    let subtitle: LocalizedStringKey
-    let isPrimary: Bool
-    let screenshotsOnly: Bool
-    let onPick: (PhotosPickerItem) -> Void
-
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var item: PhotosPickerItem?
-    @State private var isShown = false
-
-    var body: some View {
-        let shape = ConcentricRectangle(corners: .concentric(minimum: 22), isUniform: true)
-        Button {
-            isShown = true
-        } label: {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top) {
-                    ZStack {
-                        Circle()
-                            .fill(isPrimary ? Theme.accentButton : Theme.accent.opacity(colorScheme == .dark ? 0.18 : 0.12))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: systemImage)
-                            .font(.system(size: 18, weight: .semibold))
-                            .symbolRenderingMode(.monochrome)
-                            .foregroundStyle(isPrimary ? .white : Theme.accent)
-                    }
-                    .accessibilityHidden(true)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(isPrimary ? Theme.accent.opacity(0.7) : Theme.tertiary)
-                        .padding(.top, 4)
-                        .accessibilityHidden(true)
-                }
-
-                Spacer(minLength: 4)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundStyle(Theme.body)
-                        .lineLimit(2)
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(Theme.secondaryLabel)
-                        .lineLimit(2)
-                }
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
-            .background {
-                ZStack {
-                    shape.fill(Theme.card)
-                    if isPrimary {
-                        shape.fill(
-                            LinearGradient(
-                                colors: [
-                                    Theme.accent.opacity(colorScheme == .dark ? 0.16 : 0.10),
-                                    Theme.accent.opacity(colorScheme == .dark ? 0.05 : 0.02),
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    }
-                }
-            }
-            .clipShape(shape)
-            .overlay(
-                shape.stroke(
-                    isPrimary
-                        ? Theme.accent.opacity(colorScheme == .dark ? 0.30 : 0.20)
-                        : Theme.cardBorder(for: colorScheme),
-                    lineWidth: 0.5
-                )
-            )
-            .shadow(
-                color: .black.opacity(colorScheme == .dark ? 0.22 : 0.04),
-                radius: 8,
-                y: 2
-            )
-        }
-        .buttonStyle(PressStyle(scale: 0.97))
-        .photosPicker(
-            isPresented: $isShown,
-            selection: $item,
-            matching: screenshotsOnly ? .screenshots : nil
-        )
-        .onChange(of: item) { _, picked in
-            guard let picked else { return }
-            item = nil
-            onPick(picked)
-        }
-    }
-}
-
-#Preview("Picker Light") {
+#Preview("Library Light") {
     NavigationStack {
         PickerScreen()
     }
@@ -382,7 +497,7 @@ private struct LibraryHeroCard: View {
     .preferredColorScheme(.light)
 }
 
-#Preview("Picker Dark") {
+#Preview("Library Dark") {
     NavigationStack {
         PickerScreen()
     }

@@ -4,13 +4,15 @@ import SwiftUI
 
 /// Destinations pushed onto the root `NavigationStack`.
 enum Route: Hashable, Sendable {
-    /// Picker pushed from the editor via「換一張」.
+    /// Photo Library gallery pushed from a standalone editor.
     case picker
+    /// Dark-studio photo editor pushed when selecting a photo from the Library grid.
+    case editor
     /// Export & share preview page.
     case export
 }
 
-/// Root screen before any push: onboarding primer, picker without full photo access, or editor.
+/// Root screen before any push: onboarding primer, Apple Photos-style Library grid, or standalone editor.
 enum RootPage: Equatable, Sendable {
     case primer
     case picker
@@ -18,6 +20,8 @@ enum RootPage: Equatable, Sendable {
 }
 
 /// Top-level app coordinator owned by `RootView` and shared via SwiftUI `@Environment`.
+/// Follows Apple Photos' gallery-first rhythm: launching opens directly onto the full-bleed photo
+/// library grid; selecting any photo pushes smoothly into the dark editing studio with tools.
 @MainActor
 @Observable
 final class ShellModel {
@@ -52,9 +56,7 @@ final class ShellModel {
         switch authorization() {
         case .notDetermined:
             page = .primer
-        case .authorized:
-            await openLatestScreenshot()
-        case .limited, .denied, .restricted:
+        case .authorized, .limited, .denied, .restricted:
             showPicker()
         @unknown default:
             showPicker()
@@ -62,23 +64,25 @@ final class ShellModel {
     }
 
     func allowAccess() async {
-        if await requestAccess() == .full {
-            await openLatestScreenshot()
-        } else {
-            showPicker()
-        }
+        _ = await requestAccess()
+        showPicker()
     }
 
     func showPicker() {
+        leaveEditor()
         path = []
         page = .picker
     }
 
-    // MARK: - Navigation from Editor
+    // MARK: - Navigation
 
     func showPickerFromEditor() {
         leaveEditor()
-        path.append(.picker)
+        if page == .picker {
+            path = []
+        } else {
+            path.append(.picker)
+        }
     }
 
     func showExport() {
@@ -109,8 +113,14 @@ final class ShellModel {
             self.stylePickedThisTime = style
         }
         editor = model
-        path = []
-        page = .editor
+
+        if page == .picker || page == .primer {
+            page = .picker
+            path = [.editor]
+        } else {
+            path = []
+            page = .editor
+        }
         model.startRecognition()
     }
 
@@ -120,13 +130,5 @@ final class ShellModel {
 
     private func leaveEditor() {
         editor?.resetTransientState()
-    }
-
-    private func openLatestScreenshot() async {
-        if let screenshot = await latestScreenshot() {
-            open(screenshot)
-        } else {
-            showPicker()
-        }
     }
 }

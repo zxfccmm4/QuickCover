@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Root navigation shell following Apple HIG: respects system Light and Dark appearance across
-/// onboarding, image picker, and export screens, while letting the photo editor own a focused
-/// dark studio canvas.
+/// Root navigation shell following Apple Photos & HIG: opens directly onto the adaptive Light/Dark
+/// photo library grid, and transitions seamlessly into the focused pure-black photo studio when a
+/// picture is selected for masking.
 struct RootView: View {
     @State private var shell = ShellModel()
     @Environment(\.scenePhase) private var scenePhase
@@ -11,7 +11,10 @@ struct RootView: View {
     @State private var topSafeArea: CGFloat = 0
 
     private var showsDarkStudio: Bool {
-        shell.page == .editor && shell.path.isEmpty
+        if let top = shell.path.last {
+            return top == .editor
+        }
+        return shell.page == .editor
     }
 
     var body: some View {
@@ -22,6 +25,12 @@ struct RootView: View {
                     switch route {
                     case .picker:
                         PickerScreen()
+                    case .editor:
+                        if let editor = shell.editor {
+                            EditorScreen()
+                                .id(ObjectIdentifier(editor))
+                                .navigationTitle("4.1.1")
+                        }
                     case .export:
                         ExportScreen()
                     }

@@ -32,6 +32,19 @@ struct CoveredPicture: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if !showsOriginal {
+                Image(systemName: "eye")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 24, height: 24)
+                    .background(Color.black.opacity(0.42), in: Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+                    .padding(8)
+                    .accessibilityHidden(true)
+                    .transition(.opacity)
+            }
+        }
         .frame(width: size.width, height: size.height)
         .clipShape(shape)
         .overlay(

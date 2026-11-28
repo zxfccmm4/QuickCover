@@ -146,12 +146,17 @@ struct ExportScreen: View {
             ExportToggleRow(title: "6.2.1", footnote: facts.footnote, isOn: stripMetadata)
 
             Divider()
-                .padding(.leading, 16)
+                .padding(.leading, 58)
 
             exportFormatRow
         }
         .background(cardShape.fill(Theme.card))
         .overlay(cardShape.stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5))
+        .shadow(
+            color: .black.opacity(colorScheme == .dark ? 0.22 : 0.03),
+            radius: 8,
+            y: 2
+        )
         .padding(.horizontal, Metrics.pageInset)
 
         if facts.showsCoveredLine {
@@ -250,6 +255,12 @@ struct ExportScreen: View {
 
     private var exportFormatRow: some View {
         HStack(spacing: 12) {
+            IconTile(
+                systemImage: "doc.badge.gearshape",
+                ground: Color.blue.opacity(colorScheme == .dark ? 0.22 : 0.12),
+                tint: .blue
+            )
+
             Text("export.format")
                 .font(.body)
                 .foregroundStyle(Theme.body)

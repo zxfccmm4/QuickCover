@@ -66,11 +66,19 @@ enum Intake {
         return results
     }
 
-    /// Loads full-resolution original data for a screenshot picked from the quick strip.
+    /// Loads full-resolution original data for an asset picked from the Photo Library grid.
+    /// Works under both `.authorized` and `.limited` library permissions.
     static func picture(localIdentifier: String) async -> PictureSource? {
-        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized else { return nil }
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else { return nil }
         let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
         guard let asset = fetched.firstObject, let data = await imageData(of: asset) else { return nil }
+        return try? PictureSource(data: data)
+    }
+
+    /// Loads full-resolution original data directly from a `PHAsset`.
+    static func picture(asset: PHAsset) async -> PictureSource? {
+        guard let data = await imageData(of: asset) else { return nil }
         return try? PictureSource(data: data)
     }
 

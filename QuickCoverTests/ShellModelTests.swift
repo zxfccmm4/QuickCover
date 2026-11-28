@@ -5,8 +5,8 @@ import Testing
 
 @testable import QuickCover
 
-/// Where the app opens and how it gets around (design.md §5), without PhotoKit: the shell is given
-/// the answers PhotoKit would give.
+/// Where the app opens and how it navigates in the Apple Photos gallery-first architecture,
+/// without hitting PhotoKit directly.
 @MainActor
 struct ShellModelTests {
 
@@ -24,41 +24,21 @@ struct ShellModelTests {
     @MainActor
     func theFirstLaunchShowsThePrimerAndAsksNothing() async {
         let shell = shell()
-        #expect(shell.page == nil, "black while the access is read")
+        #expect(shell.page == nil, "waiting while photo authorization is read")
         await shell.start()
         #expect(shell.page == .primer)
         #expect(shell.editor == nil)
         #expect(shell.path.isEmpty)
     }
 
-    @Test
+    @Test(arguments: [PHAuthorizationStatus.authorized, .limited, .denied, .restricted])
     @MainActor
-    func fullAccessOpensStraightOnTheLatestScreenshot() async throws {
-        let shell = shell(status: .authorized, screenshot: try picture())
-        await shell.start()
-        #expect(shell.page == .editor)
-        #expect(shell.editor != nil)
-        #expect(shell.path.isEmpty)
-        #expect(shell.editor?.recognition == .running, "the picture is being looked at from the start")
-        shell.editor?.cancelRecognition()
-    }
-
-    @Test
-    @MainActor
-    func fullAccessWithNoScreenshotToShowOpensOnThePicker() async {
-        let shell = shell(status: .authorized, screenshot: nil)
-        await shell.start()
-        #expect(shell.page == .picker)
-        #expect(shell.editor == nil)
-    }
-
-    @Test(arguments: [PHAuthorizationStatus.limited, .denied, .restricted])
-    @MainActor
-    func anythingShortOfFullAccessOpensOnThePicker(status: PHAuthorizationStatus) async throws {
+    func determinedAccessOpensDirectlyOnThePhotoLibrary(status: PHAuthorizationStatus) async throws {
         let shell = shell(status: status, screenshot: try picture())
         await shell.start()
-        #expect(shell.page == .picker, "\(status)")
-        #expect(shell.editor == nil, "the latest screenshot isn't even looked for")
+        #expect(shell.page == .picker, "\(status) launches onto the Apple Photos library grid")
+        #expect(shell.editor == nil)
+        #expect(shell.path.isEmpty)
     }
 
     @Test
@@ -66,34 +46,43 @@ struct ShellModelTests {
     func startHappensOnce() async throws {
         let shell = shell(status: .authorized, screenshot: try picture())
         await shell.start()
-        #expect(shell.page == .editor)
+        #expect(shell.page == .picker)
+        shell.open(try picture())
         let editor = shell.editor
         await shell.start()
-        #expect(shell.page == .editor)
-        #expect(shell.editor === editor, "a second start doesn't reopen the picture")
+        #expect(shell.editor === editor, "a second start does not reset the active session")
         editor?.cancelRecognition()
+    }
+
+    @Test(arguments: [PhotosAccess.full, .limited, .denied])
+    @MainActor
+    func completingPrimerOpensThePhotoLibrary(granted: PhotosAccess) async throws {
+        let shell = shell(granted: granted, screenshot: try picture())
+        await shell.start()
+        #expect(shell.page == .primer)
+        await shell.allowAccess()
+        #expect(shell.page == .picker, "\(granted)")
+        #expect(shell.path.isEmpty)
+        #expect(shell.editor == nil)
     }
 
     @Test
     @MainActor
-    func allowingEveryPhotoOpensTheLatestScreenshot() async throws {
-        let shell = shell(granted: .full, screenshot: try picture())
+    func tappingAPhotoFromTheLibraryPushesTheEditorAndCanReturnBack() async throws {
+        let shell = shell(status: .authorized)
         await shell.start()
-        #expect(shell.page == .primer)
-        await shell.allowAccess()
-        #expect(shell.page == .editor)
-        #expect(shell.path.isEmpty, "the primer is replaced, not covered")
-        shell.editor?.cancelRecognition()
-    }
+        #expect(shell.page == .picker)
 
-    @Test(arguments: [PhotosAccess.limited, .denied])
-    @MainActor
-    func allowingSomePhotosOrNoneGoesToThePicker(granted: PhotosAccess) async throws {
-        let shell = shell(granted: granted, screenshot: try picture())
-        await shell.start()
-        await shell.allowAccess()
-        #expect(shell.page == .picker, "\(granted)")
-        #expect(shell.editor == nil)
+        shell.open(try picture())
+        #expect(shell.page == .picker, "library stays at root underneath the pushed editor")
+        #expect(shell.path == [.editor])
+        #expect(shell.editor != nil)
+        #expect(shell.editor?.recognition == .running)
+
+        shell.showPickerFromEditor()
+        #expect(shell.page == .picker)
+        #expect(shell.path.isEmpty, "returning pops straight back to the photo library grid")
+        shell.editor?.cancelRecognition()
     }
 
     /// 这次自己选的样式（design.md §7.5.2）：换了样式记下来；只拨位置开关不算；换一张图从头算。
@@ -142,24 +131,13 @@ struct ShellModelTests {
 
     @Test
     @MainActor
-    func chooseAnotherPushesThePickerOverTheEditor() async throws {
-        let shell = shell()
+    func exportIsPushedOverTheEditor() async throws {
+        let shell = shell(status: .authorized)
         await shell.start()
         shell.open(try picture())
-        shell.showPickerFromEditor()
-        #expect(shell.page == .editor, "the editor stays under it")
-        #expect(shell.path == [.picker])
-        shell.editor?.cancelRecognition()
-    }
-
-    @Test
-    @MainActor
-    func exportIsPushedWithoutAsking() throws {
-        let shell = shell()
-        shell.open(try picture())
         shell.showExport()
-        #expect(shell.path == [.export])
-        #expect(shell.page == .editor)
+        #expect(shell.path == [.editor, .export])
+        #expect(shell.page == .picker)
         shell.editor?.cancelRecognition()
     }
 
@@ -185,8 +163,9 @@ struct ShellModelTests {
 
     @Test
     @MainActor
-    func aNewPictureStartsTheEditorOver() throws {
-        let shell = shell()
+    func aNewPictureStartsTheEditorOver() async throws {
+        let shell = shell(status: .authorized)
+        await shell.start()
         shell.open(try picture())
         let first = shell.editor
         first?.showsOriginal = true
@@ -195,8 +174,8 @@ struct ShellModelTests {
 
         shell.open(try picture())
         #expect(shell.editor !== first, "each picture gets its own editor")
-        #expect(shell.page == .editor)
-        #expect(shell.path.isEmpty, "anything pushed goes away")
+        #expect(shell.page == .picker)
+        #expect(shell.path == [.editor])
         #expect(shell.editor?.showsOriginal == false)
         #expect(shell.editor?.drawToolOn == false)
         #expect(shell.editor?.items.isEmpty == true)
@@ -227,7 +206,8 @@ struct ShellModelTests {
     @Test
     @MainActor
     func theRoutesAreWhatTheNavigationStackPushes() {
-        #expect(Route.picker != Route.export)
-        #expect([Route.picker, Route.export].count == 2)
+        #expect(Route.picker != Route.editor)
+        #expect(Route.editor != Route.export)
+        #expect([Route.picker, Route.editor, Route.export].count == 3)
     }
 }

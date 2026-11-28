@@ -108,6 +108,27 @@ enum L10n {
         return String(format: format, locale: locale, version, build)
     }
 
+    /// Search result count heading in EmojiPickerSheet (e.g. "找到 12 个表情" / "12 matches").
+    static func emojiSearchCount(_ count: Int, bundle: Bundle? = nil) -> String {
+        let format = text("emoji.searchCountFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
+    /// Apple Photos-style subtitle count for All Photos (e.g. "128 张照片" / "128 Photos").
+    static func libraryPhotoCount(_ count: Int, bundle: Bundle? = nil) -> String {
+        let format = text("library.photoCountFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
+    /// Apple Photos-style subtitle count for Screenshots (e.g. "24 张截图" / "24 Screenshots").
+    static func libraryScreenshotCount(_ count: Int, bundle: Bundle? = nil) -> String {
+        let format = text("library.screenshotCountFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
     /// The app's strings in one language ("en", "zh-Hans", "zh-Hant"), for tests and previews.
     static func bundle(for language: String) -> Bundle {
         if let path = Bundle.main.path(forResource: language, ofType: "lproj"), let bundle = Bundle(path: path) {

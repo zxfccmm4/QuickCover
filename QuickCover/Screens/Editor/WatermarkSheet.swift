@@ -140,13 +140,19 @@ struct WatermarkSheet: View {
                 }
 
                 Section("wm.appearance") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 12) {
+                            IconTile(
+                                systemImage: "circle.lefthalf.filled",
+                                ground: Theme.accentOnBlack.opacity(0.16),
+                                tint: Theme.accentOnBlack
+                            )
                             Text("wm.opacity")
                             Spacer()
                             Text("\(Int((model.watermark.opacity * 100).rounded()))%")
-                                .font(.footnote.weight(.medium).monospacedDigit())
+                                .font(.footnote.weight(.semibold).monospacedDigit())
                                 .foregroundStyle(.secondary)
+                                .contentTransition(.numericText())
                         }
                         Slider(value: opacityBinding, in: 0.10...0.55, step: 0.01)
                             .tint(Theme.accentOnBlack)
@@ -154,23 +160,33 @@ struct WatermarkSheet: View {
                     .padding(.vertical, 2)
                     .listRowBackground(sheetCardFill)
 
-                    HStack {
+                    HStack(spacing: 12) {
+                        IconTile(
+                            systemImage: "square.grid.3x3.fill",
+                            ground: Color.indigo.opacity(0.22),
+                            tint: .indigo
+                        )
                         Text("wm.density")
-                        Spacer(minLength: 16)
+                        Spacer(minLength: 12)
                         Picker("wm.density", selection: densityBinding) {
                             ForEach(WatermarkOptions.Density.allCases) { density in
                                 Text(LocalizedStringKey(density.titleKey)).tag(density)
                             }
                         }
                         .pickerStyle(.segmented)
-                        .frame(maxWidth: 210)
+                        .frame(maxWidth: 196)
                     }
                     .listRowBackground(sheetCardFill)
 
-                    HStack {
+                    HStack(spacing: 12) {
+                        IconTile(
+                            systemImage: "paintpalette.fill",
+                            ground: Color.orange.opacity(0.20),
+                            tint: .orange
+                        )
                         Text("wm.color")
                         Spacer()
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             ForEach(WatermarkOptions.Tint.allCases) { tint in
                                 let isSelected = model.watermark.tint == tint
                                 Button {
@@ -183,15 +199,15 @@ struct WatermarkSheet: View {
                                             .frame(width: 24, height: 24)
                                             .overlay(
                                                 Circle()
-                                                    .stroke(Color.white.opacity(0.28), lineWidth: 0.75)
+                                                    .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.75)
                                             )
                                         if isSelected {
                                             Circle()
-                                                .stroke(Theme.accentOnBlack, lineWidth: 2.2)
-                                                .frame(width: 31, height: 31)
+                                                .strokeBorder(Theme.accentOnBlack, lineWidth: 2)
+                                                .frame(width: 32, height: 32)
                                         }
                                     }
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 34, height: 34)
                                 }
                                 .buttonStyle(PressStyle(scale: 0.92))
                                 .accessibilityLabel(LocalizedStringKey(tint.titleKey))

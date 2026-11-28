@@ -126,6 +126,10 @@ struct L10nTests {
             "pawprint", "plus", "wand.and.stars", "info.circle", "hand.raised.fill", "doc.text.fill",
             "heart.fill", "doc.on.doc", "arrow.up.right", "safari.fill", "person.2.fill", "eye.fill",
             "swift", "hammer.fill", "iphone", "photo.badge.checkmark", "shippingbox.fill", "swatchpalette.fill",
+            "photo.stack.fill", "doc.badge.gearshape", "text.alignleft", "circle.lefthalf.filled",
+            "square.grid.3x3.fill", "paintpalette.fill", "star.fill", "person.fill", "pawprint.fill",
+            "fork.knife", "airplane", "figure.run", "lightbulb.fill", "flag.fill", "magnifyingglass",
+            "photo.badge.plus", "clipboard.fill", "square.grid.2x2", "photo.stack",
         ]
         for name in names {
             #expect(UIImage(systemName: name) != nil, "\(name)")
@@ -133,7 +137,24 @@ struct L10nTests {
         for asset in ["IconArtwork", "symbol.twitter.icon", "Telegramicon", "Mail", "github-mark", "github-mark-white"] {
             #expect(UIImage(named: asset) != nil, "Missing image asset \(asset)")
         }
-        #expect(EmojiPreset.all.count >= 48)
+        #expect(EmojiPreset.all.count >= 1900, "Expected full Unicode 16.0 emoji catalog, got \(EmojiPreset.all.count)")
+        #expect(EmojiPreset.unicodeCategories.count == 9)
+        #expect(EmojiPreset.categories.count == 10)
+    }
+
+    @Test
+    func fullEmojiCatalogSearchSupportsChineseTraditionalAndEnglish() {
+        #expect(EmojiPreset.search("fox").contains { $0.symbol == "🦊" })
+        #expect(EmojiPreset.search("狐狸").contains { $0.symbol == "🦊" })
+        #expect(EmojiPreset.search("貓").contains { $0.symbol == "🐱" })
+        #expect(EmojiPreset.search("樱花").contains { $0.symbol == "🌸" })
+        #expect(EmojiPreset.search("中国").contains { $0.symbol == "🇨🇳" })
+        #expect(!EmojiPreset.isDirectEmojiInput("1"))
+        #expect(!EmojiPreset.isDirectEmojiInput("cat"))
+        #expect(EmojiPreset.isDirectEmojiInput("🦊"))
+        #expect(EmojiPreset.isDirectEmojiInput("1️⃣"))
+        #expect(L10n.emojiSearchCount(12, bundle: bundle("zh-Hans")) == "找到 12 个表情")
+        #expect(L10n.emojiSearchCount(12, bundle: bundle("en")) == "12 matches")
     }
 
     @Test

@@ -6,6 +6,7 @@ import SwiftUI
 struct StylePicker: View {
     @Environment(EditorModel.self) private var model
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Namespace private var pillNamespace
     @State private var blurNoticeShown = false
 
     private var styleBinding: Binding<MaskStyle> {
@@ -45,13 +46,26 @@ struct StylePicker: View {
                                 .padding(.leading, 8)
                                 .padding(.trailing, 13)
                                 .padding(.vertical, 8)
-                                .background(
-                                    Capsule()
-                                        .fill(isSelected ? Theme.accentButton : Color.white.opacity(0.10))
-                                )
+                                .background {
+                                    if isSelected {
+                                        Capsule()
+                                            .fill(option == .conceal ? Color.white.opacity(0.18) : Theme.accentButton)
+                                            .matchedGeometryEffect(id: "reviewStylePill", in: pillNamespace)
+                                    } else {
+                                        Capsule()
+                                            .fill(Color.white.opacity(0.09))
+                                    }
+                                }
                                 .overlay(
                                     Capsule()
-                                        .stroke(Color.white.opacity(isSelected ? 0.22 : 0.08), lineWidth: 0.5)
+                                        .strokeBorder(
+                                            isSelected
+                                                ? (option == .conceal
+                                                    ? AnyShapeStyle(AppleIntelligencePalette.linearGradient)
+                                                    : AnyShapeStyle(Color.white.opacity(0.24)))
+                                                : AnyShapeStyle(Color.white.opacity(0.08)),
+                                            lineWidth: isSelected && option == .conceal ? 1.2 : 0.5
+                                        )
                                 )
                             }
                             .buttonStyle(PressStyle(scale: 0.96))
@@ -59,6 +73,7 @@ struct StylePicker: View {
                         }
                     }
                     .padding(.horizontal, Metrics.pageInset)
+                    .animation(.snappy(duration: 0.24), value: model.preferences.style)
                 }
             }
 

@@ -225,47 +225,166 @@ enum ExportFormat: String, CaseIterable, Codable, Sendable, Identifiable {
     }
 }
 
-/// Categorized emoji catalog for `.emoji` sticker covering.
+/// Single searchable emoji entry from the bundled Unicode 16.0 catalog.
+struct EmojiEntry: Identifiable, Hashable, Sendable {
+    let symbol: String
+    let english: String
+    let chinese: String
+
+    var id: String { symbol }
+}
+
+/// Categorized emoji collection for `.emoji` sticker covering.
 struct EmojiCategory: Identifiable, Sendable {
     let id: String
     let titleKey: String
+    let shortTitleKey: String
     let systemImage: String
-    let emojis: [String]
+    let entries: [EmojiEntry]
+
+    var emojis: [String] { entries.map(\.symbol) }
 }
 
-/// Curated emojis for `.emoji` sticker covering (48 presets across 4 categories + custom keyboard).
+/// Complete Unicode 16.0 emoji catalog (1,900+ emojis across all 9 official Unicode groups plus a
+/// curated Featured collection) with instant Chinese & English keyword search.
 enum EmojiPreset {
     static let quickBar = ["😎", "🙂", "🫣", "🐱", "🐶", "🦊", "🐼", "🌸", "✨", "🙈"]
     static let `default` = "😎"
 
-    static let categories: [EmojiCategory] = [
-        EmojiCategory(
-            id: "faces",
-            titleKey: "emoji.cat.faces",
-            systemImage: "face.smiling",
-            emojis: ["😎", "🙂", "😊", "🥳", "🤩", "🥹", "🤫", "🤭", "🫣", "😶‍🌫️", "🤖", "👽"]
-        ),
-        EmojiCategory(
-            id: "animals",
-            titleKey: "emoji.cat.animals",
-            systemImage: "pawprint",
-            emojis: ["🐱", "🐶", "🦊", "🐼", "🐨", "🐰", "🐻‍❄️", "🦄", "🐸", "🐧", "🦋", "🐥"]
-        ),
-        EmojiCategory(
-            id: "nature",
-            titleKey: "emoji.cat.nature",
-            systemImage: "sparkles",
-            emojis: ["🌸", "🌼", "🌻", "🍀", "🌈", "✨", "⭐️", "💫", "🔥", "💎", "🎀", "🫧"]
-        ),
-        EmojiCategory(
-            id: "privacy",
-            titleKey: "emoji.cat.privacy",
-            systemImage: "lock.shield",
-            emojis: ["🙈", "🙉", "🙊", "🔒", "🛡️", "🚫", "⛔️", "🪪", "🎭", "👾", "👀", "💯"]
-        ),
+    private static let featuredSymbols: [String] = [
+        "😎", "🙂", "😊", "🥳", "🤩", "🥹", "🤫", "🤭", "🫣", "😶‍🌫️", "🤖", "👽",
+        "🐱", "🐶", "🦊", "🐼", "🐨", "🐰", "🐻‍❄️", "🦄", "🐸", "🐧", "🦋", "🐥",
+        "🌸", "🍀", "🌈", "✨", "⭐️", "🔥", "💎", "🎀", "🫧", "🙈", "🙉", "🙊",
+        "🔒", "🛡️", "🚫", "⛔️", "🪪", "🎭", "👾", "👀", "💯", "❤️", "🩵", "🫶",
     ]
 
-    static let all: [String] = categories.flatMap(\.emojis)
+    private struct RawCategory: Decodable {
+        let id: String
+        let items: [[String]]
+    }
+
+    private struct CategoryMeta {
+        let id: String
+        let titleKey: String
+        let shortTitleKey: String
+        let systemImage: String
+    }
+
+    private static let unicodeGroups: [CategoryMeta] = [
+        CategoryMeta(id: "smileys", titleKey: "emoji.cat.smileys", shortTitleKey: "emoji.tab.smileys", systemImage: "face.smiling"),
+        CategoryMeta(id: "people", titleKey: "emoji.cat.people", shortTitleKey: "emoji.tab.people", systemImage: "person.fill"),
+        CategoryMeta(id: "animals", titleKey: "emoji.cat.animals", shortTitleKey: "emoji.tab.animals", systemImage: "pawprint.fill"),
+        CategoryMeta(id: "food", titleKey: "emoji.cat.food", shortTitleKey: "emoji.tab.food", systemImage: "fork.knife"),
+        CategoryMeta(id: "travel", titleKey: "emoji.cat.travel", shortTitleKey: "emoji.tab.travel", systemImage: "airplane"),
+        CategoryMeta(id: "activities", titleKey: "emoji.cat.activities", shortTitleKey: "emoji.tab.activities", systemImage: "figure.run"),
+        CategoryMeta(id: "objects", titleKey: "emoji.cat.objects", shortTitleKey: "emoji.tab.objects", systemImage: "lightbulb.fill"),
+        CategoryMeta(id: "symbols", titleKey: "emoji.cat.symbols", shortTitleKey: "emoji.tab.symbols", systemImage: "sparkles"),
+        CategoryMeta(id: "flags", titleKey: "emoji.cat.flags", shortTitleKey: "emoji.tab.flags", systemImage: "flag.fill"),
+    ]
+
+    /// All 9 official Unicode emoji categories loaded once from the bundled `EmojiCatalog.json`.
+    static let unicodeCategories: [EmojiCategory] = {
+        let rawMap = loadCatalogMap()
+        return unicodeGroups.compactMap { meta in
+            let entries = rawMap[meta.id] ?? []
+            guard !entries.isEmpty else { return nil }
+            return EmojiCategory(
+                id: meta.id,
+                titleKey: meta.titleKey,
+                shortTitleKey: meta.shortTitleKey,
+                systemImage: meta.systemImage,
+                entries: entries
+            )
+        }
+    }()
+
+    /// Featured privacy favorites followed by all 9 complete Unicode 16.0 categories.
+    static let categories: [EmojiCategory] = {
+        let lookup = Dictionary(uniqueKeysWithValues: allEntries.map { ($0.symbol, $0) })
+        let featuredEntries = featuredSymbols.map { symbol in
+            lookup[symbol] ?? EmojiEntry(symbol: symbol, english: "", chinese: "")
+        }
+        let featured = EmojiCategory(
+            id: "featured",
+            titleKey: "emoji.cat.featured",
+            shortTitleKey: "emoji.tab.featured",
+            systemImage: "star.fill",
+            entries: featuredEntries
+        )
+        return [featured] + unicodeCategories
+    }()
+
+    /// Every unique emoji entry across all 9 official Unicode 16.0 categories (~1,906 items).
+    static let allEntries: [EmojiEntry] = {
+        let loaded = unicodeCategories.flatMap(\.entries)
+        if !loaded.isEmpty { return loaded }
+        return featuredSymbols.map { EmojiEntry(symbol: $0, english: "", chinese: "") }
+    }()
+
+    /// Every unique emoji symbol in the catalog.
+    static let all: [String] = allEntries.map(\.symbol)
+
+    /// Searches the full Unicode emoji catalog across symbol, English CLDR name, and Chinese
+    /// keywords (automatically normalizing Traditional Chinese queries to Simplified).
+    static func search(_ query: String) -> [EmojiEntry] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        let simplified = (trimmed as NSString)
+            .applyingTransform(StringTransform("Traditional-Simplified"), reverse: false) ?? trimmed
+        let tokens = simplified.lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .map(String.init)
+        guard !tokens.isEmpty else { return [] }
+
+        return allEntries.filter { entry in
+            tokens.allSatisfy { token in
+                entry.symbol.contains(token)
+                    || entry.english.contains(token)
+                    || entry.chinese.contains(token)
+            }
+        }
+    }
+
+    /// True only when a single character is an actual Emoji glyph (excluding ASCII digits/symbols
+    /// like `0-9`, `#`, `*` which are emoji-capable base scalars but typed during text search).
+    static func isDirectEmojiInput(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count == 1, let char = trimmed.first else { return false }
+        let scalars = Array(char.unicodeScalars)
+        guard let first = scalars.first else { return false }
+        if first.isASCII {
+            // Only keycap sequences (e.g. "1️⃣", "#️⃣") contain U+20E3.
+            return scalars.contains { $0.value == 0x20E3 }
+        }
+        return scalars.contains { $0.properties.isEmojiPresentation || $0.value == 0xFE0F || $0.value == 0x200D }
+    }
+
+    private static func loadCatalogMap() -> [String: [EmojiEntry]] {
+        let candidateBundles = [Bundle.main] + Bundle.allBundles
+        var fileURL: URL?
+        for bundle in candidateBundles {
+            if let url = bundle.url(forResource: "EmojiCatalog", withExtension: "json") {
+                fileURL = url
+                break
+            }
+        }
+        guard let url = fileURL,
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode([RawCategory].self, from: data) else {
+            return [:]
+        }
+        var map: [String: [EmojiEntry]] = [:]
+        map.reserveCapacity(decoded.count)
+        for cat in decoded {
+            map[cat.id] = cat.items.compactMap { arr in
+                guard let symbol = arr.first, !symbol.isEmpty else { return nil }
+                let en = arr.count > 1 ? arr[1] : ""
+                let zh = arr.count > 2 ? arr[2] : ""
+                return EmojiEntry(symbol: symbol, english: en, chinese: zh)
+            }
+        }
+        return map
+    }
 }
 
 /// Anti-theft tiled diagonal watermark settings for ID cards, licenses, and documents.
