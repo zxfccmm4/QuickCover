@@ -2,6 +2,17 @@
 
 本文件按 Release 标签（`v<版本号>-<构建号>`）记录每次发布的核心更新内容。GitHub Actions 在发布 Release 时会自动读取对应章节写入 Release 说明；若未填写，则自动汇总自上一版本以来的提交记录。
 
+## v1.1-6
+
+### 新增
+- **独立长截图拼接工作室（三栏液态玻璃架构）**：将主界面重构为「图库 / 拼长图 / 关于」原生 3-Tab 液态玻璃架构；全新「拼长图」Tab 支持多图纵向智能重叠去重拼接、横向并排拼接、录屏视频自动抽帧拼长图（标准 / 高精度），以及画布内逐像素接缝微调与一键直达导出。
+- **Apple 全系带壳截图与创意导出工作室**：全新统一导出工作室，提供「画幅 / 背景 / 外壳 / 版式 / 导出」五栏实时预览操作台；内置 2026 全系 29 款 Apple 设备外框（iPhone、iPad、MacBook、iMac、Studio Display、Mac mini、Mac Studio、Apple Watch、Apple TV），支持 15 种社交平台与 App Store 画幅预设、纯色/渐变/自定义图片背景、画面圆角/阴影/缩放调节，以及底部签名水印。
+- **Apple 原生「What’s New」更新介绍弹窗**：全新三段式更新弹窗（居中大标题与等宽数字版本胶囊 + 无外框分层 SF Symbols 语义色特性列表 + 固定磨砂底部操作栏），支持错峰弹簧入场动效与「减弱动态效果」适配、首次引导后防重叠延迟弹出、设备本地版本已读记录、关于页手动回看入口以及开发期调试强制预览开关。
+
+### 优化
+- **本地签名与 CI 构建解耦**：新增 `Signing.xcconfig` 并将私有 `LocalSigning.xcconfig` 加入 `.gitignore`，兼顾本机真机调试与 GitHub Actions 零签名自动打包。
+- **交互动效、三语本地化与测试覆盖**：新增 `AppleIntelligenceOrb` 与加载流光视觉组件，补齐长截图、带壳导出与 What’s New 简体中文 / 繁体中文 / 英文全量文案，并扩充 `WhatsNewTests`、`MaskRendererTests` 与 `TopBarHitTestTests` 单元测试覆盖。
+
 ## v1.0-5
 
 ### 新增
