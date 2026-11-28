@@ -8,9 +8,19 @@ import UIKit
 /// - Special Thanks & Apple framework acknowledgements
 /// - Privacy Policy & Open Source Notice + interactive Made-With-Love footer
 struct AboutScreen: View {
+    @Environment(ShellModel.self) private var shell: ShellModel?
     @ScaledMetric private var iconColumnWidth: CGFloat = 28
     @State private var loveCount = 0
+    @State private var fallbackWhatsNew: WhatsNewPresentation?
     @Namespace private var zoomNamespace
+
+    private var currentDisplayVersion: String {
+        if let shell {
+            return shell.whatsNewStore.displayVersion
+        }
+        let info = WhatsNewCatalog.currentVersionInfo()
+        return WhatsNewCatalog.displayVersion(shortVersion: info.shortVersion, build: info.build)
+    }
 
     var body: some View {
         Form {
@@ -19,6 +29,40 @@ struct AboutScreen: View {
             }
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+
+            Section {
+                Button {
+                    openWhatsNew()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "sparkles")
+                            .font(.title3.weight(.medium))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: min(iconColumnWidth, 38), height: min(iconColumnWidth, 38))
+                            .accessibilityHidden(true)
+
+                        Text("whatsnew.entryTitle")
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                            .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+
+                        Spacer(minLength: 8)
+
+                        Text(verbatim: currentDisplayVersion)
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.secondary)
+
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
+                    }
+                    .padding(.vertical, 1)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
 
             Section {
                 VStack(alignment: .leading, spacing: 8) {
@@ -96,6 +140,19 @@ struct AboutScreen: View {
         }
         .navigationTitle("about.title")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $fallbackWhatsNew) { presentation in
+            WhatsNewSheet(presentation: presentation) {
+                fallbackWhatsNew = nil
+            }
+        }
+    }
+
+    private func openWhatsNew() {
+        if let shell {
+            shell.presentWhatsNewManually()
+        } else {
+            fallbackWhatsNew = WhatsNewStore().makePresentation(mode: .manual)
+        }
     }
 
     private func capabilityRow(_ capability: QuickCoverCapability) -> some View {
@@ -742,6 +799,7 @@ private struct QuickCoverNoticeView: View {
     NavigationStack {
         AboutScreen()
     }
+    .environment(ShellModel())
     .tint(Theme.accent)
     .preferredColorScheme(.light)
 }
@@ -750,6 +808,7 @@ private struct QuickCoverNoticeView: View {
     NavigationStack {
         AboutScreen()
     }
+    .environment(ShellModel())
     .tint(Theme.accent)
     .preferredColorScheme(.dark)
 }

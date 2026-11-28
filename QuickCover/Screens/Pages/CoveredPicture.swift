@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Live preview of the flattened export output (including all 6 mask styles, colors, granularity,
-/// and anti-theft diagonal watermark) framed in an iOS 26 concentric rounded container.
-/// Supports press-and-hold to compare directly against the untouched original before saving.
+/// anti-theft diagonal watermark, and optional Apple hardware device frame) inside an iOS 26
+/// concentric rounded container. Supports press-and-hold to compare with the unmasked original.
 struct CoveredPicture: View {
     let editor: EditorModel
     let size: CGSize
@@ -13,9 +13,18 @@ struct CoveredPicture: View {
     @State private var showsOriginal = false
     @State private var holdFeedbackCount = 0
 
+    private var showsTransparentCheckerboard: Bool {
+        editor.deviceFrame.needsPNG && !showsOriginal
+    }
+
     var body: some View {
         let shape = ConcentricRectangle(corners: .concentric(minimum: 16), isUniform: true)
         ZStack(alignment: .top) {
+            if showsTransparentCheckerboard {
+                TransparentCheckerboard()
+                    .frame(width: size.width, height: size.height)
+            }
+
             Image(decorative: (showsOriginal ? editor.preview : (image ?? editor.preview)), scale: 1)
                 .resizable()
                 .scaledToFit()
@@ -69,6 +78,8 @@ struct CoveredPicture: View {
         })
         .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: holdFeedbackCount)
         .animation(.easeInOut(duration: 0.2), value: image != nil)
+        .animation(.snappy(duration: 0.22), value: editor.deviceFrame)
+        .animation(.snappy(duration: 0.24), value: editor.exportAspectRatio)
         .task(id: key) { await render() }
     }
 
@@ -76,7 +87,11 @@ struct CoveredPicture: View {
         RenderKey(
             editor: ObjectIdentifier(editor),
             items: editor.enabledItems.map(\.id),
-            appearance: editor.maskAppearance
+            appearance: editor.maskAppearance,
+            deviceFrame: editor.deviceFrame,
+            exportAspectRatio: editor.exportAspectRatio,
+            exportAspectFit: editor.exportAspectFit,
+            exportAspectBackdrop: editor.exportAspectBackdrop
         )
     }
 
@@ -86,6 +101,10 @@ struct CoveredPicture: View {
         let toPreview = CGSize(width: 1 / editor.previewScale.width, height: 1 / editor.previewScale.height)
         let findings = editor.enabledItems.flatMap(\.findings).map { $0.scaled(by: toPreview) }
         let appearance = editor.maskAppearance
+        let deviceFrame = editor.deviceFrame
+        let exportAspectRatio = editor.exportAspectRatio
+        let exportAspectFit = editor.exportAspectFit
+        let exportAspectBackdrop = editor.exportAspectBackdrop
         let cut = MaskRenderer.onShrunkPicture(shrink: editor.previewScale)
         let rendered = await Task.detached(priority: .userInitiated) {
             MaskRenderer.flatten(
@@ -93,7 +112,11 @@ struct CoveredPicture: View {
                 findings: findings,
                 appearance: appearance,
                 blurGrain: cut.blurGrain,
-                floor: cut.floor
+                floor: cut.floor,
+                deviceFrame: deviceFrame,
+                exportAspectRatio: exportAspectRatio,
+                exportAspectFit: exportAspectFit,
+                exportAspectBackdrop: exportAspectBackdrop
             )
         }.value
         if !Task.isCancelled {
@@ -103,8 +126,30 @@ struct CoveredPicture: View {
     }
 }
 
+private struct TransparentCheckerboard: View {
+    var body: some View {
+        Canvas { ctx, size in
+            let cell: CGFloat = 10
+            let rows = Int(ceil(size.height / cell))
+            let cols = Int(ceil(size.width / cell))
+            let light = Color(white: 0.90)
+            let dark = Color(white: 0.80)
+            for r in 0..<rows {
+                for c in 0..<cols {
+                    let rect = CGRect(x: CGFloat(c) * cell, y: CGFloat(r) * cell, width: cell, height: cell)
+                    ctx.fill(Path(rect), with: .color((r + c).isMultiple(of: 2) ? light : dark))
+                }
+            }
+        }
+    }
+}
+
 private struct RenderKey: Equatable {
     let editor: ObjectIdentifier
     let items: [Int]
     let appearance: MaskAppearance
+    let deviceFrame: DeviceFrameOptions
+    let exportAspectRatio: ExportAspectRatio
+    let exportAspectFit: ExportAspectFitMode
+    let exportAspectBackdrop: ExportAspectBackdrop
 }

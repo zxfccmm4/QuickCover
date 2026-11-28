@@ -1,0 +1,1458 @@
+{
+  "iPhone18ProMax.spaceBlack": {
+    "file": "bezel_iphone_18pm_spaceBlack.png",
+    "width": 588,
+    "height": 1200,
+    "screenRect": [
+      0.05102,
+      0.02167,
+      0.89796,
+      0.95667
+    ],
+    "cornerRadius": 0.1193,
+    "alignTop": true
+  },
+  "iPhone18ProMax.silver": {
+    "file": "bezel_iphone_18pm_silver.png",
+    "width": 588,
+    "height": 1200,
+    "screenRect": [
+      0.05102,
+      0.02167,
+      0.89796,
+      0.95667
+    ],
+    "cornerRadius": 0.1193,
+    "alignTop": true
+  },
+  "iPhone18ProMax.glacier": {
+    "file": "bezel_iphone_18pm_glacier.png",
+    "width": 588,
+    "height": 1200,
+    "screenRect": [
+      0.05102,
+      0.02167,
+      0.89796,
+      0.95667
+    ],
+    "cornerRadius": 0.1193,
+    "alignTop": true
+  },
+  "iPhone18ProMax.burgundy": {
+    "file": "bezel_iphone_18pm_burgundy.png",
+    "width": 588,
+    "height": 1200,
+    "screenRect": [
+      0.05102,
+      0.02167,
+      0.89796,
+      0.95667
+    ],
+    "cornerRadius": 0.1193,
+    "alignTop": true
+  },
+  "iPhone18Pro.spaceBlack": {
+    "file": "bezel_iphone_18p_spaceBlack.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1257,
+    "alignTop": true
+  },
+  "iPhone18Pro.silver": {
+    "file": "bezel_iphone_18p_silver.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1257,
+    "alignTop": true
+  },
+  "iPhone18Pro.glacier": {
+    "file": "bezel_iphone_18p_glacier.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1257,
+    "alignTop": true
+  },
+  "iPhone18Pro.burgundy": {
+    "file": "bezel_iphone_18p_burgundy.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1257,
+    "alignTop": true
+  },
+  "iPhone18ProMax": {
+    "file": "bezel_iphone_18pm_spaceBlack.png",
+    "width": 588,
+    "height": 1200,
+    "screenRect": [
+      0.05102,
+      0.02167,
+      0.89796,
+      0.95667
+    ],
+    "cornerRadius": 0.1193,
+    "alignTop": true
+  },
+  "iPhone18Pro": {
+    "file": "bezel_iphone_18p_spaceBlack.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1257,
+    "alignTop": true
+  },
+  "iPhoneDuo.starWhite": {
+    "file": "bezel_iphone_duo_starWhite.png",
+    "width": 872,
+    "height": 1200,
+    "screenRect": [
+      0.0539,
+      0.03917,
+      0.8922,
+      0.92167
+    ],
+    "cornerRadius": 0.0578,
+    "alignTop": false
+  },
+  "iPhoneDuo.nightSky": {
+    "file": "bezel_iphone_duo_nightSky.png",
+    "width": 872,
+    "height": 1200,
+    "screenRect": [
+      0.0539,
+      0.03917,
+      0.8922,
+      0.92167
+    ],
+    "cornerRadius": 0.0578,
+    "alignTop": false
+  },
+  "iPhoneDuo": {
+    "file": "bezel_iphone_duo_starWhite.png",
+    "width": 872,
+    "height": 1200,
+    "screenRect": [
+      0.0539,
+      0.03917,
+      0.8922,
+      0.92167
+    ],
+    "cornerRadius": 0.0578,
+    "alignTop": false
+  },
+  "iPhoneAir.silver": {
+    "file": "bezel_iphone_air_silver.png",
+    "width": 575,
+    "height": 1200,
+    "screenRect": [
+      0.04348,
+      0.025,
+      0.91304,
+      0.95
+    ],
+    "cornerRadius": 0.12,
+    "alignTop": true
+  },
+  "iPhoneAir.spaceBlack": {
+    "file": "bezel_iphone_air_spaceBlack.png",
+    "width": 575,
+    "height": 1200,
+    "screenRect": [
+      0.04348,
+      0.025,
+      0.91304,
+      0.95
+    ],
+    "cornerRadius": 0.12,
+    "alignTop": true
+  },
+  "iPhoneAir.skyBlue": {
+    "file": "bezel_iphone_air_skyBlue.png",
+    "width": 575,
+    "height": 1200,
+    "screenRect": [
+      0.04348,
+      0.025,
+      0.91304,
+      0.95
+    ],
+    "cornerRadius": 0.12,
+    "alignTop": true
+  },
+  "iPhoneAir.gold": {
+    "file": "bezel_iphone_air_gold.png",
+    "width": 575,
+    "height": 1200,
+    "screenRect": [
+      0.04348,
+      0.025,
+      0.91304,
+      0.95
+    ],
+    "cornerRadius": 0.12,
+    "alignTop": true
+  },
+  "iPhoneAir": {
+    "file": "bezel_iphone_air_silver.png",
+    "width": 575,
+    "height": 1200,
+    "screenRect": [
+      0.04348,
+      0.025,
+      0.91304,
+      0.95
+    ],
+    "cornerRadius": 0.12,
+    "alignTop": true
+  },
+  "iPhone17.spaceBlack": {
+    "file": "bezel_iphone_17_spaceBlack.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17.silver": {
+    "file": "bezel_iphone_17_silver.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17.blue": {
+    "file": "bezel_iphone_17_blue.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17.mint": {
+    "file": "bezel_iphone_17_mint.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17.rose": {
+    "file": "bezel_iphone_17_rose.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17": {
+    "file": "bezel_iphone_17_spaceBlack.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17e.spaceBlack": {
+    "file": "bezel_iphone_17_spaceBlack.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17e.silver": {
+    "file": "bezel_iphone_17_silver.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17e.starlight": {
+    "file": "bezel_iphone_17_silver.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPhone17e": {
+    "file": "bezel_iphone_17_spaceBlack.png",
+    "width": 587,
+    "height": 1200,
+    "screenRect": [
+      0.05281,
+      0.025,
+      0.89438,
+      0.95
+    ],
+    "cornerRadius": 0.1276,
+    "alignTop": true
+  },
+  "iPadPro13M5.spaceBlack": {
+    "file": "bezel_ipad_pro13_spaceBlack.png",
+    "width": 920,
+    "height": 1200,
+    "screenRect": [
+      0.05109,
+      0.04167,
+      0.89783,
+      0.91667
+    ],
+    "cornerRadius": 0.0145,
+    "alignTop": false
+  },
+  "iPadPro13M5.silver": {
+    "file": "bezel_ipad_pro13_silver.png",
+    "width": 920,
+    "height": 1200,
+    "screenRect": [
+      0.05109,
+      0.04167,
+      0.89783,
+      0.91667
+    ],
+    "cornerRadius": 0.0145,
+    "alignTop": false
+  },
+  "iPadPro13M5": {
+    "file": "bezel_ipad_pro13_spaceBlack.png",
+    "width": 920,
+    "height": 1200,
+    "screenRect": [
+      0.05109,
+      0.04167,
+      0.89783,
+      0.91667
+    ],
+    "cornerRadius": 0.0145,
+    "alignTop": false
+  },
+  "iPadPro11M5.spaceBlack": {
+    "file": "bezel_ipad_pro11_spaceBlack.png",
+    "width": 855,
+    "height": 1200,
+    "screenRect": [
+      0.05614,
+      0.04167,
+      0.88772,
+      0.91667
+    ],
+    "cornerRadius": 0.0211,
+    "alignTop": false
+  },
+  "iPadPro11M5.silver": {
+    "file": "bezel_ipad_pro11_silver.png",
+    "width": 855,
+    "height": 1200,
+    "screenRect": [
+      0.05614,
+      0.04167,
+      0.88772,
+      0.91667
+    ],
+    "cornerRadius": 0.0211,
+    "alignTop": false
+  },
+  "iPadPro11M5": {
+    "file": "bezel_ipad_pro11_spaceBlack.png",
+    "width": 855,
+    "height": 1200,
+    "screenRect": [
+      0.05614,
+      0.04167,
+      0.88772,
+      0.91667
+    ],
+    "cornerRadius": 0.0211,
+    "alignTop": false
+  },
+  "iPadAir13M4.spaceBlack": {
+    "file": "bezel_ipad_air13_spaceBlack.png",
+    "width": 926,
+    "height": 1200,
+    "screenRect": [
+      0.05508,
+      0.04167,
+      0.88985,
+      0.91667
+    ],
+    "cornerRadius": 0.0073,
+    "alignTop": false
+  },
+  "iPadAir13M4.blue": {
+    "file": "bezel_ipad_air13_blue.png",
+    "width": 926,
+    "height": 1200,
+    "screenRect": [
+      0.05508,
+      0.04167,
+      0.88985,
+      0.91667
+    ],
+    "cornerRadius": 0.0073,
+    "alignTop": false
+  },
+  "iPadAir13M4.purple": {
+    "file": "bezel_ipad_air13_purple.png",
+    "width": 926,
+    "height": 1200,
+    "screenRect": [
+      0.05508,
+      0.04167,
+      0.88985,
+      0.91667
+    ],
+    "cornerRadius": 0.0073,
+    "alignTop": false
+  },
+  "iPadAir13M4.starlight": {
+    "file": "bezel_ipad_air13_starlight.png",
+    "width": 926,
+    "height": 1200,
+    "screenRect": [
+      0.05508,
+      0.04167,
+      0.88985,
+      0.91667
+    ],
+    "cornerRadius": 0.0073,
+    "alignTop": false
+  },
+  "iPadAir13M4.silver": {
+    "file": "bezel_ipad_air13_starlight.png",
+    "width": 926,
+    "height": 1200,
+    "screenRect": [
+      0.05508,
+      0.04167,
+      0.88985,
+      0.91667
+    ],
+    "cornerRadius": 0.0073,
+    "alignTop": false
+  },
+  "iPadAir13M4": {
+    "file": "bezel_ipad_air13_blue.png",
+    "width": 926,
+    "height": 1200,
+    "screenRect": [
+      0.05508,
+      0.04167,
+      0.88985,
+      0.91667
+    ],
+    "cornerRadius": 0.0073,
+    "alignTop": false
+  },
+  "iPadAir11M4.spaceBlack": {
+    "file": "bezel_ipad_air11_spaceBlack.png",
+    "width": 870,
+    "height": 1200,
+    "screenRect": [
+      0.06782,
+      0.04917,
+      0.86437,
+      0.90167
+    ],
+    "cornerRadius": 0.012,
+    "alignTop": false
+  },
+  "iPadAir11M4.blue": {
+    "file": "bezel_ipad_air11_blue.png",
+    "width": 870,
+    "height": 1200,
+    "screenRect": [
+      0.06782,
+      0.04917,
+      0.86437,
+      0.90167
+    ],
+    "cornerRadius": 0.012,
+    "alignTop": false
+  },
+  "iPadAir11M4.purple": {
+    "file": "bezel_ipad_air11_purple.png",
+    "width": 870,
+    "height": 1200,
+    "screenRect": [
+      0.06782,
+      0.04917,
+      0.86437,
+      0.90167
+    ],
+    "cornerRadius": 0.012,
+    "alignTop": false
+  },
+  "iPadAir11M4.starlight": {
+    "file": "bezel_ipad_air11_starlight.png",
+    "width": 870,
+    "height": 1200,
+    "screenRect": [
+      0.06782,
+      0.04917,
+      0.86437,
+      0.90167
+    ],
+    "cornerRadius": 0.012,
+    "alignTop": false
+  },
+  "iPadAir11M4.silver": {
+    "file": "bezel_ipad_air11_starlight.png",
+    "width": 870,
+    "height": 1200,
+    "screenRect": [
+      0.06782,
+      0.04917,
+      0.86437,
+      0.90167
+    ],
+    "cornerRadius": 0.012,
+    "alignTop": false
+  },
+  "iPadAir11M4": {
+    "file": "bezel_ipad_air11_blue.png",
+    "width": 870,
+    "height": 1200,
+    "screenRect": [
+      0.06782,
+      0.04917,
+      0.86437,
+      0.90167
+    ],
+    "cornerRadius": 0.012,
+    "alignTop": false
+  },
+  "iPadMiniOLED.spaceBlack": {
+    "file": "bezel_ipad_mini_spaceBlack.png",
+    "width": 782,
+    "height": 1120,
+    "screenRect": [
+      0.08184,
+      0.05536,
+      0.83632,
+      0.88929
+    ],
+    "cornerRadius": 0.0168,
+    "alignTop": false
+  },
+  "iPadMiniOLED.blue": {
+    "file": "bezel_ipad_mini_blue.png",
+    "width": 782,
+    "height": 1120,
+    "screenRect": [
+      0.08184,
+      0.05536,
+      0.83632,
+      0.88929
+    ],
+    "cornerRadius": 0.0168,
+    "alignTop": false
+  },
+  "iPadMiniOLED.purple": {
+    "file": "bezel_ipad_mini_purple.png",
+    "width": 782,
+    "height": 1120,
+    "screenRect": [
+      0.08184,
+      0.05536,
+      0.83632,
+      0.88929
+    ],
+    "cornerRadius": 0.0168,
+    "alignTop": false
+  },
+  "iPadMiniOLED.starlight": {
+    "file": "bezel_ipad_mini_starlight.png",
+    "width": 782,
+    "height": 1120,
+    "screenRect": [
+      0.08184,
+      0.05536,
+      0.83632,
+      0.88929
+    ],
+    "cornerRadius": 0.0168,
+    "alignTop": false
+  },
+  "iPadMiniOLED.silver": {
+    "file": "bezel_ipad_mini_starlight.png",
+    "width": 782,
+    "height": 1120,
+    "screenRect": [
+      0.08184,
+      0.05536,
+      0.83632,
+      0.88929
+    ],
+    "cornerRadius": 0.0168,
+    "alignTop": false
+  },
+  "iPadMiniOLED": {
+    "file": "bezel_ipad_mini_starlight.png",
+    "width": 782,
+    "height": 1120,
+    "screenRect": [
+      0.08184,
+      0.05536,
+      0.83632,
+      0.88929
+    ],
+    "cornerRadius": 0.0168,
+    "alignTop": false
+  },
+  "iPadA16.silver": {
+    "file": "bezel_ipad_a16_silver.png",
+    "width": 828,
+    "height": 1120,
+    "screenRect": [
+      0.09783,
+      0.07232,
+      0.80435,
+      0.85536
+    ],
+    "cornerRadius": 0.0165,
+    "alignTop": false
+  },
+  "iPadA16.blue": {
+    "file": "bezel_ipad_a16_blue.png",
+    "width": 828,
+    "height": 1120,
+    "screenRect": [
+      0.09783,
+      0.07232,
+      0.80435,
+      0.85536
+    ],
+    "cornerRadius": 0.0165,
+    "alignTop": false
+  },
+  "iPadA16.rose": {
+    "file": "bezel_ipad_a16_rose.png",
+    "width": 828,
+    "height": 1120,
+    "screenRect": [
+      0.09783,
+      0.07232,
+      0.80435,
+      0.85536
+    ],
+    "cornerRadius": 0.0165,
+    "alignTop": false
+  },
+  "iPadA16.yellow": {
+    "file": "bezel_ipad_a16_yellow.png",
+    "width": 828,
+    "height": 1120,
+    "screenRect": [
+      0.09783,
+      0.07232,
+      0.80435,
+      0.85536
+    ],
+    "cornerRadius": 0.0165,
+    "alignTop": false
+  },
+  "iPadA16": {
+    "file": "bezel_ipad_a16_silver.png",
+    "width": 828,
+    "height": 1120,
+    "screenRect": [
+      0.09783,
+      0.07232,
+      0.80435,
+      0.85536
+    ],
+    "cornerRadius": 0.0165,
+    "alignTop": false
+  },
+  "macBookPro16M5Max.spaceBlack": {
+    "file": "bezel_mbp16_spaceBlack.png",
+    "width": 1400,
+    "height": 933,
+    "screenRect": [
+      0.09429,
+      0.10611,
+      0.81143,
+      0.78778
+    ],
+    "cornerRadius": 0.0053,
+    "alignTop": false
+  },
+  "macBookPro16M5Max.silver": {
+    "file": "bezel_mbp16_silver.png",
+    "width": 1400,
+    "height": 933,
+    "screenRect": [
+      0.09429,
+      0.10611,
+      0.81143,
+      0.78778
+    ],
+    "cornerRadius": 0.0053,
+    "alignTop": false
+  },
+  "macBookPro16M5Max": {
+    "file": "bezel_mbp16_spaceBlack.png",
+    "width": 1400,
+    "height": 933,
+    "screenRect": [
+      0.09429,
+      0.10611,
+      0.81143,
+      0.78778
+    ],
+    "cornerRadius": 0.0053,
+    "alignTop": false
+  },
+  "macBookPro14M6.spaceBlack": {
+    "file": "bezel_mbp14_spaceBlack.png",
+    "width": 1400,
+    "height": 921,
+    "screenRect": [
+      0.10857,
+      0.10858,
+      0.78286,
+      0.78284
+    ],
+    "cornerRadius": 0.0119,
+    "alignTop": false
+  },
+  "macBookPro14M6.silver": {
+    "file": "bezel_mbp14_silver.png",
+    "width": 1400,
+    "height": 921,
+    "screenRect": [
+      0.10857,
+      0.10858,
+      0.78286,
+      0.78284
+    ],
+    "cornerRadius": 0.0119,
+    "alignTop": false
+  },
+  "macBookPro14M6": {
+    "file": "bezel_mbp14_spaceBlack.png",
+    "width": 1400,
+    "height": 921,
+    "screenRect": [
+      0.10857,
+      0.10858,
+      0.78286,
+      0.78284
+    ],
+    "cornerRadius": 0.0119,
+    "alignTop": false
+  },
+  "macBookAir15M5.midnight": {
+    "file": "bezel_mba15_midnight.png",
+    "width": 1400,
+    "height": 910,
+    "screenRect": [
+      0.09286,
+      0.09451,
+      0.81357,
+      0.81099
+    ],
+    "cornerRadius": 0.0053,
+    "alignTop": false
+  },
+  "macBookAir15M5.silver": {
+    "file": "bezel_mba15_silver.png",
+    "width": 1400,
+    "height": 910,
+    "screenRect": [
+      0.09286,
+      0.09451,
+      0.81357,
+      0.81099
+    ],
+    "cornerRadius": 0.0053,
+    "alignTop": false
+  },
+  "macBookAir15M5.skyBlue": {
+    "file": "bezel_mba15_skyBlue.png",
+    "width": 1400,
+    "height": 910,
+    "screenRect": [
+      0.09286,
+      0.09451,
+      0.81357,
+      0.81099
+    ],
+    "cornerRadius": 0.0053,
+    "alignTop": false
+  },
+  "macBookAir15M5.starlight": {
+    "file": "bezel_mba15_starlight.png",
+    "width": 1400,
+    "height": 910,
+    "screenRect": [
+      0.09286,
+      0.09451,
+      0.81357,
+      0.81099
+    ],
+    "cornerRadius": 0.0053,
+    "alignTop": false
+  },
+  "macBookAir15M5": {
+    "file": "bezel_mba15_midnight.png",
+    "width": 1400,
+    "height": 910,
+    "screenRect": [
+      0.09286,
+      0.09451,
+      0.81357,
+      0.81099
+    ],
+    "cornerRadius": 0.0053,
+    "alignTop": false
+  },
+  "macBookAir13M5.midnight": {
+    "file": "bezel_mba13_midnight.png",
+    "width": 1400,
+    "height": 922,
+    "screenRect": [
+      0.12357,
+      0.12798,
+      0.75286,
+      0.74403
+    ],
+    "cornerRadius": 0.0066,
+    "alignTop": false
+  },
+  "macBookAir13M5.silver": {
+    "file": "bezel_mba13_silver.png",
+    "width": 1400,
+    "height": 922,
+    "screenRect": [
+      0.12357,
+      0.12798,
+      0.75286,
+      0.74403
+    ],
+    "cornerRadius": 0.0066,
+    "alignTop": false
+  },
+  "macBookAir13M5.skyBlue": {
+    "file": "bezel_mba13_skyBlue.png",
+    "width": 1400,
+    "height": 922,
+    "screenRect": [
+      0.12357,
+      0.12798,
+      0.75286,
+      0.74403
+    ],
+    "cornerRadius": 0.0066,
+    "alignTop": false
+  },
+  "macBookAir13M5.starlight": {
+    "file": "bezel_mba13_starlight.png",
+    "width": 1400,
+    "height": 922,
+    "screenRect": [
+      0.12357,
+      0.12798,
+      0.75286,
+      0.74403
+    ],
+    "cornerRadius": 0.0066,
+    "alignTop": false
+  },
+  "macBookAir13M5": {
+    "file": "bezel_mba13_midnight.png",
+    "width": 1400,
+    "height": 922,
+    "screenRect": [
+      0.12357,
+      0.12798,
+      0.75286,
+      0.74403
+    ],
+    "cornerRadius": 0.0066,
+    "alignTop": false
+  },
+  "macBookNeo13.blush": {
+    "file": "bezel_mbneo_blush.png",
+    "width": 1400,
+    "height": 913,
+    "screenRect": [
+      0.12571,
+      0.14129,
+      0.74857,
+      0.71742
+    ],
+    "cornerRadius": 0.0067,
+    "alignTop": false
+  },
+  "macBookNeo13.citrus": {
+    "file": "bezel_mbneo_citrus.png",
+    "width": 1400,
+    "height": 913,
+    "screenRect": [
+      0.12571,
+      0.14129,
+      0.74857,
+      0.71742
+    ],
+    "cornerRadius": 0.0067,
+    "alignTop": false
+  },
+  "macBookNeo13.indigo": {
+    "file": "bezel_mbneo_indigo.png",
+    "width": 1400,
+    "height": 913,
+    "screenRect": [
+      0.12571,
+      0.14129,
+      0.74857,
+      0.71742
+    ],
+    "cornerRadius": 0.0067,
+    "alignTop": false
+  },
+  "macBookNeo13.silver": {
+    "file": "bezel_mbneo_silver.png",
+    "width": 1400,
+    "height": 913,
+    "screenRect": [
+      0.12571,
+      0.14129,
+      0.74857,
+      0.71742
+    ],
+    "cornerRadius": 0.0067,
+    "alignTop": false
+  },
+  "macBookNeo13": {
+    "file": "bezel_mbneo_silver.png",
+    "width": 1400,
+    "height": 913,
+    "screenRect": [
+      0.12571,
+      0.14129,
+      0.74857,
+      0.71742
+    ],
+    "cornerRadius": 0.0067,
+    "alignTop": false
+  },
+  "iMac24M4.silver": {
+    "file": "bezel_imac24_silver.png",
+    "width": 1400,
+    "height": 1191,
+    "screenRect": [
+      0.02929,
+      0.03694,
+      0.94143,
+      0.62217
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "iMac24M4.blue": {
+    "file": "bezel_imac24_blue.png",
+    "width": 1400,
+    "height": 1191,
+    "screenRect": [
+      0.02929,
+      0.03694,
+      0.94143,
+      0.62217
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "iMac24M4.mint": {
+    "file": "bezel_imac24_mint.png",
+    "width": 1400,
+    "height": 1191,
+    "screenRect": [
+      0.02929,
+      0.03694,
+      0.94143,
+      0.62217
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "iMac24M4.rose": {
+    "file": "bezel_imac24_rose.png",
+    "width": 1400,
+    "height": 1191,
+    "screenRect": [
+      0.02929,
+      0.03694,
+      0.94143,
+      0.62217
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "iMac24M4.yellow": {
+    "file": "bezel_imac24_yellow.png",
+    "width": 1400,
+    "height": 1191,
+    "screenRect": [
+      0.02929,
+      0.03694,
+      0.94143,
+      0.62217
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "iMac24M4.orange": {
+    "file": "bezel_imac24_orange.png",
+    "width": 1400,
+    "height": 1191,
+    "screenRect": [
+      0.03,
+      0.03694,
+      0.94071,
+      0.62217
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "iMac24M4.purple": {
+    "file": "bezel_imac24_purple.png",
+    "width": 1400,
+    "height": 1191,
+    "screenRect": [
+      0.02929,
+      0.03694,
+      0.94143,
+      0.62217
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "iMac24M4": {
+    "file": "bezel_imac24_silver.png",
+    "width": 1400,
+    "height": 1191,
+    "screenRect": [
+      0.02929,
+      0.03694,
+      0.94143,
+      0.62217
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "studioDisplay2026": {
+    "file": "bezel_studio_display_2026.png",
+    "width": 1400,
+    "height": 1079,
+    "screenRect": [
+      0.02571,
+      0.03336,
+      0.94857,
+      0.69231
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "macMiniM6Studio": {
+    "file": "bezel_studio_display_2026.png",
+    "width": 1400,
+    "height": 1079,
+    "screenRect": [
+      0.02571,
+      0.03336,
+      0.94857,
+      0.69231
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "macMiniM5ProXDR": {
+    "file": "bezel_studio_display_xdr_2026.png",
+    "width": 1400,
+    "height": 1079,
+    "screenRect": [
+      0.02571,
+      0.03336,
+      0.94857,
+      0.69231
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "macStudioM5Max": {
+    "file": "bezel_studio_display_2026.png",
+    "width": 1400,
+    "height": 1079,
+    "screenRect": [
+      0.02571,
+      0.03336,
+      0.94857,
+      0.69231
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "macStudioM5Ultra": {
+    "file": "bezel_studio_display_xdr_2026.png",
+    "width": 1400,
+    "height": 1079,
+    "screenRect": [
+      0.02571,
+      0.03336,
+      0.94857,
+      0.69231
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  },
+  "watchUltra4.naturalTitanium": {
+    "file": "bezel_watch_ultra_natural.png",
+    "width": 600,
+    "height": 960,
+    "screenRect": [
+      0.14833,
+      0.23229,
+      0.70333,
+      0.53542
+    ],
+    "cornerRadius": 0.24,
+    "alignTop": false
+  },
+  "watchUltra4.blackTitanium": {
+    "file": "bezel_watch_ultra_black.png",
+    "width": 600,
+    "height": 960,
+    "screenRect": [
+      0.14833,
+      0.23229,
+      0.70333,
+      0.53542
+    ],
+    "cornerRadius": 0.24,
+    "alignTop": false
+  },
+  "watchUltra4": {
+    "file": "bezel_watch_ultra_natural.png",
+    "width": 600,
+    "height": 960,
+    "screenRect": [
+      0.14833,
+      0.23229,
+      0.70333,
+      0.53542
+    ],
+    "cornerRadius": 0.24,
+    "alignTop": false
+  },
+  "watchSeries12_46.spaceBlack": {
+    "file": "bezel_watch_s_46_spaceBlack.png",
+    "width": 560,
+    "height": 880,
+    "screenRect": [
+      0.12857,
+      0.21818,
+      0.74286,
+      0.56364
+    ],
+    "cornerRadius": 0.2212,
+    "alignTop": false
+  },
+  "watchSeries12_46.silver": {
+    "file": "bezel_watch_s_46_silver.png",
+    "width": 560,
+    "height": 880,
+    "screenRect": [
+      0.12857,
+      0.21818,
+      0.74286,
+      0.56364
+    ],
+    "cornerRadius": 0.2212,
+    "alignTop": false
+  },
+  "watchSeries12_46.rose": {
+    "file": "bezel_watch_s_46_rose.png",
+    "width": 560,
+    "height": 880,
+    "screenRect": [
+      0.12857,
+      0.21818,
+      0.74286,
+      0.56364
+    ],
+    "cornerRadius": 0.2212,
+    "alignTop": false
+  },
+  "watchSeries12_46.gold": {
+    "file": "bezel_watch_s_46_gold.png",
+    "width": 560,
+    "height": 880,
+    "screenRect": [
+      0.12857,
+      0.21818,
+      0.74286,
+      0.56364
+    ],
+    "cornerRadius": 0.2212,
+    "alignTop": false
+  },
+  "watchSeries12_46.glacier": {
+    "file": "bezel_watch_s_46_glacier.png",
+    "width": 560,
+    "height": 880,
+    "screenRect": [
+      0.12857,
+      0.21818,
+      0.74286,
+      0.56364
+    ],
+    "cornerRadius": 0.2212,
+    "alignTop": false
+  },
+  "watchSeries12_46": {
+    "file": "bezel_watch_s_46_spaceBlack.png",
+    "width": 560,
+    "height": 880,
+    "screenRect": [
+      0.12857,
+      0.21818,
+      0.74286,
+      0.56364
+    ],
+    "cornerRadius": 0.2212,
+    "alignTop": false
+  },
+  "watchSeries12_42.spaceBlack": {
+    "file": "bezel_watch_s_42_spaceBlack.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSeries12_42.silver": {
+    "file": "bezel_watch_s_42_silver.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSeries12_42.rose": {
+    "file": "bezel_watch_s_42_rose.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSeries12_42.gold": {
+    "file": "bezel_watch_s_42_gold.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSeries12_42.glacier": {
+    "file": "bezel_watch_s_42_glacier.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSeries12_42": {
+    "file": "bezel_watch_s_42_spaceBlack.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSE3.midnight": {
+    "file": "bezel_watch_s_42_spaceBlack.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSE3.starlight": {
+    "file": "bezel_watch_s_42_gold.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSE3.silver": {
+    "file": "bezel_watch_s_42_silver.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "watchSE3": {
+    "file": "bezel_watch_s_42_spaceBlack.png",
+    "width": 520,
+    "height": 800,
+    "screenRect": [
+      0.14038,
+      0.22125,
+      0.71923,
+      0.5575
+    ],
+    "cornerRadius": 0.2166,
+    "alignTop": false
+  },
+  "appleTV4KGen4": {
+    "file": "bezel_apple_tv_4k.png",
+    "width": 1400,
+    "height": 905,
+    "screenRect": [
+      0.02357,
+      0.04309,
+      0.89357,
+      0.7768
+    ],
+    "cornerRadius": 0.0008,
+    "alignTop": false
+  },
+  "appleTV4KStudio": {
+    "file": "bezel_studio_display_2026.png",
+    "width": 1400,
+    "height": 1079,
+    "screenRect": [
+      0.02571,
+      0.03336,
+      0.94857,
+      0.69231
+    ],
+    "cornerRadius": 0.0,
+    "alignTop": false
+  }
+}

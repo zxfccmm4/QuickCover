@@ -2,6 +2,7 @@
 build/
 *.xcuserstate
 xcuserdata/
+LocalSigning.xcconfig
 
 # Python bytecode
 __pycache__/

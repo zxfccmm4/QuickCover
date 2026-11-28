@@ -6,9 +6,9 @@ import UniformTypeIdentifiers
 
 /// Native Apple Photos (iOS 26/27) inspired Library screen:
 /// displays your real photo library edge-to-edge immediately on launch in a tight 3-column grid,
-/// floats a translucent Liquid Glass All/Screenshots pill over the scrolling photos, keeps secondary
-/// import sources (System Picker, Document Scanner, Files, Clipboard) tucked cleanly in a `+` menu,
-/// and transitions directly into the dark photo studio with tools the moment you tap any photo.
+/// supports multi-selecting screenshots or importing Screen Recordings to stitch long screenshots,
+/// floats a translucent Liquid Glass pill over the scrolling grid, and transitions into the dark
+/// photo studio the moment you confirm your image.
 struct PickerScreen: View {
     @Environment(ShellModel.self) private var shell
     @Environment(\.scenePhase) private var scenePhase
@@ -60,69 +60,17 @@ struct PickerScreen: View {
             }
 
             if isOpeningExternal {
-                ProgressView()
-                    .controlSize(.regular)
-                    .padding(20)
+                AppleIntelligenceOrb(size: 28)
+                    .padding(18)
                     .glassEffect(.regular, in: .circle)
             }
         }
         .navigationTitle("library.title")
         .navigationSubtitle(activeCountText)
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        showsPhotosPicker = true
-                    } label: {
-                        Label("library.importPhotos", systemImage: "photo.on.rectangle.angled")
-                    }
-
-                    if DocumentScannerView.isSupported {
-                        Button {
-                            showsScanner = true
-                        } label: {
-                            Label("picker.scanDocument", systemImage: "doc.viewfinder")
-                        }
-                    }
-
-                    Button {
-                        showsFileImporter = true
-                    } label: {
-                        Label("3.1.4", systemImage: "folder")
-                    }
-
-                    Button {
-                        openExternal { Intake.pictureFromPasteboard() }
-                    } label: {
-                        Label("3.1.5", systemImage: "clipboard")
-                    }
-                    .disabled(!hasClipboardImage)
-
-                    if store.authorization == .limited {
-                        Divider()
-                        Button {
-                            presentLimitedLibraryPicker()
-                        } label: {
-                            Label("library.selectMore", systemImage: "photo.badge.plus")
-                        }
-                    }
-                } label: {
-                    Label("library.importMenu", systemImage: "plus")
-                }
-                .accessibilityLabel("library.importMenu")
-
-                NavigationLink {
-                    AboutScreen()
-                } label: {
-                    Label("about.title", systemImage: "info.circle")
-                }
-                .accessibilityLabel("about.title")
-            }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .safeAreaInset(edge: .top, spacing: 0) {
             if store.canBrowseGrid {
-                floatingBottomDock
+                topFilterHeaderBar
             }
         }
         .photosPicker(
@@ -234,64 +182,72 @@ struct PickerScreen: View {
         .overlay(Capsule().stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5))
     }
 
-    // MARK: - Signature Apple Photos Floating Liquid Glass Bottom Pill
+    // MARK: - Native Top Filter Pill & Selection Action Dock
 
-    private var floatingBottomDock: some View {
-        GlassEffectContainer(spacing: 10) {
-            HStack(spacing: 10) {
-                HStack(spacing: 3) {
-                    ForEach(PhotoLibraryFilter.allCases) { option in
-                        let isSelected = store.filter == option
-                        Button {
-                            guard store.filter != option else { return }
-                            withAnimation(.snappy(duration: 0.24)) {
-                                store.filter = option
-                            }
-                            selectionFeedbackCount += 1
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: option.systemImage)
-                                    .font(.caption.weight(.semibold))
-                                Text(LocalizedStringKey(option.titleKey))
-                                    .font(.subheadline.weight(isSelected ? .semibold : .medium))
-                            }
-                            .foregroundStyle(isSelected ? .white : .primary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 9)
-                            .background {
-                                if isSelected {
-                                    Capsule()
-                                        .fill(Theme.accentButton)
-                                        .matchedGeometryEffect(id: "libraryFilterPill", in: filterNamespace)
-                                }
+    private var topFilterHeaderBar: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 3) {
+                ForEach(PhotoLibraryFilter.allCases) { option in
+                    let isSelected = store.filter == option
+                    Button {
+                        guard store.filter != option else { return }
+                        withAnimation(.snappy(duration: 0.24)) {
+                            store.filter = option
+                        }
+                        selectionFeedbackCount += 1
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: option.systemImage)
+                                .font(.caption.weight(.semibold))
+                            Text(LocalizedStringKey(option.titleKey))
+                                .font(.subheadline.weight(isSelected ? .semibold : .medium))
+                        }
+                        .foregroundStyle(isSelected ? .white : .primary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .frame(minHeight: 34)
+                        .background {
+                            if isSelected {
+                                Capsule()
+                                    .fill(Theme.accentButton)
+                                    .matchedGeometryEffect(id: "libraryFilterPill", in: filterNamespace)
+                            } else {
+                                Capsule()
+                                    .fill(Color.clear)
                             }
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                        .contentShape(.capsule)
                     }
+                    .buttonStyle(.plain)
+                    .contentShape(.capsule)
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
                 }
-                .padding(4)
-                .glassEffect(.regular.interactive(), in: .capsule)
+            }
+            .padding(4)
+            .glassEffect(.regular.interactive(), in: .capsule)
+            .contentShape(.capsule)
 
-                if hasClipboardImage {
-                    Button {
-                        openExternal { Intake.pictureFromPasteboard() }
-                    } label: {
-                        Image(systemName: "clipboard.fill")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Theme.accent)
-                            .frame(width: 44, height: 44)
-                            .glassEffect(.regular.interactive(), in: .circle)
-                    }
-                    .buttonStyle(PressStyle(scale: 0.94))
-                    .accessibilityLabel("3.1.5")
-                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+            Spacer(minLength: 4)
+
+            if hasClipboardImage {
+                Button {
+                    openExternal { Intake.pictureFromPasteboard() }
+                } label: {
+                    Image(systemName: "clipboard.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 40, height: 40)
+                        .contentShape(.circle)
+                        .glassEffect(.regular.interactive(), in: .circle)
                 }
+                .buttonStyle(PressStyle(scale: 0.94))
+                .contentShape(.circle)
+                .accessibilityLabel("3.1.5")
+                .transition(.scale(scale: 0.85).combined(with: .opacity))
             }
         }
         .padding(.horizontal, Metrics.pageInset)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
+        .padding(.vertical, 6)
         .animation(.snappy(duration: 0.24), value: hasClipboardImage)
     }
 
@@ -345,6 +301,14 @@ struct PickerScreen: View {
                 .buttonBorderShape(.capsule)
                 .controlSize(.large)
                 .tint(Theme.accentButton)
+
+                Button {
+                    shell.openStitchTab(mode: .screenRecording)
+                } label: {
+                    Label("longshot.menuVideo", systemImage: "record.circle")
+                        .font(.subheadline.weight(.medium))
+                }
+                .tint(Theme.accent)
 
                 if store.authorization == .denied || store.authorization == .restricted {
                     Button("library.openSettings") {
@@ -477,6 +441,20 @@ private struct LibraryPhotoCell: View {
         }
         .accessibilityLabel(item.isScreenshot ? "3.1.9" : "3.1.3")
     }
+}
+
+/// Transparent UIKit view that claims touches strictly inside the bottom home-indicator safe-area
+/// band so low thumb taps beneath the floating filter pill never bleed through to the photo grid.
+struct BottomSafeAreaTouchShield: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isOpaque = false
+        view.isUserInteractionEnabled = true
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
 }
 
 /// Typed localized error for iOS 27 `alert(error:actions:)` presentation.

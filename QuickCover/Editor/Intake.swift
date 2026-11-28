@@ -1,3 +1,4 @@
+import AVFoundation
 import Photos
 import PhotosUI
 import SwiftUI
@@ -16,6 +17,39 @@ enum PhotosAccess: Equatable, Sendable {
 struct RecentScreenshot: Identifiable, Sendable {
     let id: String
     let thumbnail: CGImage
+}
+
+/// Lightweight video metadata item shown in the Screen Recording long-screenshot picker.
+struct LibraryVideoItem: Identifiable, Hashable, Sendable {
+    let id: String
+    let duration: TimeInterval
+}
+
+/// Native SwiftUI `Transferable` wrapper for copying a picked screen recording movie to a temporary
+/// file URL so `AVAssetImageGenerator` can extract scroll keyframes strictly on-device.
+struct PickedMovieTransferable: Transferable, Sendable {
+    let url: URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(contentType: .movie) { movie in
+            SentTransferredFile(movie.url)
+        } importing: { received in
+            let ext = received.file.pathExtension.isEmpty ? "mov" : received.file.pathExtension
+            let dest = FileManager.default.temporaryDirectory
+                .appendingPathComponent("quickcover-rec-\(UUID().uuidString)")
+                .appendingPathExtension(ext)
+            if FileManager.default.fileExists(atPath: dest.path) {
+                try? FileManager.default.removeItem(at: dest)
+            }
+            try FileManager.default.copyItem(at: received.file, to: dest)
+            return Self(url: dest)
+        }
+    }
+}
+
+/// Thread-safe wrapper for passing `AVAsset` across Swift 6 concurrency boundaries.
+struct SendableAVAsset: @unchecked Sendable {
+    let asset: AVAsset
 }
 
 /// Brings a picture in: recent screenshots, PhotosPicker, Files, Document Scanner, or clipboard.
@@ -80,6 +114,173 @@ enum Intake {
     static func picture(asset: PHAsset) async -> PictureSource? {
         guard let data = await imageData(of: asset) else { return nil }
         return try? PictureSource(data: data)
+    }
+
+    /// Loads upright `CGImage` frames in order from already-resolved `PHAsset`s (local-only,
+    /// falling back from raw file data to rendered local `PHImageManager` output when needed).
+    static func images(assets: [PHAsset]) async -> [CGImage] {
+        var result: [CGImage] = []
+        result.reserveCapacity(assets.count)
+        for asset in assets {
+            if let source = await picture(asset: asset), let cg = try? source.uprightImage() {
+                result.append(cg)
+            } else if let fallback = await localRenderedCGImage(of: asset) {
+                result.append(fallback)
+            }
+        }
+        return result
+    }
+
+    /// Loads upright `CGImage` frames in order from PhotoKit identifiers (for long-screenshot stitching).
+    static func images(localIdentifiers: [String]) async -> [CGImage] {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited, !localIdentifiers.isEmpty else { return [] }
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: localIdentifiers, options: nil)
+        var byID: [String: PHAsset] = [:]
+        byID.reserveCapacity(fetched.count)
+        for index in 0..<fetched.count {
+            let asset = fetched.object(at: index)
+            byID[asset.localIdentifier] = asset
+        }
+        let orderedAssets = localIdentifiers.compactMap { byID[$0] }
+        return await images(assets: orderedAssets)
+    }
+
+    private static func localRenderedCGImage(of asset: PHAsset) async -> CGImage? {
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        options.isSynchronous = false
+        options.resizeMode = .exact
+
+        let uiImage: UIImage? = await withCheckedContinuation { continuation in
+            let lock = NSLock()
+            var resumed = false
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: CGSize(width: 2200, height: 2200),
+                contentMode: .aspectFit,
+                options: options
+            ) { image, _ in
+                lock.lock()
+                defer { lock.unlock() }
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: image)
+            }
+        }
+        guard let uiImage else { return nil }
+        return uprightCGImage(from: uiImage)
+    }
+
+    private static func uprightCGImage(from image: UIImage) -> CGImage? {
+        if image.imageOrientation == .up, let cg = image.cgImage {
+            return cg
+        }
+        let size = image.size
+        guard size.width > 0, size.height > 0 else { return image.cgImage }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        let rendered = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        return rendered.cgImage
+    }
+
+    /// Lists local videos (including iOS screen recordings) ordered newest-first for long-screenshot extraction.
+    static func recentVideos(limit: Int = 24) -> [LibraryVideoItem] {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else { return [] }
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.fetchLimit = limit
+        let assets = PHAsset.fetchAssets(with: .video, options: options)
+        var items: [LibraryVideoItem] = []
+        items.reserveCapacity(assets.count)
+        for index in 0..<assets.count {
+            let asset = assets.object(at: index)
+            items.append(LibraryVideoItem(id: asset.localIdentifier, duration: asset.duration))
+        }
+        return items
+    }
+
+    /// Loads a video preview thumbnail from PhotoKit.
+    static func videoThumbnail(localIdentifier: String, targetSize: CGSize) async -> UIImage? {
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+        guard let asset = fetched.firstObject else { return nil }
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .fast
+        return await withCheckedContinuation { continuation in
+            let lock = NSLock()
+            var resumed = false
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: targetSize,
+                contentMode: .aspectFill,
+                options: options
+            ) { image, info in
+                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                let isCancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
+                let hasError = info?[PHImageErrorKey] != nil
+                if isDegraded && !isCancelled && !hasError {
+                    return
+                }
+                lock.lock()
+                defer { lock.unlock() }
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: image)
+            }
+        }
+    }
+
+    /// Resolves a PhotoKit video as `AVAsset` (supports both `AVURLAsset` and trimmed `AVComposition`).
+    static func videoAsset(localIdentifier: String) async -> SendableAVAsset? {
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+        guard let asset = fetched.firstObject else { return nil }
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        return await withCheckedContinuation { continuation in
+            let lock = NSLock()
+            var resumed = false
+            PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+                lock.lock()
+                defer { lock.unlock() }
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: avAsset.map { SendableAVAsset(asset: $0) })
+            }
+        }
+    }
+
+    /// Resolves a local `URL` for a PhotoKit video asset (returns nil if only in iCloud or `AVComposition`).
+    static func videoURL(localIdentifier: String) async -> URL? {
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+        guard let asset = fetched.firstObject else { return nil }
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = false
+        options.deliveryMode = .highQualityFormat
+        return await withCheckedContinuation { continuation in
+            let lock = NSLock()
+            var resumed = false
+            PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+                lock.lock()
+                defer { lock.unlock() }
+                guard !resumed else { return }
+                resumed = true
+                let url = (avAsset as? AVURLAsset)?.url
+                continuation.resume(returning: url)
+            }
+        }
+    }
+
+    /// Loads a local video file URL from a system `PhotosPickerItem` (caller removes temp file when done).
+    static func videoURL(from item: PhotosPickerItem) async -> URL? {
+        (try? await item.loadTransferable(type: PickedMovieTransferable.self))?.url
     }
 
     private static func thumbnail(of asset: PHAsset, targetSize: CGSize) async -> CGImage? {

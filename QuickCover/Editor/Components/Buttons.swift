@@ -25,8 +25,7 @@ struct PrimaryButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if isBusy {
-                    ProgressView()
-                        .controlSize(.small)
+                    AppleIntelligenceOrb(size: 18)
                 } else if let systemImage {
                     Image(systemName: systemImage)
                         .fontWeight(.semibold)
@@ -37,8 +36,8 @@ struct PrimaryButton: View {
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.85)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .padding(.vertical, 2)
         }
         .buttonStyle(.glassProminent)
         .buttonBorderShape(.capsule)
@@ -69,8 +68,8 @@ struct SecondaryButton: View {
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.85)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .padding(.vertical, 2)
         }
         .buttonStyle(.glass)
         .buttonBorderShape(.capsule)

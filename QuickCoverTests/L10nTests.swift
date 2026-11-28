@@ -130,6 +130,15 @@ struct L10nTests {
             "square.grid.3x3.fill", "paintpalette.fill", "star.fill", "person.fill", "pawprint.fill",
             "fork.knife", "airplane", "figure.run", "lightbulb.fill", "flag.fill", "magnifyingglass",
             "photo.badge.plus", "clipboard.fill", "square.grid.2x2", "photo.stack",
+            "iphone", "ipad", "laptopcomputer", "desktopcomputer", "macmini", "macstudio",
+            "applewatch", "appletv", "shadow", "arrow.up.left.and.arrow.down.right", "aspectratio",
+            "rectangle.split.1x2", "rectangle.split.2x1", "arrow.left.and.right", "dial.medium",
+            "chevron.left", "rectangle.stack", "rectangle.stack.badge.plus", "record.circle",
+            "sparkles.rectangle.stack", "drop.halffull", "sun.max", "moon.fill", "video.fill",
+            "iphone.and.arrow.forward.inward",
+            "rectangle.portrait", "rotate.left", "rotate.right", "cube", "cube.fill",
+            "textformat.size", "rectangle.bottomthird.inset.filled", "rectangle.topthird.inset.filled",
+            "rectangle.on.rectangle.angled",
         ]
         for name in names {
             #expect(UIImage(systemName: name) != nil, "\(name)")
@@ -140,6 +149,9 @@ struct L10nTests {
         #expect(EmojiPreset.all.count >= 1900, "Expected full Unicode 16.0 emoji catalog, got \(EmojiPreset.all.count)")
         #expect(EmojiPreset.unicodeCategories.count == 9)
         #expect(EmojiPreset.categories.count == 10)
+        #expect(L10n.longshotStitchButton(3, bundle: bundle("zh-Hans")) == "拼成长截图 (3)")
+        #expect(L10n.longshotStitchButton(3, bundle: bundle("en")) == "Stitch (3)")
+        #expect(L10n.longshotOverlapCount(2, bundle: bundle("zh-Hans")) == "自动去重 2 处")
     }
 
     @Test

@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXContainerItemProxy section */
-		A1B2C3D40000000000000001 /* App proxy */ = {
+		A1B2C3D40000000000000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8238217991C4C82D1BCE751B /* Project object */;
 			proxyType = 1;
@@ -18,25 +18,19 @@
 
 /* Begin PBXFileReference section */
 		A1B2C3D40000000000000002 /* QuickCoverTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QuickCoverTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		E1D1C645818EB0816572F68E /* QuickCover.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = QuickCover.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D40000000000000010 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		E1D1C645818EB0816572F68E /* QuickCover.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuickCover.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A1B2C3D40000000000000003 /* QuickCoverTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-				Fixtures = folder;
-			};
-			path = QuickCoverTests;
-			sourceTree = "<group>";
-		};
 		32FA6C0B59B4A7B42DDCEA33 /* QuickCover */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
 			path = QuickCover;
+			sourceTree = "<group>";
+		};
+		A1B2C3D40000000000000003 /* QuickCoverTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = QuickCoverTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -47,6 +41,7 @@
 			children = (
 				32FA6C0B59B4A7B42DDCEA33 /* QuickCover */,
 				A1B2C3D40000000000000003 /* QuickCoverTests */,
+				A1B2C3D40000000000000010 /* Signing.xcconfig */,
 				A0906AD77C76E090572F0E63 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -63,21 +58,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A1B2C3D40000000000000004 /* QuickCoverTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A1B2C3D40000000000000005;
-			buildPhases = (
-				A1B2C3D40000000000000006 /* Sources */,
-				A1B2C3D4000000000000000F /* Resources */,
-			);
-			buildRules = ();
-			dependencies = (A1B2C3D40000000000000007 /* App dependency */,);
-			fileSystemSynchronizedGroups = (A1B2C3D40000000000000003 /* QuickCoverTests */,);
-			name = QuickCoverTests;
-			productName = QuickCoverTests;
-			productReference = A1B2C3D40000000000000002 /* QuickCoverTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 		2E69B1330A3161295C9DCB01 /* QuickCover */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8C42E519CFA30563C7D495EB /* Build configuration list for PBXNativeTarget "QuickCover" */;
@@ -99,6 +79,26 @@
 			productReference = E1D1C645818EB0816572F68E /* QuickCover.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A1B2C3D40000000000000004 /* QuickCoverTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D40000000000000005 /* Build configuration list for PBXNativeTarget "QuickCoverTests" */;
+			buildPhases = (
+				A1B2C3D40000000000000006 /* Sources */,
+				A1B2C3D4000000000000000F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1B2C3D40000000000000007 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A1B2C3D40000000000000003 /* QuickCoverTests */,
+			);
+			name = QuickCoverTests;
+			productName = QuickCoverTests;
+			productReference = A1B2C3D40000000000000002 /* QuickCoverTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -108,11 +108,11 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					A1B2C3D40000000000000004 = {
-						TestTargetID = 2E69B1330A3161295C9DCB01;
-					};
 					2E69B1330A3161295C9DCB01 = {
 						ProvisioningStyle = Automatic;
+					};
+					A1B2C3D40000000000000004 = {
+						TestTargetID = 2E69B1330A3161295C9DCB01;
 					};
 				};
 			};
@@ -139,14 +139,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A1B2C3D4000000000000000F /* Resources */ = {
+		64723A455F920BBCE48BF909 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		64723A455F920BBCE48BF909 /* Resources */ = {
+		A1B2C3D4000000000000000F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -156,13 +156,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A1B2C3D40000000000000006 /* Sources */ = {
+		485B7BB5562F3ABD154D4B35 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		485B7BB5562F3ABD154D4B35 /* Sources */ = {
+		A1B2C3D40000000000000006 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -172,34 +173,14 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		A1B2C3D40000000000000007 /* App dependency */ = {
+		A1B2C3D40000000000000007 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 2E69B1330A3161295C9DCB01 /* QuickCover */;
-			targetProxy = A1B2C3D40000000000000001 /* App proxy */;
+			targetProxy = A1B2C3D40000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		A1B2C3D40000000000000008 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				PRODUCT_BUNDLE_IDENTIFIER = sb.moe.quickcover.tests;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/QuickCover.app/QuickCover";
-			};
-			name = Debug;
-		};
-		A1B2C3D40000000000000009 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				PRODUCT_BUNDLE_IDENTIFIER = sb.moe.quickcover.tests;
-				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/QuickCover.app/QuickCover";
-			};
-			name = Release;
-		};
 		19E964B74B00A4CB2EF3C8A9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -233,8 +214,8 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
 				CONFIGURATION_BUILD_DIR = "$(SRCROOT)/build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -267,15 +248,16 @@
 		};
 		2E90AD925E4ACFB91CB0744B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1B2C3D40000000000000010 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
 				INFOPLIST_KEY_CFBundleDisplayName = "秒遮";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QuickCover saves the covered image to Photos.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "QuickCover uses the camera to scan documents and ID cards for on-device privacy masking. Images never leave your phone.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QuickCover saves the covered image to Photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "QuickCover reads your screenshots so it can open with the latest one already covered. Images never leave your phone.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -326,8 +308,8 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COPY_PHASE_STRIP = NO;
 				CONFIGURATION_BUILD_DIR = "$(SRCROOT)/build/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -351,17 +333,42 @@
 			};
 			name = Release;
 		};
+		A1B2C3D40000000000000008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1B2C3D40000000000000010 /* Signing.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_BUNDLE_IDENTIFIER = sb.moe.quickcover.tests;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/QuickCover.app/QuickCover";
+			};
+			name = Debug;
+		};
+		A1B2C3D40000000000000009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1B2C3D40000000000000010 /* Signing.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_BUNDLE_IDENTIFIER = sb.moe.quickcover.tests;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/QuickCover.app/QuickCover";
+			};
+			name = Release;
+		};
 		E4D305C9168016FE6F18420B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1B2C3D40000000000000010 /* Signing.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
 				INFOPLIST_KEY_CFBundleDisplayName = "秒遮";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QuickCover saves the covered image to Photos.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "QuickCover uses the camera to scan documents and ID cards for on-device privacy masking. Images never leave your phone.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QuickCover saves the covered image to Photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "QuickCover reads your screenshots so it can open with the latest one already covered. Images never leave your phone.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -382,15 +389,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A1B2C3D40000000000000005 /* Build configuration list for PBXNativeTarget "QuickCoverTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A1B2C3D40000000000000008 /* Debug */,
-				A1B2C3D40000000000000009 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 		5075F2191BCB6FFD9AB675B1 /* Build configuration list for PBXProject "QuickCover" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -405,6 +403,15 @@
 			buildConfigurations = (
 				2E90AD925E4ACFB91CB0744B /* Debug */,
 				E4D305C9168016FE6F18420B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A1B2C3D40000000000000005 /* Build configuration list for PBXNativeTarget "QuickCoverTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D40000000000000008 /* Debug */,
+				A1B2C3D40000000000000009 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

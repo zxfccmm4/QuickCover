@@ -1,0 +1,3 @@
+// Optional local-only signing overrides (e.g. DEVELOPMENT_TEAM).
+// LocalSigning.xcconfig is gitignored so CI and other contributors build cleanly without it.
+#include? "LocalSigning.xcconfig"

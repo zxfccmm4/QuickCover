@@ -1,4 +1,6 @@
+import AVFoundation
 import CoreGraphics
+import CoreVideo
 import Foundation
 import ImageIO
 import Testing
@@ -787,6 +789,983 @@ struct MaskRendererTests {
             }
         }
         #expect(foundIndigoBarPixel, "indigo stripes paint colored diagonal bars")
+    }
+
+    @Test
+    func longScreenshotSmartOverlapDeduplicatesSharedContentAndDirectAppendConcatenates() throws {
+        // Two 300x360 synthetic scrolling screenshots with fixed 40px top/bottom chrome and a shared
+        // textured band that scrolled upward by 140px between frame 1 and frame 2.
+        func scrollingShot(offsetY: CGFloat) -> CGImage {
+            picture(size: CGSize(width: 300, height: 360)) { ctx in
+                // Background
+                UIColor(white: 0.96, alpha: 1).setFill()
+                ctx.fill(CGRect(x: 0, y: 0, width: 300, height: 360))
+
+                // Unique high-contrast content stripes indexed across y = 0...600 in virtual page space
+                for row in stride(from: 0, to: 600, by: 28) {
+                    let screenY = CGFloat(row) - offsetY
+                    guard screenY > -28 && screenY < 360 else { continue }
+                    let hue = CGFloat((row / 28) % 5) * 0.16
+                    UIColor(hue: hue, saturation: 0.85, brightness: 0.72, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 24, y: screenY, width: CGFloat(120 + (row % 3) * 50), height: 14))
+                }
+
+                // Identical fixed top bar (status + navigation)
+                UIColor(white: 0.92, alpha: 1).setFill()
+                ctx.fill(CGRect(x: 0, y: 0, width: 300, height: 40))
+                UIColor(white: 0.25, alpha: 1).setFill()
+                ctx.fill(CGRect(x: 110, y: 14, width: 80, height: 12))
+
+                // Identical fixed bottom tab bar
+                UIColor(white: 0.92, alpha: 1).setFill()
+                ctx.fill(CGRect(x: 0, y: 320, width: 300, height: 40))
+                UIColor(white: 0.25, alpha: 1).setFill()
+                ctx.fill(CGRect(x: 40, y: 334, width: 220, height: 10))
+            }
+        }
+
+        let shot1 = scrollingShot(offsetY: 0)
+        let shot2 = scrollingShot(offsetY: 140)
+
+        let smart = try LongScreenshotStitcher.stitch(images: [shot1, shot2], options: .init(smartOverlap: true))
+        #expect(smart.frameCount == 2)
+        #expect(smart.stitchedOverlapCount == 1)
+        #expect(smart.image.width == 300)
+        #expect(smart.image.height < 600, "overlapping scrolled content and fixed chrome are deduplicated (got \(smart.image.height))")
+        #expect(smart.image.height >= 450, "keeps full non-overlapping height (~500px, got \(smart.image.height))")
+
+        let direct = try LongScreenshotStitcher.stitch(images: [shot1, shot2], options: .init(smartOverlap: false))
+        #expect(direct.stitchedOverlapCount == 0)
+        #expect(direct.image.height == 720)
+
+        let spacedVertical = try LongScreenshotStitcher.stitch(
+            images: [shot1, shot2],
+            options: .init(direction: .vertical, smartOverlap: false, spacing: .narrow)
+        )
+        #expect(spacedVertical.image.height == 720 + 16)
+
+        let horizontal = try LongScreenshotStitcher.stitch(
+            images: [shot1, shot2],
+            options: .init(direction: .horizontal, spacing: .wide)
+        )
+        #expect(horizontal.image.width == 600 + 36)
+        #expect(horizontal.image.height == 360)
+    }
+
+    @Test
+    func longScreenshotSmartOverlapHandlesRealWorldChromeClockFloatingButtonReverseOrderAndDuplicates() throws {
+        // Simulates realistic iPhone white-background scrolling screenshots (600x1200) containing:
+        // - Live changing status-bar clock digits ("17:25", "17:26", "17:27")
+        // - Slightly shifting translucent Liquid Glass top nav bar & bottom tab bar
+        // - Floating "+" action button fixed at bottom-right & right-edge scroll indicator
+        // - Predominantly white background with thin text/list cards spanning y = 0...2200
+        let shotSize = CGSize(width: 600, height: 1200)
+        func realisticIPhoneShot(offsetY: CGFloat, clockText: String, glassTintOffset: CGFloat, scrollBarTop: CGFloat) -> CGImage {
+            picture(size: shotSize) { ctx in
+                UIColor.white.setFill()
+                ctx.fill(CGRect(origin: .zero, size: shotSize))
+
+                // Virtual feed items (mix of white whitespace, thin dividers, avatars, and dark text)
+                let titleAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 22, weight: .semibold),
+                    .foregroundColor: UIColor(white: 0.12, alpha: 1),
+                ]
+                let bodyAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 16, weight: .regular),
+                    .foregroundColor: UIColor(white: 0.45, alpha: 1),
+                ]
+                for index in 0..<18 {
+                    let itemY = 120 + CGFloat(index) * 116 - offsetY
+                    guard itemY > -120 && itemY < 1220 else { continue }
+                    let hue = CGFloat((index * 3) % 7) / 7.0
+                    UIColor(hue: hue, saturation: 0.72, brightness: 0.85, alpha: 1).setFill()
+                    UIBezierPath(roundedRect: CGRect(x: 28, y: itemY + 14, width: 48, height: 48), cornerRadius: 12).fill()
+
+                    NSString(string: "Message Item #\(index + 1) · Conversation Row")
+                        .draw(at: CGPoint(x: 92, y: itemY + 14), withAttributes: titleAttr)
+                    NSString(string: "Detail snippet line \(index * 17 + 1003) with padding & whitespace")
+                        .draw(at: CGPoint(x: 92, y: itemY + 46), withAttributes: bodyAttr)
+
+                    UIColor(white: 0.91, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 28, y: itemY + 98, width: 544, height: 1.5))
+                }
+
+                // Right-edge scrollbar moving per frame
+                UIColor(white: 0.55, alpha: 0.75).setFill()
+                UIBezierPath(roundedRect: CGRect(x: 590, y: scrollBarTop, width: 5, height: 140), cornerRadius: 2.5).fill()
+
+                // Floating circular "+" button near bottom-right corner
+                UIColor(red: 0.05, green: 0.55, blue: 0.65, alpha: 1).setFill()
+                UIBezierPath(ovalIn: CGRect(x: 500, y: 950, width: 68, height: 68)).fill()
+                UIColor.white.setFill()
+                ctx.fill(CGRect(x: 520, y: 981, width: 28, height: 6))
+                ctx.fill(CGRect(x: 531, y: 970, width: 6, height: 28))
+
+                // Translucent top header with slightly varying glass tint + live clock digit changes
+                UIColor(red: 0.94 - glassTintOffset, green: 0.95, blue: 0.97 + glassTintOffset, alpha: 0.95).setFill()
+                ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 112))
+                let clockAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.monospacedDigitSystemFont(ofSize: 18, weight: .semibold),
+                    .foregroundColor: UIColor.black,
+                ]
+                NSString(string: clockText).draw(at: CGPoint(x: 34, y: 18), withAttributes: clockAttr)
+                NSString(string: "Inbox · Timeline").draw(at: CGPoint(x: 226, y: 66), withAttributes: titleAttr)
+
+                // Translucent bottom tab bar with slightly shifting tint
+                UIColor(red: 0.94 + glassTintOffset, green: 0.95, blue: 0.96, alpha: 0.95).setFill()
+                ctx.fill(CGRect(x: 0, y: 1086, width: 600, height: 114))
+                UIColor(white: 0.25, alpha: 1).setFill()
+                ctx.fill(CGRect(x: 210, y: 1178, width: 180, height: 6))
+            }
+        }
+
+        let shot1 = realisticIPhoneShot(offsetY: 0, clockText: "17:25", glassTintOffset: 0.00, scrollBarTop: 150)
+        let shot2 = realisticIPhoneShot(offsetY: 480, clockText: "17:26", glassTintOffset: 0.02, scrollBarTop: 340)
+        let shot3 = realisticIPhoneShot(offsetY: 990, clockText: "17:27", glassTintOffset: 0.03, scrollBarTop: 550)
+
+        let expectedThreeShotHeight = 1200 + 480 + 510 // 2190 px
+
+        // 1. Forward order [shot1, shot2, shot3]
+        let forward = try LongScreenshotStitcher.stitch(images: [shot1, shot2, shot3], options: .init(smartOverlap: true))
+        #expect(forward.stitchedOverlapCount == 2)
+        #expect(abs(forward.image.height - expectedThreeShotHeight) <= 3, "Expected ~\(expectedThreeShotHeight)px, got \(forward.image.height)")
+
+        // 2. Reverse order [shot3, shot2, shot1] (newest-first gallery selection) auto-recovers exact length
+        let reversed = try LongScreenshotStitcher.stitch(images: [shot3, shot2, shot1], options: .init(smartOverlap: true))
+        #expect(reversed.stitchedOverlapCount == 2)
+        #expect(abs(reversed.image.height - expectedThreeShotHeight) <= 3, "Reverse selection should still stitch to ~\(expectedThreeShotHeight)px, got \(reversed.image.height)")
+
+        // 3. Near-duplicate frame [shot1, shot1, shot2] skips the duplicate instead of appending twice
+        let duplicatePass = try LongScreenshotStitcher.stitch(images: [shot1, shot1, shot2], options: .init(smartOverlap: true))
+        let expectedTwoShotHeight = 1200 + 480
+        #expect(abs(duplicatePass.image.height - expectedTwoShotHeight) <= 3, "Duplicate frame should be skipped (~1680px, got \(duplicatePass.image.height))")
+
+        // 4. Two completely unrelated screenshots fall back cleanly without false-positive cropping
+        let unrelatedA = Sample.text("Alpha Document Page One 11111", at: CGPoint(x: 40, y: 200))
+        let unrelatedB = picture(size: CGSize(width: 600, height: 300)) { ctx in
+            UIColor(red: 0.10, green: 0.18, blue: 0.34, alpha: 1).setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 600, height: 300))
+            UIColor(red: 0.95, green: 0.65, blue: 0.15, alpha: 1).setFill()
+            for x in stride(from: 20, to: 560, by: 60) {
+                ctx.fill(CGRect(x: x, y: 80, width: 32, height: 140))
+            }
+        }
+        let unrelated = try LongScreenshotStitcher.stitch(images: [unrelatedA, unrelatedB], options: .init(smartOverlap: true))
+        #expect(unrelated.stitchedOverlapCount == 0)
+        #expect(unrelated.image.height == unrelatedA.height + unrelatedB.height)
+    }
+
+    @Test
+    func longScreenshotSmartOverlapMergesDifferingTabViewCollapsingHeaderAndFractionalOffset() throws {
+        // Simulates iOS 26 real scrolling screenshots (900x1950, 3x portrait) where:
+        // - Shot 1 has a tall Large Navigation Title (0...350px) and full 4-tab bottom TabView (1710...1950px, bright orange highlight)
+        // - Shot 2 scrolls down by a fractional coarse-pixel offset (1237px, leaving a thin ~13% crisp overlap band),
+        //   collapses into a compact Inline Navigation Bar (0...205px, deep teal), and switches to a minimized
+        //   floating pill TabView (1785...1950px, distinct slate tint) plus soft scroll-edge blur and a floating corner pill.
+        let shotSize = CGSize(width: 900, height: 1950)
+        func iOS26Shot(offsetY: CGFloat, largeHeader: Bool, compactTab: Bool) -> CGImage {
+            picture(size: shotSize) { ctx in
+                UIColor.white.setFill()
+                ctx.fill(CGRect(origin: .zero, size: shotSize))
+
+                let titleAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 30, weight: .semibold),
+                    .foregroundColor: UIColor(white: 0.10, alpha: 1),
+                ]
+                let subAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 22, weight: .regular),
+                    .foregroundColor: UIColor(white: 0.40, alpha: 1),
+                ]
+
+                for idx in 0..<24 {
+                    let itemY = 365 + CGFloat(idx) * 142 - offsetY
+                    guard itemY > -150 && itemY < 1960 else { continue }
+                    let hue = CGFloat((idx * 5) % 9) / 9.0
+                    UIColor(hue: hue, saturation: 0.78, brightness: 0.80, alpha: 1).setFill()
+                    UIBezierPath(roundedRect: CGRect(x: 36, y: itemY + 18, width: 72, height: 72), cornerRadius: 18).fill()
+
+                    NSString(string: "Thread Row \(idx + 1) · Long Content Line")
+                        .draw(at: CGPoint(x: 128, y: itemY + 18), withAttributes: titleAttr)
+                    NSString(string: "Preview item \(idx * 23 + 419) with multi-word detail")
+                        .draw(at: CGPoint(x: 128, y: itemY + 60), withAttributes: subAttr)
+
+                    UIColor(white: 0.90, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 36, y: itemY + 124, width: 828, height: 2))
+                }
+
+                // Floating corner action pill on right edge
+                UIColor(red: 0.15, green: 0.45, blue: 0.90, alpha: 1).setFill()
+                UIBezierPath(roundedRect: CGRect(x: 785, y: 1520, width: 76, height: 76), cornerRadius: 38).fill()
+
+                // Completely different Top Navigation Chrome between Shot 1 and Shot 2
+                if largeHeader {
+                    UIColor(white: 0.96, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 0, y: 0, width: 900, height: 350))
+                    NSString(string: "9:41").draw(at: CGPoint(x: 48, y: 24), withAttributes: subAttr)
+                    NSString(string: "Large Inbox Header").draw(at: CGPoint(x: 36, y: 220), withAttributes: titleAttr)
+                } else {
+                    UIColor(red: 0.08, green: 0.42, blue: 0.48, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 0, y: 0, width: 900, height: 205))
+                    NSString(string: "9:42").draw(at: CGPoint(x: 48, y: 24), withAttributes: subAttr)
+                    NSString(string: "Inline Bar").draw(at: CGPoint(x: 360, y: 125), withAttributes: titleAttr)
+                }
+
+                // Completely different Bottom TabView Chrome between Shot 1 and Shot 2
+                if compactTab {
+                    UIColor(red: 0.14, green: 0.16, blue: 0.22, alpha: 1).setFill()
+                    UIBezierPath(roundedRect: CGRect(x: 110, y: 1795, width: 680, height: 110), cornerRadius: 55).fill()
+                    UIColor(white: 0.20, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 320, y: 1922, width: 260, height: 8))
+                } else {
+                    // Vivid orange tab bar highlight (must NEVER remain inside the middle seam!)
+                    UIColor(red: 0.99, green: 0.45, blue: 0.08, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 0, y: 1710, width: 900, height: 240))
+                    UIColor(white: 0.15, alpha: 1).setFill()
+                    ctx.fill(CGRect(x: 320, y: 1922, width: 260, height: 8))
+                }
+            }
+        }
+
+        let shot1 = iOS26Shot(offsetY: 0, largeHeader: true, compactTab: false)
+        let shot2 = iOS26Shot(offsetY: 1237, largeHeader: false, compactTab: true)
+
+        let expectedHeight = 1950 + 1237 // 3187 px
+        let stitched = try LongScreenshotStitcher.stitch(images: [shot1, shot2], options: .init(smartOverlap: true))
+        #expect(stitched.stitchedOverlapCount == 1, "Should still merge differing TabView & collapsing header shots")
+        #expect(abs(stitched.image.height - expectedHeight) <= 4, "Expected ~\(expectedHeight)px, got \(stitched.image.height)")
+
+        // Verify Shot 1's orange bottom TabView (R~252, G~115, B~20) and Shot 2's teal inline header (R~20, G~107, B~122)
+        // are completely excluded from the stitched middle junction (y in 1350...1750).
+        let raw = bytes(stitched.image)
+        let rowStride = stitched.image.width * 4
+        var orangeChromeRows = 0
+        var tealHeaderRows = 0
+        for y in 1350..<min(stitched.image.height, 1750) {
+            let p = y * rowStride + 250 * 4
+            let r = Int(raw[p]), g = Int(raw[p + 1]), b = Int(raw[p + 2])
+            if r > 235 && g < 130 && b < 45 {
+                orangeChromeRows += 1
+            }
+            if r < 40 && abs(g - 107) < 25 && abs(b - 122) < 25 {
+                tealHeaderRows += 1
+            }
+        }
+        #expect(orangeChromeRows == 0, "Bottom TabView must not remain in the middle seam")
+        #expect(tealHeaderRows == 0, "Top NavigationBar must not remain in the middle seam")
+    }
+
+    @Test
+    func longScreenshotManualSeamAdjustmentGapAndEdgeCropping() throws {
+        let img1 = Sample.solid(width: 600, height: 1000, fill: Sample.white)
+        let img2 = Sample.solid(width: 600, height: 1000, fill: UIColor(white: 0.92, alpha: 1).cgColor)
+
+        let layout = try LongScreenshotStitcher.computeVerticalLayout(
+            images: [img1, img2],
+            options: .init(direction: .vertical, smartOverlap: false)
+        )
+        #expect(layout.seams.count == 1)
+
+        // Manual seam edit: cut 120px off bottom of frame 1, cut 90px off top of frame 2, add 40px red divider gap.
+        let editedSeams = [
+            LongScreenshotStitcher.SeamAdjustment(
+                prevCutY: 880,
+                currStartY: 90,
+                gap: 40,
+                isAutoMatched: false
+            )
+        ]
+        let customRed = CustomColorRGB(red: 0.92, green: 0.15, blue: 0.20)
+        let rendered = try LongScreenshotStitcher.renderVertical(
+            layout: layout,
+            seams: editedSeams,
+            crop: .zero,
+            dividerColor: customRed
+        )
+        let expectedUnCroppedH = 880 + 40 + 910 // 1830
+        #expect(rendered.image.height == expectedUnCroppedH)
+        #expect(rendered.image.width == 600)
+
+        // Check pixel inside the 40px gap (top-down y = 900). Note `bytes(_:)` stores rows bottom-up,
+        // so top-down y maps to `(height - 1 - y)`.
+        let raw = bytes(rendered.image)
+        let gapRowInBytes = rendered.image.height - 1 - 900
+        let gapPixel = gapRowInBytes * rendered.image.width * 4 + 300 * 4
+        #expect(raw[gapPixel] > 210 && raw[gapPixel + 1] < 75 && raw[gapPixel + 2] < 80,
+                "Expected red divider pixel, got rgba=(\(raw[gapPixel]),\(raw[gapPixel+1]),\(raw[gapPixel+2]),\(raw[gapPixel+3]))")
+
+        // Seam close-up preview renders centered junction with gap.
+        let preview = try #require(LongScreenshotStitcher.renderSeamPreview(
+            previous: layout.orderedImages[0],
+            current: layout.orderedImages[1],
+            seam: editedSeams[0],
+            bandPixels: 120,
+            dividerColor: customRed
+        ))
+        #expect(preview.width == 600)
+        #expect(preview.height == 120 + 40 + 120)
+
+        // Left 10% + Right 15% + Top 5% + Bottom 10% crop shrinks output dimensions precisely.
+        let cropped = try LongScreenshotStitcher.renderVertical(
+            layout: layout,
+            seams: editedSeams,
+            crop: LongScreenshotStitcher.CropInsets(left: 0.10, right: 0.15, top: 0.05, bottom: 0.10),
+            dividerColor: customRed
+        )
+        #expect(abs(cropped.image.width - 450) <= 2)
+        #expect(abs(cropped.image.height - Int((Double(expectedUnCroppedH) * 0.85).rounded())) <= 2)
+
+        // Suggested chrome trim produces non-trivial top & bottom trim values for unmatched seams.
+        let suggested = LongScreenshotStitcher.suggestedChromeTrim(
+            previous: layout.orderedImages[0],
+            current: layout.orderedImages[1]
+        )
+        #expect(suggested.prevCutY < layout.orderedImages[0].height)
+        #expect(suggested.currStartY > 0)
+    }
+
+    @Test
+    func deviceFrameRendererSupportsAll29Latest2026Models9AppStoreTemplatesAndScaling() throws {
+        let baseScreen = Sample.text("13800138000", at: CGPoint(x: 30, y: 200))
+
+        // Every single one of the 29 selectable 2026 Apple models across all 8 categories renders cleanly.
+        #expect(AppleDeviceModel.allCases.count == 29)
+        #expect(DeviceCategory.allCases.filter { $0 != .none }.count == 8)
+        #expect(DeviceShowcaseTemplate.allCases.count == 9)
+
+        for deviceModel in AppleDeviceModel.allCases {
+            let framed = DeviceFrameRenderer.render(
+                screen: baseScreen,
+                options: DeviceFrameOptions(
+                    model: deviceModel,
+                    finish: deviceModel.availableFinishes.first ?? .silver,
+                    showsBackground: true,
+                    backdropKind: .gradient,
+                    gradientPreset: .mist
+                )
+            )
+            #expect(framed.width >= 700, "\(deviceModel.displayName) width should be high-res")
+            #expect(framed.height >= 700, "\(deviceModel.displayName) height should be high-res")
+        }
+
+        // All 9 App Store directional showcase templates render distinct valid frames cleanly.
+        for tpl in DeviceShowcaseTemplate.allCases {
+            let framed = DeviceFrameRenderer.render(
+                screen: baseScreen,
+                options: DeviceFrameOptions(
+                    model: .iPhone18ProMax,
+                    finish: .burgundy,
+                    template: tpl,
+                    heroTitle: "QuickCover",
+                    heroSubtitle: "Privacy in One Tap",
+                    showsBackground: true,
+                    backdropKind: .gradient,
+                    gradientPreset: .obsidian
+                )
+            )
+            #expect(framed.width >= 750, "\(tpl) width should be valid, got \(framed.width)")
+            #expect(framed.height >= 900, "\(tpl) height should be valid, got \(framed.height)")
+        }
+
+        // Background OFF yields tight transparent PNG cutout (alpha == 0 in corner) even under 3D perspective.
+        let cutoutPerspWatch = DeviceFrameRenderer.render(
+            screen: baseScreen,
+            options: DeviceFrameOptions(
+                model: .watchUltra4,
+                finish: .naturalTitanium,
+                template: .perspectiveLeft,
+                showsBackground: false
+            )
+        )
+        let cornerBytes = bytes(cutoutPerspWatch)
+        #expect(cornerBytes[3] == 0, "background-off Watch Ultra 4 3D cutout corner has alpha == 0")
+
+        let bgWatchUltra = DeviceFrameRenderer.render(
+            screen: baseScreen,
+            options: DeviceFrameOptions(
+                model: .watchUltra4,
+                finish: .naturalTitanium,
+                showsBackground: true,
+                backdropKind: .solidColor,
+                solidBackgroundColor: CustomColorRGB(red: 0.95, green: 0.25, blue: 0.40)
+            )
+        )
+        #expect(bgWatchUltra.width > cutoutPerspWatch.width, "background ON adds studio padding around hardware")
+        let bgCorner = bytes(bgWatchUltra)
+        #expect(bgCorner[0] > 210 && bgCorner[1] < 90 && bgCorner[3] == 255, "custom RGB solid background paints exact color")
+
+        // Post-frame overall outputScale shrinks final pixel resolution cleanly.
+        let halfScaled = DeviceFrameRenderer.render(
+            screen: baseScreen,
+            options: DeviceFrameOptions(
+                model: .appleTV4KGen4,
+                finish: .spaceBlack,
+                showsBackground: true,
+                outputScale: 0.5
+            )
+        )
+        let fullScaled = DeviceFrameRenderer.render(
+            screen: baseScreen,
+            options: DeviceFrameOptions(
+                model: .appleTV4KGen4,
+                finish: .spaceBlack,
+                showsBackground: true,
+                outputScale: 1.0
+            )
+        )
+        #expect(abs(halfScaled.width * 2 - fullScaled.width) <= 2)
+        #expect(abs(halfScaled.height * 2 - fullScaled.height) <= 2)
+
+        // Post-frame bottom badge and full-canvas tiled watermarks visibly paint over the framed canvas.
+        let frameOpts = DeviceFrameOptions(
+            model: .iPhoneDuo,
+            finish: .starWhite,
+            showsBackground: true,
+            backdropKind: .solidColor,
+            solidBackgroundColor: CustomColorRGB(red: 0.96, green: 0.96, blue: 0.98)
+        )
+        let plainFramed = MaskRenderer.flatten(baseScreen, findings: [], appearance: .default, deviceFrame: frameOpts)
+        let badgeWM = WatermarkOptions(
+            isEnabled: true,
+            text: "@QuickCover",
+            opacity: 0.45,
+            tint: .slate,
+            placement: .bottomBadge,
+            showsDeviceModel: true
+        )
+        let badgedFramed = MaskRenderer.flatten(
+            baseScreen,
+            findings: [],
+            appearance: MaskAppearance(watermark: badgeWM),
+            deviceFrame: frameOpts
+        )
+        #expect(badgedFramed.height > plainFramed.height, "bottomBadge reserves clean footer caption space")
+
+        let fullCanvasWM = WatermarkOptions(
+            isEnabled: true,
+            text: "CONFIDENTIAL",
+            opacity: 0.42,
+            density: .dense,
+            tint: .red,
+            placement: .fullCanvasTiled
+        )
+        let fullTiledFramed = MaskRenderer.flatten(
+            baseScreen,
+            findings: [],
+            appearance: MaskAppearance(watermark: fullCanvasWM),
+            deviceFrame: frameOpts
+        )
+        #expect(bytes(fullTiledFramed) != bytes(plainFramed), "fullCanvasTiled watermark renders across backdrop")
+
+        // Background-off hardware cutout forces PNG output even when JPEG export format is requested.
+        let src = try #require(CGImageSourceCreateWithData(Sample.jpeg(baseScreen) as CFData, nil))
+        let pngData = try MaskRenderer.encode(
+            src,
+            orientation: .up,
+            findings: [],
+            options: MaskRenderer.Options(
+                format: .jpeg,
+                deviceFrame: DeviceFrameOptions(model: .macStudioM5Ultra, finish: .silver, showsBackground: false)
+            )
+        )
+        let encodedSource = try #require(CGImageSourceCreateWithData(pngData as CFData, nil))
+        #expect(CGImageSourceGetType(encodedSource) as String? == "public.png")
+    }
+
+    @Test
+    func exportAspectRatioPresetsRenderExactRatiosInFitFillAndDeviceFrameModes() {
+        #expect(ExportAspectRatio.allCases.count == 15)
+        for cat in ExportAspectCategory.allCases {
+            #expect(!ExportAspectRatio.presets(in: cat).isEmpty)
+        }
+        let tallImage = Sample.solid(width: 900, height: 1800, fill: Sample.white)
+
+        // All explicit aspect ratios produce exact proportions in both Fit and Fill modes.
+        for preset in ExportAspectRatio.allCases {
+            guard let expectedRatio = preset.ratio else { continue }
+
+            let fitted = MaskRenderer.applyExportAspectRatio(
+                tallImage,
+                ratio: preset,
+                fitMode: .fit,
+                backdrop: .dark
+            )
+            let fitRatio = CGFloat(fitted.width) / CGFloat(fitted.height)
+            #expect(abs(fitRatio - expectedRatio) < 0.025, "\(preset.rawValue) fit ratio mismatch: \(fitRatio) vs \(expectedRatio)")
+
+            let cropped = MaskRenderer.applyExportAspectRatio(
+                tallImage,
+                ratio: preset,
+                fitMode: .fill
+            )
+            let fillRatio = CGFloat(cropped.width) / CGFloat(cropped.height)
+            #expect(abs(fillRatio - expectedRatio) < 0.025, "\(preset.rawValue) fill ratio mismatch: \(fillRatio) vs \(expectedRatio)")
+        }
+
+        // Fit with .light backdrop fills surrounding canvas with light neutral tone.
+        let wechatFit = MaskRenderer.applyExportAspectRatio(
+            tallImage,
+            ratio: .wechatCover,
+            fitMode: .fit,
+            backdrop: .light
+        )
+        let wechatBytes = bytes(wechatFit)
+        #expect(wechatBytes[0] > 235 && wechatBytes[1] > 235 && wechatBytes[2] > 235)
+
+        // Device frame studio canvas inherits App Store 6.9" export aspect ratio cleanly without double margins.
+        let framedAppStore = MaskRenderer.flatten(
+            tallImage,
+            findings: [],
+            appearance: .default,
+            deviceFrame: DeviceFrameOptions(model: .iPhone18ProMax, showsBackground: true, canvasAspect: .auto),
+            exportAspectRatio: .appStorePhone69
+        )
+        let framedRatio = CGFloat(framedAppStore.width) / CGFloat(framedAppStore.height)
+        #expect(abs(framedRatio - (1320.0 / 2868.0)) < 0.025)
+    }
+
+    @Test
+    func screenRecordingStitchDiscardsOverlaysPausesBounceBacksAndSupportsComposition() async throws {
+        let frameW = 390
+        let frameH = 840
+        let docH = 2200
+
+        // Build a 2200px tall document with distinct colorful UI cards so every scroll offset has rich unique features.
+        let docCtx = try #require(CGImage.rgbaContext(width: frameW, height: docH))
+        docCtx.setFillColor(CGColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1))
+        docCtx.fill(CGRect(x: 0, y: 0, width: frameW, height: docH))
+
+        let rowStep = 95
+        for idx in 0..<(docH / rowStep) {
+            let yTop = idx * rowStep + 14
+            let yGL = docH - yTop - 68
+            let hueA = CGFloat((idx * 37) % 256) / 255.0
+            let hueB = CGFloat((idx * 89 + 70) % 256) / 255.0
+            let hueC = CGFloat((idx * 131 + 140) % 256) / 255.0
+            docCtx.setFillColor(CGColor(red: 0.93, green: 0.94, blue: 0.96, alpha: 1))
+            docCtx.fill(CGRect(x: 16, y: yGL, width: frameW - 32, height: 68))
+            docCtx.setFillColor(CGColor(red: hueA, green: hueB, blue: hueC, alpha: 1))
+            docCtx.fill(CGRect(x: 24, y: yGL + 14, width: 40, height: 40))
+
+            let bar1W = 80 + ((idx * 47) % 190)
+            let bar2W = 60 + ((idx * 73) % 210)
+            docCtx.setFillColor(CGColor(red: 0.14, green: 0.16, blue: 0.22, alpha: 1))
+            docCtx.fill(CGRect(x: 78, y: yGL + 38, width: bar1W, height: 14))
+            docCtx.setFillColor(CGColor(red: 0.35, green: 0.40, blue: 0.48, alpha: 1))
+            docCtx.fill(CGRect(x: 78, y: yGL + 14, width: bar2W, height: 12))
+        }
+        let docImage = try #require(docCtx.makeImage())
+
+        func makeControlCenterFrame() throws -> CGImage {
+            let ctx = try #require(CGImage.rgbaContext(width: frameW, height: frameH))
+            ctx.setFillColor(CGColor(red: 0.94, green: 0.08, blue: 0.78, alpha: 1))
+            ctx.fill(CGRect(x: 0, y: 0, width: frameW, height: frameH))
+            ctx.setFillColor(CGColor(red: 0.12, green: 0.12, blue: 0.15, alpha: 1))
+            ctx.fill(CGRect(x: 36, y: 180, width: 144, height: 220))
+            ctx.fill(CGRect(x: 210, y: 260, width: 144, height: 180))
+            return try #require(ctx.makeImage())
+        }
+
+        func makeScrollFrame(offsetY: Int) throws -> CGImage {
+            let clamped = max(0, min(docH - frameH, offsetY))
+            let slice = try #require(docImage.cropping(to: CGRect(x: 0, y: clamped, width: frameW, height: frameH)))
+            let ctx = try #require(CGImage.rgbaContext(width: frameW, height: frameH))
+            ctx.draw(slice, in: CGRect(x: 0, y: 0, width: frameW, height: frameH))
+            // Overlay fixed status bar (top) & home indicator (bottom) like a real iPhone screen recording.
+            ctx.setFillColor(CGColor(red: 0.96, green: 0.96, blue: 0.97, alpha: 1))
+            ctx.fill(CGRect(x: 0, y: frameH - 34, width: frameW, height: 34))
+            ctx.setFillColor(CGColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1))
+            ctx.fill(CGRect(x: 155, y: frameH - 22, width: 80, height: 10))
+            ctx.fill(CGRect(x: 130, y: 10, width: 130, height: 5))
+            return try #require(ctx.makeImage())
+        }
+
+        let controlCenter = try makeControlCenterFrame()
+        // 10 fps timeline (~3.0s): Control Center -> Scroll 0...680 -> Pause -> Bounce up -> Resume 680...1360 -> Control Center
+        let offsets: [Int?] = [
+            nil, nil, nil, nil,
+            0, 85, 170, 255, 340, 425, 510, 595, 680,
+            680, 680, 680,
+            590, 635,
+            680, 765, 850, 935, 1020, 1105, 1190, 1275, 1360,
+            nil, nil, nil, nil
+        ]
+
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("QuickCoverVideoTest-\(UUID().uuidString).mov")
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let writer = try AVAssetWriter(outputURL: tempURL, fileType: .mov)
+        let settings: [String: Any] = [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: frameW,
+            AVVideoHeightKey: frameH,
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: 2_800_000,
+                AVVideoMaxKeyFrameIntervalKey: 10,
+            ],
+        ]
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+            assetWriterInput: input,
+            sourcePixelBufferAttributes: [
+                kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA),
+                kCVPixelBufferWidthKey as String: frameW,
+                kCVPixelBufferHeightKey as String: frameH,
+            ]
+        )
+        #expect(writer.canAdd(input))
+        writer.add(input)
+        #expect(writer.startWriting())
+        writer.startSession(atSourceTime: .zero)
+
+        for (index, offset) in offsets.enumerated() {
+            while !input.isReadyForMoreMediaData {
+                try await Task.sleep(for: .milliseconds(5))
+            }
+            let frameImage = try offset.map { try makeScrollFrame(offsetY: $0) } ?? controlCenter
+            var pxBuf: CVPixelBuffer?
+            CVPixelBufferCreate(
+                kCFAllocatorDefault,
+                frameW,
+                frameH,
+                kCVPixelFormatType_32BGRA,
+                nil,
+                &pxBuf
+            )
+            let buffer = try #require(pxBuf)
+            CVPixelBufferLockBaseAddress(buffer, [])
+            let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
+            if let base = CVPixelBufferGetBaseAddress(buffer),
+               let ctx = CGContext(
+                   data: base,
+                   width: frameW,
+                   height: frameH,
+                   bitsPerComponent: 8,
+                   bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
+                   space: CGColorSpaceCreateDeviceRGB(),
+                   bitmapInfo: bitmapInfo
+               ) {
+                ctx.draw(frameImage, in: CGRect(x: 0, y: 0, width: frameW, height: frameH))
+            }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+
+            let pts = CMTime(value: CMTimeValue(index), timescale: 10)
+            #expect(adaptor.append(buffer, withPresentationTime: pts))
+        }
+        input.markAsFinished()
+        await writer.finishWriting()
+        #expect(writer.status == .completed)
+
+        // Exercise both AVURLAsset and an AVMutableComposition (trimmed Photos recording path).
+        let urlAsset = AVURLAsset(url: tempURL)
+        let urlLayout = try await LongScreenshotStitcher.stitchVideoLayout(
+            asset: urlAsset,
+            options: .init(videoPrecision: .standard)
+        )
+        #expect(urlLayout.orderedImages.count >= 2)
+        #expect(urlLayout.seams.allSatisfy { $0.isAutoMatched })
+
+        let rendered = try LongScreenshotStitcher.renderVertical(layout: urlLayout, seams: urlLayout.seams)
+        #expect(
+            rendered.image.height >= docH - 45 && rendered.image.height <= docH + 45,
+            "Unexpected stitched height: \(rendered.image.height), frames=\(urlLayout.orderedImages.count), seams=\(urlLayout.seams)"
+        )
+
+        // Confirm Control Center magenta panels at both ends were completely stripped.
+        let outBytes = bytes(rendered.image)
+        let w = rendered.image.width
+        let h = rendered.image.height
+        var magentaCount = 0
+        let checkRows = Array(0..<min(40, h)) + Array(max(0, h - 40)..<h)
+        for y in checkRows {
+            for x in Swift.stride(from: 8, to: w - 8, by: 8) {
+                let p = ((h - 1 - y) * w + x) * 4
+                let r = outBytes[p], g = outBytes[p + 1], b = outBytes[p + 2]
+                if r > 200 && g < 60 && b > 150 {
+                    magentaCount += 1
+                }
+            }
+        }
+        #expect(magentaCount == 0)
+
+        // Verify AVComposition support directly.
+        let composition = AVMutableComposition()
+        let compDuration = try await urlAsset.load(.duration)
+        if let srcTrack = try await urlAsset.loadTracks(withMediaType: .video).first,
+           let dstTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) {
+            try dstTrack.insertTimeRange(
+                CMTimeRange(start: .zero, duration: compDuration),
+                of: srcTrack,
+                at: .zero
+            )
+            let compLayout = try await LongScreenshotStitcher.stitchVideoLayout(
+                asset: composition,
+                options: .init(videoPrecision: .standard)
+            )
+            let compRendered = try LongScreenshotStitcher.renderVertical(layout: compLayout, seams: compLayout.seams)
+            #expect(compRendered.image.height >= docH - 45 && compRendered.image.height <= docH + 45)
+        }
+    }
+
+    @Test
+    func framelessBackdropCustomGradientAndBackgroundImageCompositeCleanly() {
+        let fg = Sample.solid(width: 400, height: 800, fill: Sample.white)
+
+        // 1. Frameless mode (no device model) renders rounded cutout over a solid palette color.
+        var solidOpts = DeviceFrameOptions(
+            model: nil,
+            showsBackground: true,
+            backdropKind: .solidColor,
+            solidBackgroundColor: CustomColorRGB(red: 0.10, green: 0.50, blue: 0.90)
+        )
+        solidOpts.enableFramelessBackdrop = true
+        let solidOut = MaskRenderer.flatten(
+            fg,
+            findings: [],
+            appearance: .default,
+            deviceFrame: solidOpts
+        )
+        #expect(solidOut.width > fg.width && solidOut.height > fg.height)
+        let solidCorner = bytes(solidOut)
+        #expect(solidCorner[0] < 45 && solidCorner[1] > 105 && solidCorner[2] > 205)
+
+        // 2. Custom multi-stop gradient synthesis supports 3 stops & multiple directions.
+        var gradOpts = DeviceFrameOptions(
+            model: nil,
+            showsBackground: true,
+            backdropKind: .gradient,
+            canvasAspect: .portrait3x4
+        )
+        gradOpts.enableFramelessBackdrop = true
+        gradOpts.usesCustomGradient = true
+        gradOpts.customGradientStart = CustomColorRGB(red: 0.96, green: 0.12, blue: 0.18)
+        gradOpts.customGradientMid = CustomColorRGB(red: 0.20, green: 0.85, blue: 0.45)
+        gradOpts.customGradientEnd = CustomColorRGB(red: 0.10, green: 0.25, blue: 0.96)
+        gradOpts.gradientDirection = .vertical
+        let gradOut = DeviceFrameRenderer.render(screen: fg, options: gradOpts)
+        let gradBytes = bytes(gradOut)
+        // `bytes(_:)` stores rows bottom-up: `(height - 1 - y)` indexes top-down visual coordinates.
+        let topPx = ((gradOut.height - 1 - 8) * gradOut.width + gradOut.width / 2) * 4
+        let botPx = (8 * gradOut.width + gradOut.width / 2) * 4
+        #expect(gradBytes[topPx] > 180 && gradBytes[topPx + 2] < 80)
+        #expect(gradBytes[botPx + 2] > 180 && gradBytes[botPx] < 80)
+
+        // Radial gradient renders cleanly.
+        gradOpts.gradientDirection = .radial
+        let radialOut = DeviceFrameRenderer.render(screen: fg, options: gradOpts)
+        #expect(radialOut.width > fg.width)
+
+        // 3. Custom background image compositing with Xiaohongshu 3:4 aspect ratio, blur & dim.
+        let bgPhoto = Sample.solid(
+            width: 600,
+            height: 800,
+            fill: CGColor(red: 0.15, green: 0.72, blue: 0.36, alpha: 1.0)
+        )
+        var photoOpts = DeviceFrameOptions(
+            model: nil,
+            template: .tiltRight,
+            showsBackground: true,
+            backdropKind: .customImage
+        )
+        photoOpts.enableFramelessBackdrop = true
+        photoOpts.customBackgroundImage = CustomBackdropImage(image: bgPhoto)
+        photoOpts.customImageBlur = 0.25
+        photoOpts.customImageDim = 0.15
+
+        let photoOut = MaskRenderer.flatten(
+            fg,
+            findings: [],
+            appearance: .default,
+            deviceFrame: photoOpts,
+            exportAspectRatio: .xiaohongshu3x4
+        )
+        let ratio = CGFloat(photoOut.width) / CGFloat(photoOut.height)
+        #expect(abs(ratio - 0.75) < 0.025)
+        let photoBytes = bytes(photoOut)
+        #expect(photoBytes[1] > photoBytes[0] && photoBytes[1] > photoBytes[2])
+    }
+
+    @Test
+    func longScreenshotAutoReordersArbitrarilyScrambledScreenshots() throws {
+        let w = 390
+        let fullH = 1800
+        let winH = 600
+        let step = 380
+
+        let ctx = try #require(CGImage.rgbaContext(width: w, height: fullH))
+        ctx.setFillColor(CGColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: w, height: fullH))
+        for i in 0..<(fullH / 60) {
+            let yGL = fullH - (i * 60 + 48)
+            let r = CGFloat((i * 41) % 256) / 255.0
+            let g = CGFloat((i * 83 + 50) % 256) / 255.0
+            let b = CGFloat((i * 127 + 100) % 256) / 255.0
+            ctx.setFillColor(CGColor(red: 0.92, green: 0.93, blue: 0.95, alpha: 1))
+            ctx.fill(CGRect(x: 16, y: yGL, width: w - 32, height: 42))
+            ctx.setFillColor(CGColor(red: r, green: g, blue: b, alpha: 1))
+            ctx.fill(CGRect(x: 24, y: yGL + 7, width: 28, height: 28))
+            let barW = 70 + ((i * 53) % 200)
+            ctx.setFillColor(CGColor(red: 0.14, green: 0.16, blue: 0.22, alpha: 1))
+            ctx.fill(CGRect(x: 68, y: yGL + 16, width: barW, height: 12))
+        }
+        let doc = try #require(ctx.makeImage())
+
+        let slices = (0..<4).map { idx in
+            doc.cropping(to: CGRect(x: 0, y: idx * step, width: w, height: winH))!
+        }
+        let expectedH = 3 * step + winH
+
+        for perm in [[2, 0, 3, 1], [3, 1, 0, 2]] {
+            let scrambled = perm.map { slices[$0] }
+            let layout = try LongScreenshotStitcher.computeVerticalLayout(
+                images: scrambled,
+                options: .init(direction: .vertical, smartOverlap: true, allowReverseOrder: true)
+            )
+            #expect(layout.seams.count == 3, "seams count=\(layout.seams.count), perm=\(perm), seams=\(layout.seams)")
+            #expect(layout.seams.allSatisfy { $0.isAutoMatched }, "perm=\(perm), seams=\(layout.seams)")
+            let rendered = try LongScreenshotStitcher.renderVertical(layout: layout, seams: layout.seams)
+            #expect(abs(rendered.image.height - expectedH) <= 8, "perm=\(perm), height=\(rendered.image.height), expected=\(expectedH)")
+        }
+    }
+
+    @Test
+    func officialAppleProductBezelsLoadAndCompositeAllCategories() {
+        #expect(DeviceFrameRenderer.OfficialBezelCatalog.isAvailable)
+        let screen = Sample.solid(width: 480, height: 960, fill: CGColor(red: 0.20, green: 0.55, blue: 0.92, alpha: 1.0))
+
+        let modelsToVerify: [AppleDeviceModel] = [
+            .watchUltra4,
+            .watchSeries12_46,
+            .watchSeries12_42,
+            .watchSE3,
+            .iPhone18ProMax,
+            .iPhoneDuo,
+            .iPadPro13M5,
+            .macBookPro16M5Max,
+            .iMac24M4,
+            .studioDisplay2026,
+            .macStudioM5Ultra,
+            .appleTV4KGen4,
+        ]
+
+        for model in modelsToVerify {
+            let finish = model.availableFinishes.first ?? .silver
+            let entry = DeviceFrameRenderer.OfficialBezelCatalog.entry(for: model, finish: finish)
+            #expect(entry != nil, "Missing official bezel manifest entry for \(model.rawValue)")
+            if let entry {
+                #expect(DeviceFrameRenderer.OfficialBezelCatalog.bezelCGImage(for: entry) != nil, "Missing bezel PNG \(entry.file)")
+            }
+
+            let cutout = DeviceFrameRenderer.render(
+                screen: screen,
+                options: DeviceFrameOptions(
+                    model: model,
+                    finish: finish,
+                    showsBackground: false
+                )
+            )
+            #expect(cutout.width >= 400 && cutout.height >= 400)
+            let cornerAlpha = bytes(cutout)[3]
+            #expect(cornerAlpha == 0, "\(model.displayName) should preserve transparent outer corners")
+        }
+    }
+
+    @Test
+    func longScreenshotInsideIPhoneBezelAndStitcherNeverTruncateBottom() throws {
+        // 1:6 long screenshot with bright red top band (y_top 0..<200) and bright blue bottom band (y_top 2680..<2880).
+        let w = 480
+        let h = 2880
+        let ctx = try #require(CGImage.rgbaContext(width: w, height: h))
+        ctx.setFillColor(CGColor(red: 0.96, green: 0.97, blue: 0.98, alpha: 1.0))
+        ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+        // CGContext Y=0 is bottom-left.
+        ctx.setFillColor(CGColor(red: 0.95, green: 0.15, blue: 0.15, alpha: 1.0))
+        ctx.fill(CGRect(x: 0, y: h - 200, width: w, height: 200))
+        ctx.setFillColor(CGColor(red: 0.12, green: 0.25, blue: 0.95, alpha: 1.0))
+        ctx.fill(CGRect(x: 0, y: 0, width: w, height: 200))
+        let longShot = try #require(ctx.makeImage())
+
+        let cutout = DeviceFrameRenderer.render(
+            screen: longShot,
+            options: DeviceFrameOptions(
+                model: .iPhone18ProMax,
+                finish: .spaceBlack,
+                showsBackground: false
+            )
+        )
+        let aspect = Double(cutout.height) / Double(max(cutout.width, 1))
+        #expect(aspect > 4.5, "Expected stretched iPhone bezel aspect > 4.5 for 1:6 long screenshot, got \(aspect)")
+
+        let cutoutBytes = bytes(cutout)
+        let rowStride = cutout.width * 4
+        let sampleX = cutout.width / 2
+        // Remember bytes(_:) is bottom-up: row ~94% of height is near top, row ~6% is near bottom.
+        let topSampleY = Int(Double(cutout.height) * 0.94)
+        let botSampleY = Int(Double(cutout.height) * 0.06)
+        let topIdx = topSampleY * rowStride + sampleX * 4
+        let botIdx = botSampleY * rowStride + sampleX * 4
+        #expect(cutoutBytes[topIdx] > 180 && cutoutBytes[topIdx + 2] < 80, "Top red band should be preserved")
+        #expect(cutoutBytes[botIdx + 2] > 180 && cutoutBytes[botIdx] < 80, "Bottom blue band must not be truncated")
+
+        let studio = DeviceFrameRenderer.render(
+            screen: longShot,
+            options: DeviceFrameOptions(
+                model: .iPhone17,
+                finish: .blue,
+                showsBackground: true,
+                backdropKind: .solidColor,
+                solidBackgroundColor: CustomColorRGB(red: 0.92, green: 0.93, blue: 0.95)
+            )
+        )
+        #expect(studio.height > studio.width * 3, "Studio backdrop must keep tall height for long iPhone screenshot")
+        let studioBytes = bytes(studio)
+        let sStride = studio.width * 4
+        let sX = studio.width / 2
+        let hasTopRed = (Int(Double(studio.height) * 0.72)..<Int(Double(studio.height) * 0.96)).contains { y in
+            let p = y * sStride + sX * 4
+            return studioBytes[p] > 180 && studioBytes[p + 2] < 80
+        }
+        let hasBotBlue = (Int(Double(studio.height) * 0.04)..<Int(Double(studio.height) * 0.28)).contains { y in
+            let p = y * sStride + sX * 4
+            return studioBytes[p + 2] > 180 && studioBytes[p] < 80
+        }
+        #expect(hasTopRed, "Top red band should remain intact in studio frame")
+        #expect(hasBotBlue, "Bottom blue band must not be truncated in studio frame")
+
+        // Stitcher exceeding maxHeight scales proportionally instead of dropping bottom frames.
+        let redFrame = Sample.solid(width: 300, height: 600, fill: CGColor(red: 0.95, green: 0.15, blue: 0.15, alpha: 1))
+        let greenFrame = Sample.solid(width: 300, height: 600, fill: CGColor(red: 0.15, green: 0.85, blue: 0.25, alpha: 1))
+        let blueFrame = Sample.solid(width: 300, height: 600, fill: CGColor(red: 0.12, green: 0.25, blue: 0.95, alpha: 1))
+        let layout = try LongScreenshotStitcher.computeVerticalLayout(
+            images: [redFrame, greenFrame, blueFrame],
+            options: .init(direction: .vertical, smartOverlap: false)
+        )
+        let scaled = try LongScreenshotStitcher.renderVertical(layout: layout, seams: layout.seams, maxHeight: 900)
+        #expect(scaled.image.height == 900)
+        #expect(scaled.image.width == 150)
+        let scaledBytes = bytes(scaled.image)
+        let scaledBotIdx = 12 * scaled.image.width * 4 + (scaled.image.width / 2) * 4
+        #expect(scaledBytes[scaledBotIdx + 2] > 180 && scaledBytes[scaledBotIdx] < 80, "Scaled stitch must retain final blue frame")
+    }
+
+    @Test
+    func exportShareFileUsesConcreteExtensionAndWritesReadableImage() throws {
+        let img = Sample.solid(width: 64, height: 64, fill: CGColor(red: 0.25, green: 0.55, blue: 0.90, alpha: 1))
+        let src = try #require(CGImageSourceCreateWithData(Sample.jpeg(img) as CFData, nil))
+        let pngData = try MaskRenderer.encode(
+            src,
+            orientation: .up,
+            findings: [],
+            options: MaskRenderer.Options(format: .png)
+        )
+        let url = try ExportActions.makeShareFileURL(data: pngData, fileType: .png)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        #expect(url.pathExtension == "png")
+        let diskData = try Data(contentsOf: url)
+        #expect(diskData == pngData)
+        #expect(ExportActions.fileExtension(for: .jpeg) == "jpg")
+        #expect(ExportActions.fileExtension(for: .heic) == "heic")
     }
 }
 

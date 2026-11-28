@@ -227,6 +227,14 @@ final class EditorModel {
     private(set) var preferences: Preferences
     /// Per-image anti-theft watermark settings (intentionally off by default on each new image).
     var watermark: WatermarkOptions = .off
+    /// Per-image Apple device mockup frame applied on export.
+    var deviceFrame: DeviceFrameOptions = .none
+    /// Per-image export aspect ratio preset (social media covers, App Store screenshots, or original).
+    var exportAspectRatio: ExportAspectRatio = .original
+    /// Fit vs center-crop fill mode when an explicit export aspect ratio is chosen.
+    var exportAspectFit: ExportAspectFitMode = .fit
+    /// Backdrop style around the picture when `.fit` aspect framing adds margins.
+    var exportAspectBackdrop: ExportAspectBackdrop = .adaptiveBlur
     /// Whether the watermark configuration sheet is presented.
     var watermarkShown = false
     /// Whether the expanded emoji catalog picker sheet is presented.
@@ -294,7 +302,11 @@ final class EditorModel {
             strength: preferences.strength,
             watermark: watermark,
             stripMetadata: preferences.stripMetadata,
-            format: preferences.exportFormat
+            format: preferences.exportFormat,
+            deviceFrame: deviceFrame,
+            exportAspectRatio: exportAspectRatio,
+            exportAspectFit: exportAspectFit,
+            exportAspectBackdrop: exportAspectBackdrop
         )
     }
 
@@ -321,6 +333,12 @@ final class EditorModel {
     func cancelRecognition() {
         recognitionTask?.cancel()
         recognitionTask = nil
+    }
+
+    /// Marks the session ready for manual drawing or direct export without running auto-redaction.
+    func markReadyWithoutRecognition() {
+        cancelRecognition()
+        recognition = .done
     }
 
     func retryRecognition() {

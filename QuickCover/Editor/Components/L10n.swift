@@ -108,6 +108,13 @@ enum L10n {
         return String(format: format, locale: locale, version, build)
     }
 
+    /// Formatted version pill inside the What's New header (e.g. "Version 1.0 (5)" / "版本 1.0 (5)").
+    static func whatsNewVersion(_ version: String, bundle: Bundle? = nil) -> String {
+        let format = text("whatsnew.versionFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, version)
+    }
+
     /// Search result count heading in EmojiPickerSheet (e.g. "找到 12 个表情" / "12 matches").
     static func emojiSearchCount(_ count: Int, bundle: Bundle? = nil) -> String {
         let format = text("emoji.searchCountFormat", bundle: bundle)
@@ -125,6 +132,42 @@ enum L10n {
     /// Apple Photos-style subtitle count for Screenshots (e.g. "24 张截图" / "24 Screenshots").
     static func libraryScreenshotCount(_ count: Int, bundle: Bundle? = nil) -> String {
         let format = text("library.screenshotCountFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
+    /// Multi-select stitch button title (e.g. "拼成长截图 (3)" / "Stitch Long (3)").
+    static func longshotStitchButton(_ count: Int, bundle: Bundle? = nil) -> String {
+        let format = text("longshot.stitchButtonFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
+    /// Subtitle while multi-selecting frames inside Library grid.
+    static func longshotSelectHint(_ count: Int, bundle: Bundle? = nil) -> String {
+        guard count > 0 else { return text("longshot.selectZero", bundle: bundle) }
+        let format = text("longshot.selectCountFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
+    /// Detected overlap count badge in stitched preview (e.g. "自动去重 2 处" / "2 overlaps merged").
+    static func longshotOverlapCount(_ count: Int, bundle: Bundle? = nil) -> String {
+        let format = text("longshot.overlapFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, count)
+    }
+
+    /// Seam pill title in long-screenshot seam adjuster (e.g. "接缝 1" / "Seam 1").
+    static func longshotSeamTitle(_ index: Int, bundle: Bundle? = nil) -> String {
+        let format = text("longshot.seamFormat", bundle: bundle)
+        let locale = bundle.flatMap(locale(for:)) ?? .current
+        return String(format: format, locale: locale, index)
+    }
+
+    /// Hub CTA title for starting stitch with selected count (e.g. "开始拼接 (3)" / "Stitch (3)").
+    static func longshotStartStitch(_ count: Int, bundle: Bundle? = nil) -> String {
+        let format = text("longshot.hub.startStitchFormat", bundle: bundle)
         let locale = bundle.flatMap(locale(for:)) ?? .current
         return String(format: format, locale: locale, count)
     }

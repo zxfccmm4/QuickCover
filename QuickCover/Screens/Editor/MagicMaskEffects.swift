@@ -289,3 +289,165 @@ struct AppleIntelligenceRimGlow: View {
         }
     }
 }
+
+/// Compact, luminous Apple Intelligence iridescent plasma orb (and optional determinate ring progress)
+/// used across buttons, status capsules, and full-stage loading views.
+struct AppleIntelligenceOrb: View {
+    var size: CGFloat = 24
+    var progress: Double? = nil
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(paused: reduceMotion)) { timeline in
+            let t = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
+            let spinA = Angle.degrees(t.truncatingRemainder(dividingBy: 2.4) / 2.4 * 360)
+            let spinB = Angle.degrees(-t.truncatingRemainder(dividingBy: 3.6) / 3.6 * 360)
+            let pulse = reduceMotion ? 1.0 : (0.92 + 0.08 * sin(t * 3.2))
+
+            ZStack {
+                // Soft ambient iridescent halo
+                Circle()
+                    .fill(
+                        AngularGradient(
+                            colors: AppleIntelligencePalette.colors,
+                            center: .center,
+                            angle: spinA
+                        )
+                    )
+                    .blur(radius: size * 0.24)
+                    .opacity(0.55)
+                    .scaleEffect(pulse * 1.18)
+
+                // Counter-rotating plasma core
+                Circle()
+                    .fill(
+                        AngularGradient(
+                            colors: AppleIntelligencePalette.colors.reversed(),
+                            center: .center,
+                            angle: spinB
+                        )
+                    )
+                    .frame(width: size * 0.78, height: size * 0.78)
+                    .overlay(
+                        Circle()
+                            .strokeBorder(
+                                AngularGradient(
+                                    colors: AppleIntelligencePalette.colors,
+                                    center: .center,
+                                    angle: spinA
+                                ),
+                                lineWidth: max(1.5, size * 0.08)
+                            )
+                    )
+                    .overlay(
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [.white.opacity(0.88), .white.opacity(0.08), .clear],
+                                    center: UnitPoint(x: 0.35, y: 0.30),
+                                    startRadius: 0,
+                                    endRadius: size * 0.45
+                                )
+                            )
+                    )
+
+                if let progress, progress > 0.01 {
+                    Circle()
+                        .trim(from: 0, to: min(max(progress, 0.02), 1.0))
+                        .stroke(
+                            AngularGradient(
+                                colors: AppleIntelligencePalette.colors,
+                                center: .center,
+                                angle: spinA
+                            ),
+                            style: StrokeStyle(lineWidth: max(2, size * 0.075), lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: size * 1.06, height: size * 1.06)
+                        .animation(.easeOut(duration: 0.22), value: progress)
+                }
+            }
+            .frame(width: size, height: size)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Clean label with a traveling Apple Intelligence specular highlight sheen.
+struct AppleIntelligenceShimmerText: View {
+    let text: LocalizedStringKey
+    var font: Font = .subheadline.weight(.semibold)
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if reduceMotion {
+            Text(text)
+                .font(font)
+                .foregroundStyle(.white.opacity(0.92))
+        } else {
+            TimelineView(.animation) { timeline in
+                let cycle = timeline.date.timeIntervalSinceReferenceDate
+                    .truncatingRemainder(dividingBy: 1.9) / 1.9
+                let sweep = -0.35 + cycle * 1.7
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(0.62), location: max(0, sweep - 0.24)),
+                                .init(color: AppleIntelligencePalette.colors[0], location: max(0, min(1, sweep - 0.08))),
+                                .init(color: .white, location: max(0, min(1, sweep))),
+                                .init(color: AppleIntelligencePalette.colors[4], location: max(0, min(1, sweep + 0.08))),
+                                .init(color: .white.opacity(0.62), location: min(1, sweep + 0.24)),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+        }
+    }
+}
+
+/// Full-stage Apple Intelligence loading showcase with luminous plasma orb, shimmer text,
+/// optional percentage readout, and soft edge rim glow.
+struct AppleIntelligenceLoadingView: View {
+    let title: LocalizedStringKey
+    var progress: Double? = nil
+    var showsEdgeGlow: Bool = true
+
+    var body: some View {
+        ZStack {
+            if showsEdgeGlow {
+                AppleIntelligenceRimGlow(cornerRadius: 28)
+                    .padding(6)
+                    .opacity(0.42)
+            }
+
+            VStack(spacing: 18) {
+                AppleIntelligenceOrb(size: 62, progress: progress)
+
+                VStack(spacing: 6) {
+                    AppleIntelligenceShimmerText(
+                        text: title,
+                        font: .subheadline.weight(.semibold)
+                    )
+                    .multilineTextAlignment(.center)
+
+                    if let progress, progress > 0.01 {
+                        Text(verbatim: "\(Int((min(progress, 1) * 100).rounded()))%")
+                            .font(.caption.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.72))
+                            .contentTransition(.numericText())
+                    }
+                }
+            }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 24)
+            .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}

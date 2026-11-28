@@ -11,28 +11,31 @@ struct PictureCapsule: View {
     var body: some View {
         HStack(spacing: 8) {
             if spins {
-                ProgressView()
-                    .controlSize(.small)
-                    .tint(.white)
-                    .accessibilityHidden(true)
+                AppleIntelligenceOrb(size: 18)
             } else if usesIntelligenceAccent {
                 Image(systemName: "sparkles")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppleIntelligencePalette.linearGradient)
                     .accessibilityHidden(true)
             }
-            Text(text)
-                .font(.subheadline.weight(weight))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
+            Group {
+                if spins {
+                    AppleIntelligenceShimmerText(text: text, font: .subheadline.weight(weight))
+                } else {
+                    Text(text)
+                        .font(.subheadline.weight(weight))
+                        .foregroundStyle(.white)
+                }
+            }
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .frame(minHeight: 36)
         .glassEffect(.regular, in: .capsule)
         .overlay {
-            if usesIntelligenceAccent {
+            if usesIntelligenceAccent || spins {
                 Capsule()
                     .stroke(AppleIntelligencePalette.linearGradient.opacity(0.65), lineWidth: 1)
             }
@@ -173,7 +176,7 @@ struct SelectedManualBoxFrame: View {
     }
 }
 
-/// Real-time diagonal watermark preview layer matching `MaskRenderer.drawWatermark` at 60fps.
+/// Real-time watermark preview layer matching `MaskRenderer` & `DeviceFrameRenderer` at 60fps.
 struct WatermarkLiveOverlay: View {
     let options: WatermarkOptions
 
@@ -183,7 +186,19 @@ struct WatermarkLiveOverlay: View {
                 cg.saveGState()
                 cg.translateBy(x: 0, y: size.height)
                 cg.scaleBy(x: 1, y: -1)
-                MaskRenderer.drawWatermark(in: cg, size: size, options: options)
+                if options.placement == .bottomBadge {
+                    DeviceFrameRenderer.drawBottomBadge(
+                        in: cg,
+                        canvasSize: size,
+                        bandHeight: max(36, min(size.width, size.height) * 0.11),
+                        watermark: options,
+                        modelName: nil,
+                        onDarkBackground: false,
+                        usePillBacking: true
+                    )
+                } else {
+                    MaskRenderer.drawWatermark(in: cg, size: size, options: options)
+                }
                 cg.restoreGState()
             }
         }

@@ -225,6 +225,143 @@ enum ExportFormat: String, CaseIterable, Codable, Sendable, Identifiable {
     }
 }
 
+/// Groupings for export canvas aspect ratio presets.
+enum ExportAspectCategory: String, CaseIterable, Identifiable, Sendable {
+    case all
+    case social
+    case appStore
+    case standard
+
+    var id: String { rawValue }
+
+    var titleKey: String { "export.aspectCat.\(rawValue)" }
+
+    var systemImage: String {
+        switch self {
+        case .all: "square.grid.2x2"
+        case .social: "sparkles.tv"
+        case .appStore: "app.badge"
+        case .standard: "aspectratio"
+        }
+    }
+}
+
+/// Output canvas aspect ratio presets covering Xiaohongshu, Douyin, WeChat, Bilibili, Instagram, YouTube, X, App Store, and standard photo formats.
+enum ExportAspectRatio: String, CaseIterable, Codable, Sendable, Identifiable {
+    case original
+    case xiaohongshu3x4
+    case douyin9x16
+    case wechatCover
+    case bilibili16x9
+    case portrait4x5
+    case youtube16x9
+    case xCard16x9
+    case appStorePhone69
+    case appStoreIPad13
+    case appStoreMac16x10
+    case square1x1
+    case portrait2x3
+    case classic4x3
+    case photo3x2
+
+    var id: String { rawValue }
+
+    var titleKey: String { "export.aspect.\(rawValue)" }
+
+    var category: ExportAspectCategory {
+        switch self {
+        case .xiaohongshu3x4, .douyin9x16, .wechatCover, .bilibili16x9, .portrait4x5, .youtube16x9, .xCard16x9:
+            .social
+        case .appStorePhone69, .appStoreIPad13, .appStoreMac16x10:
+            .appStore
+        case .original, .square1x1, .portrait2x3, .classic4x3, .photo3x2:
+            .standard
+        }
+    }
+
+    static func presets(in category: ExportAspectCategory) -> [ExportAspectRatio] {
+        switch category {
+        case .all:
+            allCases
+        case .social, .appStore:
+            allCases.filter { $0.category == category }
+        case .standard:
+            allCases.filter { $0.category == .standard }
+        }
+    }
+
+    var ratioBadge: String? {
+        switch self {
+        case .original: nil
+        case .xiaohongshu3x4: "3:4"
+        case .douyin9x16: "9:16"
+        case .wechatCover: "2.35:1"
+        case .bilibili16x9, .youtube16x9, .xCard16x9: "16:9"
+        case .portrait4x5: "4:5"
+        case .appStorePhone69: "6.9\""
+        case .appStoreIPad13: "13\""
+        case .appStoreMac16x10: "16:10"
+        case .square1x1: "1:1"
+        case .portrait2x3: "2:3"
+        case .classic4x3: "4:3"
+        case .photo3x2: "3:2"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .original: "aspectratio"
+        case .xiaohongshu3x4, .portrait4x5, .portrait2x3: "rectangle.portrait"
+        case .douyin9x16, .appStorePhone69: "iphone"
+        case .appStoreIPad13: "ipad"
+        case .appStoreMac16x10: "macbook"
+        case .wechatCover, .bilibili16x9, .youtube16x9, .xCard16x9: "play.rectangle"
+        case .square1x1: "square"
+        case .classic4x3, .photo3x2: "photo"
+        }
+    }
+
+    var ratio: CGFloat? {
+        switch self {
+        case .original: nil
+        case .xiaohongshu3x4: 3.0 / 4.0
+        case .douyin9x16: 9.0 / 16.0
+        case .wechatCover: 2.35
+        case .bilibili16x9, .youtube16x9, .xCard16x9: 16.0 / 9.0
+        case .portrait4x5: 4.0 / 5.0
+        case .appStorePhone69: 1320.0 / 2868.0
+        case .appStoreIPad13: 3.0 / 4.0
+        case .appStoreMac16x10: 16.0 / 10.0
+        case .square1x1: 1.0
+        case .portrait2x3: 2.0 / 3.0
+        case .classic4x3: 4.0 / 3.0
+        case .photo3x2: 3.0 / 2.0
+        }
+    }
+}
+
+/// How an exported image fits inside a selected `ExportAspectRatio` canvas when no studio device frame adapts natively.
+enum ExportAspectFitMode: String, CaseIterable, Codable, Sendable, Identifiable {
+    case fit
+    case fill
+
+    var id: String { rawValue }
+
+    var titleKey: String { "export.aspectFit.\(rawValue)" }
+}
+
+/// Background fill style for `.fit` aspect-ratio framing.
+enum ExportAspectBackdrop: String, CaseIterable, Codable, Sendable, Identifiable {
+    case adaptiveBlur
+    case light
+    case dark
+    case white
+
+    var id: String { rawValue }
+
+    var titleKey: String { "export.aspectBg.\(rawValue)" }
+}
+
 /// Single searchable emoji entry from the bundled Unicode 16.0 catalog.
 struct EmojiEntry: Identifiable, Hashable, Sendable {
     let symbol: String
@@ -387,8 +524,21 @@ enum EmojiPreset {
     }
 }
 
-/// Anti-theft tiled diagonal watermark settings for ID cards, licenses, and documents.
+/// Anti-theft diagonal watermark & studio bottom-badge signature settings.
 struct WatermarkOptions: Equatable, Codable, Sendable {
+    enum Placement: String, CaseIterable, Codable, Sendable, Identifiable {
+        /// Diagonal anti-theft watermark over the redacted screenshot (default).
+        case tiled
+        /// Diagonal anti-theft watermark across the entire framed canvas and background.
+        case fullCanvasTiled
+        /// Clean Picsew / Leica-style signature caption along the bottom of the canvas.
+        case bottomBadge
+
+        var id: String { rawValue }
+
+        var titleKey: String { "wm.place.\(rawValue)" }
+    }
+
     enum Density: String, CaseIterable, Codable, Sendable, Identifiable {
         case sparse
         case medium
@@ -440,9 +590,14 @@ struct WatermarkOptions: Equatable, Codable, Sendable {
     var opacity: Double = 0.28
     var density: Density = .medium
     var tint: Tint = .slate
+    var placement: Placement = .tiled
+    /// When using `.bottomBadge` with an Apple device frame, appends the exact Apple model name.
+    var showsDeviceModel: Bool = true
 
     var isActive: Bool {
-        isEnabled && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard isEnabled else { return false }
+        if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        return placement == .bottomBadge && showsDeviceModel
     }
 
     static let off = WatermarkOptions()
@@ -488,6 +643,12 @@ enum MaskRenderer {
         var quality = 0.95
         /// How coarse the blur is. The app leaves it at the shipped grain; the probe tries others.
         var blurGrain: BlurGrain = .default
+        /// Optional post-redaction Apple hardware frame applied on export.
+        var deviceFrame: DeviceFrameOptions = .none
+        /// Optional output canvas aspect ratio preset.
+        var exportAspectRatio: ExportAspectRatio = .original
+        var exportAspectFit: ExportAspectFitMode = .fit
+        var exportAspectBackdrop: ExportAspectBackdrop = .adaptiveBlur
 
         var appearance: MaskAppearance {
             MaskAppearance(
@@ -543,11 +704,19 @@ enum MaskRenderer {
             upright,
             findings: findings,
             appearance: options.appearance,
-            blurGrain: options.blurGrain
+            blurGrain: options.blurGrain,
+            deviceFrame: options.deviceFrame,
+            exportAspectRatio: options.exportAspectRatio,
+            exportAspectFit: options.exportAspectFit,
+            exportAspectBackdrop: options.exportAspectBackdrop
         )
 
         let sourceType = (CGImageSourceGetType(source) as String?).flatMap(UTType.init)
-        let targetType = options.format.utType(original: sourceType)
+        var targetType = options.format.utType(original: sourceType)
+        if options.deviceFrame.needsPNG {
+            // Preserve transparent alpha channel around background-free hardware cutouts.
+            targetType = .png
+        }
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(data, targetType.identifier as CFString, 1, nil) else {
             throw Failure.cannotEncode
@@ -578,7 +747,8 @@ enum MaskRenderer {
     }
 
     /// Full-featured pixel flattening supporting all 6 masking styles, Magic Erase multi-directional
-    /// inpainting, rich mosaic/stripe/solid colors, granularity, and diagonal anti-theft watermarks.
+    /// inpainting, rich mosaic/stripe/solid colors, granularity, diagonal watermarks, optional Apple
+    /// device mockup frames, and social media / App Store export aspect ratio framing.
     static func flatten(
         _ image: CGImage,
         findings: [Finding],
@@ -586,81 +756,242 @@ enum MaskRenderer {
         blurGrain: BlurGrain = .default,
         floor: CGFloat = mosaicFloor,
         stripeOrigin: CGPoint = .zero,
-        medianTextHeight: CGFloat? = nil
+        medianTextHeight: CGFloat? = nil,
+        deviceFrame: DeviceFrameOptions = .none,
+        exportAspectRatio: ExportAspectRatio = .original,
+        exportAspectFit: ExportAspectFitMode = .fit,
+        exportAspectBackdrop: ExportAspectBackdrop = .adaptiveBlur
     ) -> CGImage {
-        let hasWatermark = appearance.watermark.isActive
-        guard (!findings.isEmpty || hasWatermark),
-              let context = CGImage.rgbaContext(width: image.width, height: image.height) else {
-            return image
-        }
-        let width = CGFloat(image.width)
-        let height = CGFloat(image.height)
-        context.interpolationQuality = .high
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let wm = appearance.watermark
+        let drawsPreFrameWatermark = wm.isActive && (
+            wm.placement == .tiled || (!deviceFrame.isStudioCanvasActive && wm.placement == .fullCanvasTiled)
+        )
+        let drawsUnframedBadge = wm.isActive && !deviceFrame.isStudioCanvasActive && wm.placement == .bottomBadge
+        let flat: CGImage
+        if (!findings.isEmpty || drawsPreFrameWatermark || drawsUnframedBadge),
+           let context = CGImage.rgbaContext(width: image.width, height: image.height) {
+            let width = CGFloat(image.width)
+            let height = CGFloat(image.height)
+            context.interpolationQuality = .high
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
 
-        let resolvedMedianTextHeight = medianTextHeight ?? computeMedianTextHeight(in: findings)
+            let resolvedMedianTextHeight = medianTextHeight ?? computeMedianTextHeight(in: findings)
 
-        // Top-left pixel coordinates matching findings.
-        context.saveGState()
-        context.translateBy(x: 0, y: height)
-        context.scaleBy(x: 1, y: -1)
+            // Top-left pixel coordinates matching findings.
+            context.saveGState()
+            context.translateBy(x: 0, y: height)
+            context.scaleBy(x: 1, y: -1)
 
-        for finding in findings {
-            for quad in finding.quads {
-                let path = quadPath(quad)
-                let rect = Geometry.bounds(of: quad)
-                switch appearance.style {
-                case .solid:
-                    context.setFillColor(appearance.resolvedSolidCGColor)
-                    context.addPath(path)
-                    context.fillPath()
-                case .conceal:
-                    magicErase(from: image, rect: rect, path: path, into: context)
-                case .emoji:
-                    drawEmojiCover(
-                        from: image,
-                        rect: rect,
-                        path: path,
-                        emoji: appearance.emoji,
-                        into: context
-                    )
-                case .mosaic, .blur:
-                    cover(
-                        from: image,
-                        rect: rect,
-                        path: path,
-                        finding: finding,
-                        into: context,
-                        style: appearance.style,
-                        tint: appearance.style == .mosaic ? appearance.mosaicTint : .original,
-                        strength: appearance.strength,
-                        blurGrain: blurGrain,
-                        floor: floor
-                    )
-                case .stripes:
-                    drawStripes(
-                        from: image,
-                        rect: rect,
-                        path: path,
-                        finding: finding,
-                        into: context,
-                        tint: appearance.mosaicTint,
-                        strength: appearance.strength,
-                        blurGrain: blurGrain,
-                        floor: floor,
-                        stripeOrigin: stripeOrigin,
-                        medianTextHeight: resolvedMedianTextHeight
-                    )
+            for finding in findings {
+                for quad in finding.quads {
+                    let path = quadPath(quad)
+                    let rect = Geometry.bounds(of: quad)
+                    switch appearance.style {
+                    case .solid:
+                        context.setFillColor(appearance.resolvedSolidCGColor)
+                        context.addPath(path)
+                        context.fillPath()
+                    case .conceal:
+                        magicErase(from: image, rect: rect, path: path, into: context)
+                    case .emoji:
+                        drawEmojiCover(
+                            from: image,
+                            rect: rect,
+                            path: path,
+                            emoji: appearance.emoji,
+                            into: context
+                        )
+                    case .mosaic, .blur:
+                        cover(
+                            from: image,
+                            rect: rect,
+                            path: path,
+                            finding: finding,
+                            into: context,
+                            style: appearance.style,
+                            tint: appearance.style == .mosaic ? appearance.mosaicTint : .original,
+                            strength: appearance.strength,
+                            blurGrain: blurGrain,
+                            floor: floor
+                        )
+                    case .stripes:
+                        drawStripes(
+                            from: image,
+                            rect: rect,
+                            path: path,
+                            finding: finding,
+                            into: context,
+                            tint: appearance.mosaicTint,
+                            strength: appearance.strength,
+                            blurGrain: blurGrain,
+                            floor: floor,
+                            stripeOrigin: stripeOrigin,
+                            medianTextHeight: resolvedMedianTextHeight
+                        )
+                    }
                 }
             }
-        }
-        context.restoreGState()
+            context.restoreGState()
 
-        if hasWatermark {
-            drawWatermark(in: context, size: CGSize(width: width, height: height), options: appearance.watermark)
+            if drawsPreFrameWatermark {
+                drawWatermark(in: context, size: CGSize(width: width, height: height), options: wm)
+            }
+            if drawsUnframedBadge {
+                let bandH = max(56, min(width, height) * 0.085)
+                DeviceFrameRenderer.drawBottomBadge(
+                    in: context,
+                    canvasSize: CGSize(width: width, height: height),
+                    bandHeight: bandH,
+                    watermark: wm,
+                    modelName: nil,
+                    onDarkBackground: false,
+                    usePillBacking: true
+                )
+            }
+
+            flat = context.makeImage() ?? image
+        } else {
+            flat = image
         }
 
-        return context.makeImage() ?? image
+        if deviceFrame.isStudioCanvasActive {
+            let postFrameWatermark: WatermarkOptions = (wm.isActive && wm.placement != .tiled) ? wm : .off
+            let usesNativeStudioAspect = deviceFrame.showsBackground &&
+                deviceFrame.canvasAspect == .auto &&
+                exportAspectRatio != .original
+            let framed = DeviceFrameRenderer.render(
+                screen: flat,
+                options: deviceFrame,
+                watermark: postFrameWatermark,
+                targetAspectOverride: usesNativeStudioAspect ? exportAspectRatio.ratio : nil
+            )
+            if usesNativeStudioAspect || exportAspectRatio == .original {
+                return framed
+            }
+            return applyExportAspectRatio(
+                framed,
+                ratio: exportAspectRatio,
+                fitMode: exportAspectFit,
+                backdrop: exportAspectBackdrop,
+                transparentMargin: deviceFrame.needsPNG
+            )
+        }
+
+        let scaled = deviceFrame.outputScale < 0.995
+            ? DeviceFrameRenderer.scaleImage(flat, factor: deviceFrame.outputScale)
+            : flat
+        return applyExportAspectRatio(
+            scaled,
+            ratio: exportAspectRatio,
+            fitMode: exportAspectFit,
+            backdrop: exportAspectBackdrop,
+            transparentMargin: false
+        )
+    }
+
+    /// Crops or pads `image` cleanly to match any `ExportAspectRatio` social media or App Store target aspect ratio.
+    static func applyExportAspectRatio(
+        _ image: CGImage,
+        ratio: ExportAspectRatio,
+        fitMode: ExportAspectFitMode = .fit,
+        backdrop: ExportAspectBackdrop = .adaptiveBlur,
+        transparentMargin: Bool = false
+    ) -> CGImage {
+        guard let targetRatio = ratio.ratio, image.width > 0, image.height > 0 else {
+            return image
+        }
+        let srcW = CGFloat(image.width)
+        let srcH = CGFloat(image.height)
+        let srcRatio = srcW / srcH
+        if abs(srcRatio - targetRatio) < 0.004 {
+            return image
+        }
+
+        switch fitMode {
+        case .fill:
+            let cropRect: CGRect
+            if srcRatio > targetRatio {
+                let targetW = max(16, (srcH * targetRatio).rounded())
+                let x0 = max(0, ((srcW - targetW) / 2).rounded())
+                cropRect = CGRect(x: x0, y: 0, width: min(srcW - x0, targetW), height: srcH)
+            } else {
+                let targetH = max(16, (srcW / targetRatio).rounded())
+                let y0 = max(0, ((srcH - targetH) / 2).rounded())
+                cropRect = CGRect(x: 0, y: y0, width: srcW, height: min(srcH - y0, targetH))
+            }
+            return image.cropping(to: cropRect) ?? image
+
+        case .fit:
+            var outW = srcW
+            var outH = outW / targetRatio
+            if outH < srcH {
+                outH = srcH
+                outW = outH * targetRatio
+            }
+            let maxEdge: CGFloat = 4096
+            let longest = max(outW, outH)
+            if longest > maxEdge {
+                let shrink = maxEdge / longest
+                outW *= shrink
+                outH *= shrink
+            }
+            let canvasW = max(32, Int(outW.rounded()))
+            let canvasH = max(32, Int(outH.rounded()))
+            guard let ctx = CGImage.rgbaContext(width: canvasW, height: canvasH) else {
+                return image
+            }
+            let canvasRect = CGRect(x: 0, y: 0, width: canvasW, height: canvasH)
+
+            if transparentMargin {
+                ctx.clear(canvasRect)
+            } else {
+                switch backdrop {
+                case .adaptiveBlur:
+                    DeviceFrameRenderer.drawAdaptiveBlurBackdrop(screen: image, in: ctx, rect: canvasRect)
+                case .light:
+                    ctx.setFillColor(CGColor(red: 0.96, green: 0.96, blue: 0.97, alpha: 1))
+                    ctx.fill(canvasRect)
+                case .dark:
+                    ctx.setFillColor(CGColor(red: 0.07, green: 0.07, blue: 0.08, alpha: 1))
+                    ctx.fill(canvasRect)
+                case .white:
+                    ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+                    ctx.fill(canvasRect)
+                }
+            }
+
+            let marginFactor: CGFloat = transparentMargin ? 0.96 : 0.92
+            let fitScale = min((CGFloat(canvasW) * marginFactor) / srcW, (CGFloat(canvasH) * marginFactor) / srcH)
+            let drawW = max(8, (srcW * fitScale).rounded())
+            let drawH = max(8, (srcH * fitScale).rounded())
+            let drawRect = CGRect(
+                x: ((CGFloat(canvasW) - drawW) / 2).rounded(),
+                y: ((CGFloat(canvasH) - drawH) / 2).rounded(),
+                width: drawW,
+                height: drawH
+            )
+
+            ctx.saveGState()
+            ctx.interpolationQuality = .high
+            if !transparentMargin {
+                ctx.setShadow(
+                    offset: CGSize(width: 0, height: -max(4, min(drawW, drawH) * 0.014)),
+                    blur: max(12, min(drawW, drawH) * 0.045),
+                    color: CGColor(red: 0, green: 0, blue: 0, alpha: 0.18)
+                )
+            }
+            let radius = transparentMargin ? 0 : min(18, min(drawW, drawH) * 0.025)
+            if radius > 1 {
+                let clip = CGPath(roundedRect: drawRect, cornerWidth: radius, cornerHeight: radius, transform: nil)
+                ctx.beginPath()
+                ctx.addPath(clip)
+                ctx.clip()
+            }
+            ctx.draw(image, in: drawRect)
+            ctx.restoreGState()
+
+            return ctx.makeImage() ?? image
+        }
     }
 
     // MARK: - Grid sizing

@@ -210,4 +210,22 @@ struct ShellModelTests {
         #expect(Route.editor != Route.export)
         #expect([Route.picker, Route.editor, Route.export].count == 3)
     }
+
+    @Test
+    @MainActor
+    func stitchTabSwitchAndPendingRequestHandoff() async throws {
+        let shell = shell(status: .authorized)
+        await shell.start()
+        #expect(shell.selectedTab == .library)
+        #expect(shell.pendingStitchRequest == nil)
+
+        shell.openStitchTab(mode: .multiImage, assets: [], assetIDs: ["a1", "a2"])
+        #expect(shell.selectedTab == .stitch)
+        #expect(shell.pendingStitchRequest?.assetIDs == ["a1", "a2"])
+        #expect(shell.pendingStitchRequest?.mode == .multiImage)
+
+        shell.openForExport(try picture())
+        #expect(shell.path == [.editor, .export])
+        shell.editor?.cancelRecognition()
+    }
 }

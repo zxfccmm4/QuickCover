@@ -1,21 +1,30 @@
 import SwiftUI
 
-/// Dark-studio Liquid Glass inspector sheet for configuring diagonal anti-theft watermarks
-/// (ideal for ID cards, licenses, contracts, and verification screenshots).
-/// Allows live canvas preview directly above the sheet while editing text, opacity, density, and tint.
+/// Adaptive Liquid Glass inspector sheet for configuring diagonal anti-theft watermarks and
+/// Picsew/Leica-style bottom studio signature captions. Works identically from both `EditorScreen`
+/// (dark studio) and `ExportScreen` (adaptive light/dark export preview).
 struct WatermarkSheet: View {
     @Environment(EditorModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selectionFeedbackCount = 0
 
     private static let presetKeys = [
         "wm.preset.business",
         "wm.preset.identity",
+        "wm.preset.showcase",
         "wm.preset.rental",
         "wm.preset.once",
     ]
 
+    private var accentColor: Color {
+        colorScheme == .dark ? Theme.accentOnBlack : Theme.accent
+    }
+
     private var sheetCardFill: Color {
-        Color(.secondarySystemGroupedBackground).opacity(0.86)
+        colorScheme == .dark
+            ? Color(.secondarySystemGroupedBackground).opacity(0.86)
+            : Color(.secondarySystemGroupedBackground)
     }
 
     private var enabledBinding: Binding<Bool> {
@@ -24,7 +33,9 @@ struct WatermarkSheet: View {
             set: { enabled in
                 model.watermark.isEnabled = enabled
                 if enabled && model.watermark.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    model.watermark.text = L10n.text("wm.preset.business")
+                    model.watermark.text = L10n.text(
+                        model.watermark.placement == .bottomBadge ? "wm.preset.showcase" : "wm.preset.business"
+                    )
                 }
                 selectionFeedbackCount += 1
             }
@@ -39,6 +50,34 @@ struct WatermarkSheet: View {
                 if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !model.watermark.isEnabled {
                     model.watermark.isEnabled = true
                 }
+            }
+        )
+    }
+
+    private var placementBinding: Binding<WatermarkOptions.Placement> {
+        Binding(
+            get: { model.watermark.placement },
+            set: { newPlacement in
+                model.watermark.placement = newPlacement
+                if !model.watermark.isEnabled {
+                    model.watermark.isEnabled = true
+                    if model.watermark.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        model.watermark.text = L10n.text(
+                            newPlacement == .bottomBadge ? "wm.preset.showcase" : "wm.preset.business"
+                        )
+                    }
+                }
+                selectionFeedbackCount += 1
+            }
+        )
+    }
+
+    private var showsDeviceModelBinding: Binding<Bool> {
+        Binding(
+            get: { model.watermark.showsDeviceModel },
+            set: { newValue in
+                model.watermark.showsDeviceModel = newValue
+                selectionFeedbackCount += 1
             }
         )
     }
@@ -68,8 +107,8 @@ struct WatermarkSheet: View {
                         HStack(spacing: 12) {
                             IconTile(
                                 systemImage: "checkerboard.shield",
-                                ground: model.watermark.isEnabled ? Theme.accentOnBlack.opacity(0.18) : Color.white.opacity(0.10),
-                                tint: model.watermark.isEnabled ? Theme.accentOnBlack : .secondary
+                                ground: model.watermark.isEnabled ? accentColor.opacity(0.18) : Theme.fill,
+                                tint: model.watermark.isEnabled ? accentColor : .secondary
                             )
                             Text("wm.enable")
                                 .font(.body)
@@ -77,6 +116,42 @@ struct WatermarkSheet: View {
                     }
                     .tint(nil)
                     .listRowBackground(sheetCardFill)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("wm.placement")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        Picker("wm.placement", selection: placementBinding) {
+                            ForEach(WatermarkOptions.Placement.allCases) { placement in
+                                Text(LocalizedStringKey(placement.titleKey)).tag(placement)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    .padding(.vertical, 2)
+                    .listRowBackground(sheetCardFill)
+
+                    if model.watermark.placement == .bottomBadge && model.deviceFrame.isActive {
+                        Toggle(isOn: showsDeviceModelBinding) {
+                            HStack(spacing: 12) {
+                                IconTile(
+                                    systemImage: model.deviceFrame.category.systemImage,
+                                    ground: accentColor.opacity(0.16),
+                                    tint: accentColor
+                                )
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("wm.showDeviceModel")
+                                    if let name = model.deviceFrame.model?.displayName {
+                                        Text(verbatim: name)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                        .tint(nil)
+                        .listRowBackground(sheetCardFill)
+                    }
                 }
 
                 Section("wm.textSection") {
@@ -121,11 +196,11 @@ struct WatermarkSheet: View {
                                             .padding(.vertical, 7)
                                             .background(
                                                 Capsule()
-                                                    .fill(isSelected ? Theme.accentButton : Color.white.opacity(0.10))
+                                                    .fill(isSelected ? Theme.accentButton : Theme.fill)
                                             )
                                             .overlay(
                                                 Capsule()
-                                                    .stroke(Color.white.opacity(isSelected ? 0.20 : 0.08), lineWidth: 0.5)
+                                                    .stroke(Theme.cardBorder(for: colorScheme), lineWidth: 0.5)
                                             )
                                     }
                                     .buttonStyle(PressStyle(scale: 0.96))
@@ -144,8 +219,8 @@ struct WatermarkSheet: View {
                         HStack(spacing: 12) {
                             IconTile(
                                 systemImage: "circle.lefthalf.filled",
-                                ground: Theme.accentOnBlack.opacity(0.16),
-                                tint: Theme.accentOnBlack
+                                ground: accentColor.opacity(0.16),
+                                tint: accentColor
                             )
                             Text("wm.opacity")
                             Spacer()
@@ -154,34 +229,36 @@ struct WatermarkSheet: View {
                                 .foregroundStyle(.secondary)
                                 .contentTransition(.numericText())
                         }
-                        Slider(value: opacityBinding, in: 0.10...0.55, step: 0.01)
-                            .tint(Theme.accentOnBlack)
+                        Slider(value: opacityBinding, in: 0.10...0.60, step: 0.01)
+                            .tint(accentColor)
                     }
                     .padding(.vertical, 2)
                     .listRowBackground(sheetCardFill)
 
-                    HStack(spacing: 12) {
-                        IconTile(
-                            systemImage: "square.grid.3x3.fill",
-                            ground: Color.indigo.opacity(0.22),
-                            tint: .indigo
-                        )
-                        Text("wm.density")
-                        Spacer(minLength: 12)
-                        Picker("wm.density", selection: densityBinding) {
-                            ForEach(WatermarkOptions.Density.allCases) { density in
-                                Text(LocalizedStringKey(density.titleKey)).tag(density)
+                    if model.watermark.placement != .bottomBadge {
+                        HStack(spacing: 12) {
+                            IconTile(
+                                systemImage: "square.grid.3x3.fill",
+                                ground: Color.indigo.opacity(colorScheme == .dark ? 0.22 : 0.12),
+                                tint: .indigo
+                            )
+                            Text("wm.density")
+                            Spacer(minLength: 12)
+                            Picker("wm.density", selection: densityBinding) {
+                                ForEach(WatermarkOptions.Density.allCases) { density in
+                                    Text(LocalizedStringKey(density.titleKey)).tag(density)
+                                }
                             }
+                            .pickerStyle(.segmented)
+                            .frame(maxWidth: 196)
                         }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 196)
+                        .listRowBackground(sheetCardFill)
                     }
-                    .listRowBackground(sheetCardFill)
 
                     HStack(spacing: 12) {
                         IconTile(
                             systemImage: "paintpalette.fill",
-                            ground: Color.orange.opacity(0.20),
+                            ground: Color.orange.opacity(colorScheme == .dark ? 0.20 : 0.12),
                             tint: .orange
                         )
                         Text("wm.color")
@@ -199,11 +276,11 @@ struct WatermarkSheet: View {
                                             .frame(width: 24, height: 24)
                                             .overlay(
                                                 Circle()
-                                                    .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.75)
+                                                    .strokeBorder(Color.primary.opacity(0.24), lineWidth: 0.75)
                                             )
                                         if isSelected {
                                             Circle()
-                                                .strokeBorder(Theme.accentOnBlack, lineWidth: 2)
+                                                .strokeBorder(accentColor, lineWidth: 2)
                                                 .frame(width: 32, height: 32)
                                         }
                                     }
@@ -229,6 +306,7 @@ struct WatermarkSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .close) {
                         model.watermarkShown = false
+                        dismiss()
                     }
                     .tint(.primary)
                 }
